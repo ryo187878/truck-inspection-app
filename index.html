@@ -496,7 +496,18 @@ textarea{min-height:80px;resize:vertical}
     if(bar) bar.classList.add("show");
   }
 
-  async function syncAfterLogin(){
+  async function syncAfterLogin(profile){
+    if(profile && profile.role==="driver"){
+      localStorage.removeItem("truck_inspection_records_v1");
+      localStorage.removeItem("truck_inspection_saved_v1");
+      const cloudVehicles=await window.firebaseCloud.loadVehicles();
+      if(cloudVehicles.length) localStorage.setItem("truck_vehicles", JSON.stringify(cloudVehicles));
+      const masterData=await window.firebaseCloud.loadMasterData();
+      if(Array.isArray(masterData.drivers)) localStorage.setItem("truck_drivers", JSON.stringify(masterData.drivers));
+      if(typeof renderMasters === "function") renderMasters();
+      cloudStatus("☁️ Firebase：運転者モード接続済み", "ok");
+      return;
+    }
     const local = JSON.parse(localStorage.getItem("truck_inspection_records_v1")||"[]");
     const cloud = await window.firebaseCloud.loadRecords();
     const byId = new Map();
@@ -561,7 +572,7 @@ textarea{min-height:80px;resize:vertical}
       window.firebaseUser=user; window.firebaseReady=true; window.firebaseProfile=profile;
       window.firebaseCloud.status="接続済み";
       applyRole(profile,user);
-      await syncAfterLogin();
+      await syncAfterLogin(profile);
       authGate.classList.add("auth-hidden");
       authError.textContent="";
     }catch(e){
