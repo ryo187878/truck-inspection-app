@@ -542,7 +542,10 @@ function showPage(page,btn){
   btn.classList.add("active");
   document.querySelector(".actions").style.display=page==="inspection"?"block":"none";
   if(page==="records") renderRecords();
-  if(page==="savedRecords") renderSavedRecords();
+  if(page==="savedRecords"){
+    renderSavedRecords();
+    refreshSavedRecordsFromCloud();
+  }
   if(page==="master") renderMasters();
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -601,6 +604,30 @@ function getSavedRecords(){
 }
 function saveSavedRecords(arr){
   localStorage.setItem("truck_inspection_saved_v1",JSON.stringify(arr||[]));
+}
+
+
+async function refreshSavedRecordsFromCloud(){
+  if(!window.firebaseReady || !window.firebaseCloud || !window.firebaseCloud.loadRecords) return;
+  const root=document.getElementById("savedRecordList");
+  try{
+    const cloud=await window.firebaseCloud.loadRecords();
+    const local=getRecords();
+    const byId=new Map();
+    [...local,...cloud].forEach(r=>{ if(r && r.id) byId.set(String(r.id),r); });
+    const merged=[...byId.values()];
+    localStorage.setItem(key,JSON.stringify(merged));
+    const formalSaved=merged
+      .filter(r=>r && r.managerConfirmedAt && !r.deletedAt)
+      .map(r=>JSON.parse(JSON.stringify(r)));
+    saveSavedRecords(formalSaved);
+    renderSavedRecords();
+    const status=document.getElementById("status");
+    if(status) status.textContent=`保存版をクラウドと同期しました（${formalSaved.length}件）。`;
+  }catch(e){
+    console.error(e);
+    if(root && !root.children.length) root.innerHTML='<div class="small">クラウド同期に失敗しました。通信状態を確認してください。</div>';
+  }
 }
 
 function renderSavedRecords(){
