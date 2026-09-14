@@ -22,7 +22,7 @@ textarea{min-height:80px;resize:vertical}
 .item.brown .q{background:#d9d1be}
 .q{padding:11px;font-size:15px;line-height:1.45;font-weight:600}
 .result{padding:10px;background:#eaf3f8;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.result.four-choice{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important}.result.four-choice button{display:block!important;visibility:visible!important;min-width:0!important}
-.bulk-actions button{border:0;border-radius:10px;padding:11px 6px;font-size:14px;font-weight:800;background:#fff;box-shadow:0 1px 3px #0002}.result button{border:0;border-radius:10px;padding:11px 4px;font-size:16px;font-weight:800;background:#fff;box-shadow:0 1px 3px #0002}
+.bulk-actions button{border:0;border-radius:10px;padding:11px 6px;font-size:14px;font-weight:800;background:#fff;box-shadow:0 1px 3px #0002}.bulk-actions button.active-change{background:#dcecff;color:#17365d;box-shadow:inset 0 0 0 2px #6f82a6}.changeover-box{display:none;margin:12px 0 2px;padding:12px;border:2px solid #9ab1cf;border-radius:12px;background:#f5f9ff}.changeover-box.show{display:block}.choice-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.choice-row button{border:0;border-radius:10px;padding:12px 8px;font-size:15px;font-weight:800;background:#fff;box-shadow:0 1px 3px #0002}.choice-row button.active{background:#dcefdc;box-shadow:inset 0 0 0 2px #70ad47}.required-note{display:none;color:#a30000;font-size:12px;font-weight:800;margin-top:4px}.required-note.show{display:block}.result button{border:0;border-radius:10px;padding:11px 4px;font-size:16px;font-weight:800;background:#fff;box-shadow:0 1px 3px #0002}
 .result button.active.ok{background:#cfead0}
 .result button.active.warn{background:#fff0b8}
 .result button.active.ng{background:#ffd0d0}.result button.active.mix{background:#e6d8f7}
@@ -151,9 +151,10 @@ textarea{min-height:80px;resize:vertical}
 
 <section class="card">
   <div class="section-title">点検項目 <span class="badge" id="progress">0 / 27</span></div>
-  <div class="bulk-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 12px">
+  <div class="bulk-actions" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 12px">
     <button type="button" onclick="bulkSelectAll()">☑️ 全項目チェック</button>
     <button type="button" onclick="bulkSelectRequired()">☑️ 茶色以外チェック</button>
+    <button type="button" id="changeDriverButton" onclick="toggleDriverChange()">🔄 運転者乗り換え</button>
   </div>
   <div class="small" style="margin-bottom:10px">※ 茶色の点検項目は未選択でも保存できます。18番は「全項目チェック」を使った時だけ手動選択が必須です。</div>
   <div id="items"></div>
@@ -163,10 +164,21 @@ textarea{min-height:80px;resize:vertical}
   <div class="section-title">点検結果・確認事項 <span class="badge">必須</span></div>
   <label>総合判定</label>
   <select id="overall" required><option value="">選択してください（必須）</option><option>良好</option><option>要注意</option><option>異常</option></select>
+
+  <div id="changeoverBox" class="changeover-box">
+    <label>乗り換え時　前運転者からの報告事項の有無 <span class="badge">必須</span></label>
+    <div class="choice-row">
+      <button type="button" id="previousReportNone" onclick="setPreviousDriverReport('無')">無</button>
+      <button type="button" id="previousReportYes" onclick="setPreviousDriverReport('有')">有</button>
+    </div>
+    <div class="small" style="margin-top:8px">※「有」を選択した場合は「当日の異常箇所、処置状況の報告」の入力が必須です。</div>
+    <div class="small" style="margin-top:5px">※運転者乗り換えの場合は、27項目の点検結果を選択しなくても保存できます。</div>
+  </div>
+
   <br><br>
   <label>異常内容・処置</label><textarea id="abnormal" placeholder="異常があれば入力"></textarea>
-  <label>前日の異常箇所の処置状況</label><textarea id="previous"></textarea>
-  <label>当日の不具合箇所の処置状況</label><textarea id="today"></textarea>
+  <label>前日の異常箇所、処置状況</label><textarea id="previous"></textarea>
+  <label>当日の異常箇所、処置状況の報告 <span id="todayRequiredBadge" class="badge" style="display:none">必須</span></label><textarea id="today"></textarea><div id="todayRequiredNote" class="required-note">前運転者からの報告事項が「有」のため入力必須です。</div>
 </section>
 
 <section class="card manager-simple-card">
@@ -794,6 +806,7 @@ function renderRecords(){
     return `<div class="record">
       <b>${escapeHtml(r.date||"")}</b>　${escapeHtml(r.vehicle||"")}<br>
       運転者：${escapeHtml(r.driver||"")}　判定：${escapeHtml(r.overall||"未入力")}<br>
+      ${r.driverChange?`乗り換え：あり　前運転者からの報告事項：${escapeHtml(r.previousDriverReport||"未選択")}<br>`:""}
       車検満了：${escapeHtml(r.shaken||"未登録")}<br>
       <span class="small">△ ${warn}件 / × ${ng}件</span>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid #ddd">
@@ -866,6 +879,7 @@ function renderSavedRecords(){
     return `<div class="record" style="border-left:5px solid #5b7f9b">
       <b>${escapeHtml(r.date||"")}</b>　${escapeHtml(r.vehicle||"")}<br>
       運転者：${escapeHtml(r.driver||"")}　判定：${escapeHtml(r.overall||"未入力")}<br>
+      ${r.driverChange?`乗り換え：あり　前運転者からの報告事項：${escapeHtml(r.previousDriverReport||"未選択")}<br>`:""}
       車検満了：${escapeHtml(r.shaken||"未登録")}<br>
       確認者：${escapeHtml(r.managerConfirmedBy||"")}${r.managerConfirmedRole?`（${escapeHtml(r.managerConfirmedRole)}）`:''}<br>
       <span class="small">保存日時：${escapeHtml(confirmedAt)}　/　△ ${warn}件 / × ${ng}件</span>
@@ -1248,6 +1262,58 @@ function getSelectedShaken(){
   return v ? (v.shaken||"") : "";
 }
 function getRecords(){return JSON.parse(localStorage.getItem(key)||"[]")}
+
+let driverChangeMode=false;
+let previousDriverReport="";
+
+function toggleDriverChange(){
+  driverChangeMode=!driverChangeMode;
+  const box=document.getElementById("changeoverBox");
+  const btn=document.getElementById("changeDriverButton");
+  if(box) box.classList.toggle("show",driverChangeMode);
+  if(btn) btn.classList.toggle("active-change",driverChangeMode);
+  if(!driverChangeMode){
+    previousDriverReport="";
+    ["previousReportNone","previousReportYes"].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.classList.remove("active");
+    });
+    updateTodayRequiredState();
+  }
+}
+
+function setPreviousDriverReport(value){
+  if(!driverChangeMode) return;
+  previousDriverReport=value;
+  const none=document.getElementById("previousReportNone");
+  const yes=document.getElementById("previousReportYes");
+  if(none) none.classList.toggle("active",value==="無");
+  if(yes) yes.classList.toggle("active",value==="有");
+  updateTodayRequiredState();
+}
+
+function updateTodayRequiredState(){
+  const required=driverChangeMode && previousDriverReport==="有";
+  const todayEl=document.getElementById("today");
+  const badge=document.getElementById("todayRequiredBadge");
+  const note=document.getElementById("todayRequiredNote");
+  if(todayEl) todayEl.required=required;
+  if(badge) badge.style.display=required?"inline-block":"none";
+  if(note) note.classList.toggle("show",required);
+}
+
+function resetDriverChange(){
+  driverChangeMode=false;
+  previousDriverReport="";
+  const box=document.getElementById("changeoverBox");
+  const btn=document.getElementById("changeDriverButton");
+  if(box) box.classList.remove("show");
+  if(btn) btn.classList.remove("active-change");
+  ["previousReportNone","previousReportYes"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.remove("active");
+  });
+  updateTodayRequiredState();
+}
+
 function resetAfterSave(){
   // 保存後は「次の車両」をすぐ入力できるよう、入力画面を完全に初期化する。
   Object.keys(results).forEach(k=>delete results[k]);
@@ -1269,6 +1335,7 @@ function resetAfterSave(){
   if(shaken) shaken.checked=false;
   const manager=document.getElementById("managerConfirmPerson");
   if(manager) manager.value="";
+  resetDriverChange();
   if(typeof updateProgress==="function") updateProgress();
 }
 
@@ -1285,25 +1352,39 @@ async function saveRecord(){
     abnormal:document.getElementById("abnormal").value,
     previous:document.getElementById("previous").value,
     today:document.getElementById("today").value,
+    driverChange:driverChangeMode,
+    previousDriverReport:driverChangeMode ? previousDriverReport : "",
     savedAt:new Date().toISOString()
   };
   if(!record.vehicle || !record.driver){alert("車両番号と点検実施者を入力してください。");return}
   if(!record.overall){alert("点検結果・確認事項の「総合判定」を選択してください。");return;}
+  if(record.driverChange && !record.previousDriverReport){
+    alert("運転者乗り換え時は「前運転者からの報告事項の有無」を「無」または「有」から選択してください。");
+    return;
+  }
+  if(record.driverChange && record.previousDriverReport==="有" && !String(record.today||"").trim()){
+    alert("前運転者からの報告事項が「有」の場合は「当日の異常箇所、処置状況の報告」を入力してください。");
+    const todayEl=document.getElementById("today"); if(todayEl) todayEl.focus();
+    return;
+  }
   const selected=getSelectedVehicleMaster();
   if(selected && selected.shaken && !document.getElementById("shakenConfirm").checked){
     alert("車検満了日を確認してから点検を保存してください。");return;
   }
-  // 茶色項目は任意。18番は「全項目チェック」を使った時だけ手動選択を必須にする。
-  const optionalNos = [1,8,9,10,11,12,13,17,18,21];
-  const requiredItems = items.filter(x => !optionalNos.includes(Number(x.no)));
-  const missingRequired = requiredItems.filter(x => !results[x.no]);
-  if(requireItem18 && !results[18]){
-    alert("「全項目チェック」を使用した場合は、18番「冬用タイヤのプラットホームの露出の有無」を○・△・×・☆から手動で選択してください。");
-    return;
-  }
-  if(missingRequired.length){
-    alert(`必須点検項目が未入力です。あと ${missingRequired.length} 項目です。`);
-    return;
+  // 通常点検では茶色項目は任意。必須17項目を確認する。
+  // 運転者乗り換え時は27項目の選択を省略して保存できる。
+  if(!record.driverChange){
+    const optionalNos = [1,8,9,10,11,12,13,17,18,21];
+    const requiredItems = items.filter(x => !optionalNos.includes(Number(x.no)));
+    const missingRequired = requiredItems.filter(x => !results[x.no]);
+    if(requireItem18 && !results[18]){
+      alert("「全項目チェック」を使用した場合は、18番「冬用タイヤのプラットホームの露出の有無」を○・△・×・☆から手動で選択してください。");
+      return;
+    }
+    if(missingRequired.length){
+      alert(`必須点検項目が未入力です。あと ${missingRequired.length} 項目です。`);
+      return;
+    }
   }
   const records=getRecords(); records.push(record);
   localStorage.setItem(key,JSON.stringify(records));
@@ -1518,20 +1599,20 @@ function exportExcel(){
   const brownSet=new Set([1,8,9,10,11,12,13,17,18,21]);
 
   // ① 月間一覧
-  const monthlyHeaders=["点検日","車両番号","運転者","車検満了日","総合判定","異常内容","前回点検からの異常","本日の点検メモ","整備管理者・補助者確認者","確認者区分"];
+  const monthlyHeaders=["点検日","車両番号","運転者","車検満了日","総合判定","異常内容","前回点検からの異常","当日の異常箇所、処置状況の報告","運転者乗り換え","前運転者からの報告事項","整備管理者・補助者確認者","確認者区分"];
   const monthly=[monthlyHeaders];
   filtered.forEach(r=>monthly.push([
-    r.date||"",r.vehicle||"",r.driver||"",r.shaken||"",r.overall||"",r.abnormal||"",r.previous||"",r.today||"",r.managerConfirmedBy||"",r.managerConfirmedRole||""
+    r.date||"",r.vehicle||"",r.driver||"",r.shaken||"",r.overall||"",r.abnormal||"",r.previous||"",r.today||"",r.driverChange?"あり":"",r.driverChange?(r.previousDriverReport||""):"",r.managerConfirmedBy||"",r.managerConfirmedRole||""
   ]));
 
   // ② 点検記録：1行＝1回の点検の表形式
-  const detailHeaders=["点検日","車両番号","運転者","車検満了日","車検確認","総合判定","異常内容","前回点検からの異常","本日の点検メモ","整備管理者・補助者確認者","確認者区分"];
+  const detailHeaders=["点検日","車両番号","運転者","車検満了日","車検確認","総合判定","異常内容","前回点検からの異常","当日の異常箇所、処置状況の報告","運転者乗り換え","前運転者からの報告事項","整備管理者・補助者確認者","確認者区分"];
   for(let i=1;i<=27;i++) detailHeaders.push(`${i}.${items[i-1]}`);
   const detail=[detailHeaders];
   filtered.forEach(r=>{
     const row=[
       r.date||"",r.vehicle||"",r.driver||"",r.shaken||"",r.shaken ? (r.shakenConfirmed?"確認済み":"未確認"):"対象外",
-      r.overall||"",r.abnormal||"",r.previous||"",r.today||"",r.managerConfirmedBy||"",r.managerConfirmedRole||""
+      r.overall||"",r.abnormal||"",r.previous||"",r.today||"",r.driverChange?"あり":"",r.driverChange?(r.previousDriverReport||""):"",r.managerConfirmedBy||"",r.managerConfirmedRole||""
     ];
     for(let i=1;i<=27;i++) row.push(getResultValue(r,i));
     detail.push(row);
@@ -1682,7 +1763,7 @@ function exportDailyPrintExcel(){
   if(!trucks.length){alert("車両マスターに車両が登録されていません。");return;}
 
   const brownSet=new Set([1,8,9,10,11,12,13,17,18,21]);
-  const headers=["車両番号","運転者","総合判定",...items.map(x=>x.text),"整備管理者・補助者確認者"];
+  const headers=["車両番号","運転者","総合判定",...items.map(x=>x.text),"整備管理者・補助者確認者","運転者乗り換え","前運転者からの報告事項","当日の異常箇所、処置状況の報告"];
   const latestByVehicle=new Map();
   dayRecords.slice().sort((a,b)=>String(a.savedAt||a.createdAt||"").localeCompare(String(b.savedAt||b.createdAt||""))).forEach(r=>{
     const k=String(r.vehicle||"").trim();
@@ -1697,7 +1778,10 @@ function exportDailyPrintExcel(){
       r ? (r.driver||"") : "",
       r ? (r.overall||"") : "未点検",
       ...items.map(x=>r ? getResultValue(r,x.no) : ""),
-      r ? (r.managerConfirmedBy||"") : ""
+      r ? (r.managerConfirmedBy||"") : "",
+      r && r.driverChange ? "あり" : "",
+      r && r.driverChange ? (r.previousDriverReport||"") : "",
+      r ? (r.today||"") : ""
     ]);
   });
 
@@ -1726,7 +1810,7 @@ function exportDailyPrintExcel(){
     });
     sheetData+="</row>";
   });
-  const widths=[12,11,10,...Array(27).fill(9),18];
+  const widths=[12,11,10,...Array(27).fill(9),18,12,16,24];
   const cols=widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
   const endRow=rows.length, endCol=colName(headers.length), last=Math.max(10000,endRow+50);
   const dv=`<dataValidations count="4"><dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="A2:A${last}"><formula1>TruckList</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="B2:B${last}"><formula1>DriverList</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="C2:C${last}"><formula1>"良好,要注意,異常"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="AF2:AF${last}"><formula1>ManagerList</formula1></dataValidation></dataValidations>`;
@@ -1737,7 +1821,7 @@ function exportDailyPrintExcel(){
   sheetData+=noteXml;
   const noteMerge=`<mergeCells count="1"><mergeCell ref="AA${noteRow}:AF${noteRow}"/></mergeCells>`;
   const finalEndRow=Math.max(endRow,noteRow);
-  const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:AF${finalEndRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${sheetData}</sheetData><autoFilter ref="A1:${endCol}${endRow}"/>${noteMerge}${dv}<printOptions horizontalCentered="1"/><pageMargins left="0.15" right="0.15" top="0.2" bottom="0.2" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="1"/></worksheet>`;
+  const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:AG${finalEndRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${sheetData}</sheetData><autoFilter ref="A1:${endCol}${endRow}"/>${noteMerge}${dv}<printOptions horizontalCentered="1"/><pageMargins left="0.15" right="0.15" top="0.2" bottom="0.2" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="1"/></worksheet>`;
 
   // マスターを同じブックに含め、▽の参照先を確実に存在させる。
   const trucksForMaster=getMaster("truck_vehicles",defaultVehicles);
@@ -1777,7 +1861,7 @@ function exportMonthlyPrintExcel(){
   const drivers=getMaster("truck_drivers",defaultDrivers);
   const managers=getManagers();
   const brownSet=new Set([1,8,9,10,11,12,13,17,18,21]);
-  const headers=["点検日","車両番号","運転者","総合判定",...items.map(x=>x.text),"整備管理者・補助者確認者"];
+  const headers=["点検日","車両番号","運転者","総合判定",...items.map(x=>x.text),"整備管理者・補助者確認者","運転者乗り換え","前運転者からの報告事項","当日の異常箇所、処置状況の報告"];
 
   const [yy,mm]=month.split("-").map(Number);
   const lastDay=new Date(yy,mm,0).getDate();
@@ -1811,7 +1895,10 @@ function exportMonthlyPrintExcel(){
       r.driver||"",
       r.overall||"",
       ...items.map(x=>getResultValue(r,x.no)),
-      r.managerConfirmedBy||""
+      r.managerConfirmedBy||"",
+      r.driverChange ? "あり" : "",
+      r.driverChange ? (r.previousDriverReport||"") : "",
+      r.today||""
     ]);
   });
 
@@ -1829,7 +1916,7 @@ function exportMonthlyPrintExcel(){
     });
     sheetData+="</row>";
   });
-  const widths=[12,14,12,10,...Array(27).fill(9),18];
+  const widths=[12,14,12,10,...Array(27).fill(9),18,12,16];
   const cols=widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
   const endRow=rows.length, endCol=colName(headers.length);
   const validations=[
@@ -1845,7 +1932,7 @@ function exportMonthlyPrintExcel(){
   sheetData+=noteXml;
   const noteMerge=`<mergeCells count="1"><mergeCell ref="AA${noteRow}:AF${noteRow}"/></mergeCells>`;
   const finalEndRow=Math.max(endRow,noteRow);
-  const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:AF${finalEndRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${sheetData}</sheetData><autoFilter ref="A1:${endCol}${endRow}"/>${noteMerge}<dataValidations count="4">${validations}</dataValidations><printOptions horizontalCentered="1"/><pageMargins left="0.15" right="0.15" top="0.2" bottom="0.2" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
+  const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:AH${finalEndRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${sheetData}</sheetData><autoFilter ref="A1:${endCol}${endRow}"/>${noteMerge}<dataValidations count="4">${validations}</dataValidations><printOptions horizontalCentered="1"/><pageMargins left="0.15" right="0.15" top="0.2" bottom="0.2" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
 
   const exportVehicleNames=[]; monthRecords.forEach(r=>{const v=String(r.vehicle||"").trim(); if(v&&!exportVehicleNames.includes(v)) exportVehicleNames.push(v);});
   const truckRows=[["車両番号"],...exportVehicleNames.map(v=>[v])];
@@ -1882,6 +1969,7 @@ function clearForm(){
   document.getElementById("shakenConfirm").checked=false;
   const managerSel=document.getElementById("managerConfirmPerson");
   if(managerSel) managerSel.value="";
+  resetDriverChange();
   document.getElementById("status").textContent="";
 }
 
