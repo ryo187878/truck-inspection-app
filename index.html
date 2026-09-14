@@ -327,14 +327,14 @@ textarea{min-height:80px;resize:vertical}
 
     <div class="card">
       <b>⚠️ 保存について</b><br>
-      現在の試作版は、このiPadのブラウザ内に点検データを保存しています。端末やブラウザのデータを消去すると記録が失われる可能性があります。監査用の長期保存では、PDFを別途バックアップすることをおすすめします。
+      点検記録と管理マスターはFirebaseクラウドにも保存します。端末内にも一時保存しますが、通信状況によって同期に時間がかかる場合があります。監査用の長期保存では、Excelの定期バックアップもおすすめします。
     </div>
   </div>
 </section>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-  import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCnnljHeudw5t_US6v5nkZ4555NGfH-vF8",
@@ -351,6 +351,12 @@ textarea{min-height:80px;resize:vertical}
   const CLOUD_COMPANY = "kantotanami";
   const CLOUD_OFFICE = "ibaraki";
   const CLOUD_COLLECTION = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/inspections`;
+  const CLOUD_VEHICLES = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/vehicles`;
+  const CLOUD_MASTER_DOC = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/settings/masterData`;
+
+  function vehicleDocId(name){
+    return String(name||"").trim().replaceAll("/","／") || crypto.randomUUID();
+  }
 
   window.firebaseReady = false;
   window.firebaseUser = null;
@@ -380,6 +386,59 @@ textarea{min-height:80px;resize:vertical}
           cloudUpdatedAt: new Date().toISOString()
         }, {merge:true});
       }
+    },
+    async loadVehicles(){
+      if(!window.firebaseReady) return [];
+      const snap=await getDocs(collection(firestoreDb, CLOUD_VEHICLES));
+      return snap.docs.map(d=>{
+        const v=d.data()||{};
+        return {
+          _cloudId:d.id,
+          name:String(v.name||v.vehicleNumber||"").trim(),
+          shaken:v.shaken||"",
+          jibaiseki:v.jibaiseki||"",
+          optional:v.optional||""
+        };
+      }).filter(v=>v.name);
+    },
+    async saveVehicle(vehicle){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      const id=vehicle._cloudId||vehicleDocId(vehicle.name);
+      await setDoc(doc(firestoreDb, CLOUD_VEHICLES, id), {
+        name:vehicle.name,
+        vehicleNumber:vehicle.name,
+        shaken:vehicle.shaken||"",
+        jibaiseki:vehicle.jibaiseki||"",
+        optional:vehicle.optional||"",
+        companyId:CLOUD_COMPANY,
+        officeId:CLOUD_OFFICE,
+        cloudUpdatedAt:new Date().toISOString()
+      }, {merge:true});
+      return id;
+    },
+    async deleteVehicle(vehicle){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      const id=vehicle._cloudId||vehicleDocId(vehicle.name);
+      await deleteDoc(doc(firestoreDb, CLOUD_VEHICLES, id));
+    },
+    async loadMasterData(){
+      if(!window.firebaseReady) return {};
+      const snap=await getDoc(doc(firestoreDb, CLOUD_MASTER_DOC));
+      return snap.exists() ? (snap.data()||{}) : {};
+    },
+    async saveDrivers(drivers){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      await setDoc(doc(firestoreDb, CLOUD_MASTER_DOC), {
+        drivers:Array.isArray(drivers)?drivers:[],
+        cloudUpdatedAt:new Date().toISOString()
+      }, {merge:true});
+    },
+    async saveManagers(managers){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      await setDoc(doc(firestoreDb, CLOUD_MASTER_DOC), {
+        managers:Array.isArray(managers)?managers:[],
+        cloudUpdatedAt:new Date().toISOString()
+      }, {merge:true});
     }
   };
 
@@ -407,6 +466,35 @@ textarea{min-height:80px;resize:vertical}
       const localIds=new Set(local.map(r=>String(r.id||"")));
       const needUpload=local.filter(r=>r && r.id && !cloud.some(c=>String(c.id)===String(r.id)));
       if(needUpload.length) await window.firebaseCloud.migrateLocal(needUpload);
+
+      // ④ 管理画面マスターをクラウドから同期
+      const cloudVehicles=await window.firebaseCloud.loadVehicles();
+      if(cloudVehicles.length){
+        localStorage.setItem("truck_vehicles", JSON.stringify(cloudVehicles));
+      }else{
+        const localVehicles=JSON.parse(localStorage.getItem("truck_vehicles")||"[]");
+        for(const v of localVehicles){
+          if(v && v.name){
+            const id=await window.firebaseCloud.saveVehicle(v);
+            v._cloudId=id;
+          }
+        }
+        if(localVehicles.length) localStorage.setItem("truck_vehicles", JSON.stringify(localVehicles));
+      }
+      const masterData=await window.firebaseCloud.loadMasterData();
+      if(Array.isArray(masterData.drivers)){
+        localStorage.setItem("truck_drivers", JSON.stringify(masterData.drivers));
+      }else{
+        const localDrivers=JSON.parse(localStorage.getItem("truck_drivers")||"[]");
+        if(localDrivers.length) await window.firebaseCloud.saveDrivers(localDrivers);
+      }
+      if(Array.isArray(masterData.managers)){
+        localStorage.setItem("truck_managers", JSON.stringify(masterData.managers));
+      }else{
+        const localManagers=JSON.parse(localStorage.getItem("truck_managers")||"[]");
+        if(localManagers.length) await window.firebaseCloud.saveManagers(localManagers);
+      }
+      if(typeof renderMasters === "function") renderMasters();
       if(typeof renderRecords === "function") renderRecords();
       if(typeof renderSavedRecords === "function") renderSavedRecords();
       cloudStatus(`☁️ Firebase：接続済み（${merged.length}件）`, "ok");
@@ -439,7 +527,7 @@ const defaultDrivers = ["運転者A","運転者B","運転者C"];
 function getMaster(name, defaults){
   const saved=localStorage.getItem(name);
   const value=saved?JSON.parse(saved):JSON.parse(JSON.stringify(defaults));
-  if(name==="truck_vehicles") return value.map(v=>({name:v.name,shaken:v.shaken||"",jibaiseki:v.jibaiseki||"",optional:v.optional||""}));
+  if(name==="truck_vehicles") return value.map(v=>({_cloudId:v._cloudId||"",name:v.name||v.vehicleNumber||"",shaken:v.shaken||"",jibaiseki:v.jibaiseki||"",optional:v.optional||""}));
   return value;
 }
 function saveMaster(name, arr){ localStorage.setItem(name, JSON.stringify(arr)); }
@@ -502,16 +590,26 @@ function renderMasters(){
   updateShakenInfo();
 }
   populateExcelVehicle();
-function addVehicle(){
+async function addVehicle(){
   const name=document.getElementById("newVehicle").value.trim();
   const shaken=document.getElementById("newShaken").value;
   const jibaiseki=document.getElementById("newJibaiseki").value;
   const optional=document.getElementById("newOptional").value;
   if(!name){alert("車両番号を入力してください。");return}
-  const arr=getMaster("truck_vehicles",defaultVehicles).map(v=>({name:v.name,shaken:v.shaken||"",jibaiseki:v.jibaiseki||"",optional:v.optional||""}));
+  const arr=getMaster("truck_vehicles",defaultVehicles);
   if(arr.some(v=>v.name===name)){alert("同じ車両番号が既に登録されています。");return}
-  arr.push({name,shaken,jibaiseki,optional});
+  const vehicle={name,shaken,jibaiseki,optional,_cloudId:""};
+  arr.push(vehicle);
   saveMaster("truck_vehicles",arr);
+  try{
+    if(window.firebaseReady && window.firebaseCloud){
+      vehicle._cloudId=await window.firebaseCloud.saveVehicle(vehicle);
+      saveMaster("truck_vehicles",arr);
+    }
+  }catch(e){
+    console.error(e);
+    alert("車両はこの端末に保存しましたが、Firebaseへの保存に失敗しました。");
+  }
   document.getElementById("newVehicle").value="";
   document.getElementById("newShaken").value="";
   document.getElementById("newJibaiseki").value="";
@@ -524,16 +622,38 @@ function addDriver(){
   const arr=getMaster("truck_drivers",defaultDrivers);
   if(!arr.includes(v)) arr.push(v);
   saveMaster("truck_drivers",arr);
+  if(window.firebaseReady && window.firebaseCloud){
+    window.firebaseCloud.saveDrivers(arr).catch(e=>{console.error(e);alert("運転者のクラウド保存に失敗しました。");});
+  }
   document.getElementById("newDriver").value="";
   renderMasters();
 }
-function removeVehicle(i){
+async function removeVehicle(i){
   const arr=getMaster("truck_vehicles",defaultVehicles);
-  if(confirm(`「${arr[i].name}」を削除しますか？`)){arr.splice(i,1);saveMaster("truck_vehicles",arr);renderMasters();}
+  const target=arr[i];
+  if(!target) return;
+  if(confirm(`「${target.name}」を削除しますか？`)){
+    arr.splice(i,1);
+    saveMaster("truck_vehicles",arr);
+    try{
+      if(window.firebaseReady && window.firebaseCloud) await window.firebaseCloud.deleteVehicle(target);
+    }catch(e){
+      console.error(e);
+      alert("この端末では削除しましたが、Firebase側の削除に失敗しました。");
+    }
+    renderMasters();
+  }
 }
 function removeDriver(i){
   const arr=getMaster("truck_drivers",defaultDrivers);
-  if(confirm(`「${arr[i]}」を削除しますか？`)){arr.splice(i,1);saveMaster("truck_drivers",arr);renderMasters();}
+  if(confirm(`「${arr[i]}」を削除しますか？`)){
+    arr.splice(i,1);
+    saveMaster("truck_drivers",arr);
+    if(window.firebaseReady && window.firebaseCloud){
+      window.firebaseCloud.saveDrivers(arr).catch(e=>{console.error(e);alert("運転者のクラウド更新に失敗しました。");});
+    }
+    renderMasters();
+  }
 }
 function showPage(page,btn){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
@@ -1200,6 +1320,9 @@ function getManagers(){
 }
 function saveManagers(data){
   localStorage.setItem("truck_managers",JSON.stringify(data));
+  if(window.firebaseReady && window.firebaseCloud){
+    window.firebaseCloud.saveManagers(data).catch(e=>{console.error(e);alert("整備管理者マスターのクラウド保存に失敗しました。");});
+  }
 }
 function addManager(){
   const nameEl=document.getElementById("managerName");
