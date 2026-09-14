@@ -78,13 +78,34 @@ textarea{min-height:80px;resize:vertical}
 
 
 .cloud-status{margin:8px 0;padding:8px 10px;border-radius:8px;background:#f1f5f9;color:#53606b;font-size:13px;font-weight:700}.cloud-status.ok{background:#eaf7ee;color:#176b35}.cloud-status.ng{background:#fff0f0;color:#a30000}
+
+/* 管理者ログイン */
+.auth-gate{position:fixed;inset:0;z-index:100;background:#f4f6f8;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{width:min(430px,100%);background:#fff;border-radius:16px;padding:22px;box-shadow:0 8px 30px #0002}
+.auth-card h2{margin:0 0 8px;font-size:22px}.auth-card p{margin:0 0 16px;color:#667;font-size:13px;line-height:1.6}
+.auth-card input{margin-bottom:10px}.auth-card button{width:100%;border:0;border-radius:11px;padding:13px;font-size:16px;font-weight:800;background:#6f82a6;color:#fff}
+.auth-error{min-height:22px;color:#a30000;font-size:13px;font-weight:700;margin-top:10px}.auth-hidden{display:none!important}
+.user-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px}.user-bar.show{display:flex}.logout-btn{width:auto;border:1px solid #ffffff88;border-radius:8px;background:#ffffff20;color:#fff;padding:5px 9px;font-weight:700}
 </style>
 </head>
 <body>
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <h2>🔐 管理者ログイン</h2>
+    <p>会社の管理画面を利用するには、登録済みのメールアドレスとパスワードでログインしてください。</p>
+    <label>メールアドレス</label>
+    <input id="loginEmail" type="email" autocomplete="username" placeholder="メールアドレス">
+    <label>パスワード</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード">
+    <button type="button" id="loginButton">ログイン</button>
+    <div id="authError" class="auth-error"></div>
+  </div>
+</div>
 <header>
 <h1>🚚 トラック日常点検</h1>
 <div class="sub">iPad縦長入力版 · 1台ごとに保存 · 整備管理者欄は①のみ · 18番☆ミックスタイヤ対応・確実表示版</div>
-<div id="cloudStatus" class="cloud-status">☁️ Firebase：接続準備中…</div>
+<div id="cloudStatus" class="cloud-status">☁️ Firebase：ログイン待ち</div>
+<div id="userBar" class="user-bar"><span id="loginUserLabel"></span><button type="button" id="logoutButton" class="logout-btn">ログアウト</button></div>
 </header>
 
 
@@ -333,7 +354,7 @@ textarea{min-height:80px;resize:vertical}
 </section>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
   import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -353,6 +374,7 @@ textarea{min-height:80px;resize:vertical}
   const CLOUD_COLLECTION = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/inspections`;
   const CLOUD_VEHICLES = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/vehicles`;
   const CLOUD_MASTER_DOC = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/settings/masterData`;
+  const CLOUD_USERS = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/users`;
 
   function vehicleDocId(name){
     return String(name||"").trim().replaceAll("/","／") || crypto.randomUUID();
@@ -447,68 +469,109 @@ textarea{min-height:80px;resize:vertical}
     if(el){ el.textContent=message; el.className="cloud-status "+cls; }
   }
 
-  onAuthStateChanged(firebaseAuth, async user=>{
-    if(!user) return;
-    window.firebaseUser=user;
-    window.firebaseReady=true;
-    window.firebaseCloud.status="接続済み";
-    cloudStatus("☁️ Firebase：接続済み", "ok");
-    try{
-      const local = JSON.parse(localStorage.getItem("truck_inspection_records_v1")||"[]");
-      const cloud = await window.firebaseCloud.loadRecords();
-      const byId = new Map();
-      [...local, ...cloud].forEach(r=>{ if(r && r.id) byId.set(String(r.id), r); });
-      const merged=[...byId.values()];
-      localStorage.setItem("truck_inspection_records_v1", JSON.stringify(merged));
-      // ③保存版もクラウド上の確認済み記録から再構築する
-      const formalSaved = merged.filter(r=>r && r.managerConfirmedAt && !r.deletedAt).map(r=>JSON.parse(JSON.stringify(r)));
-      localStorage.setItem("truck_inspection_saved_v1", JSON.stringify(formalSaved));
-      const localIds=new Set(local.map(r=>String(r.id||"")));
-      const needUpload=local.filter(r=>r && r.id && !cloud.some(c=>String(c.id)===String(r.id)));
-      if(needUpload.length) await window.firebaseCloud.migrateLocal(needUpload);
+  async function loadUserProfile(user){
+    const snap=await getDoc(doc(firestoreDb, CLOUD_USERS, user.uid));
+    if(!snap.exists()) throw new Error("このユーザーには利用権限が登録されていません。");
+    const profile=snap.data()||{};
+    if(profile.companyId!==CLOUD_COMPANY || profile.officeId!==CLOUD_OFFICE){
+      throw new Error("この営業所を利用する権限がありません。");
+    }
+    if(!["admin","driver"].includes(profile.role)){
+      throw new Error("ユーザー権限が正しく設定されていません。");
+    }
+    return profile;
+  }
 
-      // ④ 管理画面マスターをクラウドから同期
-      const cloudVehicles=await window.firebaseCloud.loadVehicles();
-      if(cloudVehicles.length){
-        localStorage.setItem("truck_vehicles", JSON.stringify(cloudVehicles));
-      }else{
-        const localVehicles=JSON.parse(localStorage.getItem("truck_vehicles")||"[]");
-        for(const v of localVehicles){
-          if(v && v.name){
-            const id=await window.firebaseCloud.saveVehicle(v);
-            v._cloudId=id;
-          }
-        }
-        if(localVehicles.length) localStorage.setItem("truck_vehicles", JSON.stringify(localVehicles));
+  function applyRole(profile, user){
+    const tabs=[...document.querySelectorAll(".tabs .tab")];
+    if(profile.role==="driver") {
+      tabs.forEach((b,i)=>b.style.display=i===0?"":"none");
+      const first=tabs[0]; if(first) first.click();
+    } else {
+      tabs.forEach(b=>b.style.display="");
+    }
+    const label=document.getElementById("loginUserLabel");
+    const bar=document.getElementById("userBar");
+    if(label) label.textContent=`${profile.role==="admin"?"管理者":"運転者"}：${user.email||user.uid}`;
+    if(bar) bar.classList.add("show");
+  }
+
+  async function syncAfterLogin(){
+    const local = JSON.parse(localStorage.getItem("truck_inspection_records_v1")||"[]");
+    const cloud = await window.firebaseCloud.loadRecords();
+    const byId = new Map();
+    [...local, ...cloud].forEach(r=>{ if(r && r.id) byId.set(String(r.id), r); });
+    const merged=[...byId.values()];
+    localStorage.setItem("truck_inspection_records_v1", JSON.stringify(merged));
+    const formalSaved = merged.filter(r=>r && r.managerConfirmedAt && !r.deletedAt).map(r=>JSON.parse(JSON.stringify(r)));
+    localStorage.setItem("truck_inspection_saved_v1", JSON.stringify(formalSaved));
+    const needUpload=local.filter(r=>r && r.id && !cloud.some(c=>String(c.id)===String(r.id)));
+    if(needUpload.length) await window.firebaseCloud.migrateLocal(needUpload);
+
+    const cloudVehicles=await window.firebaseCloud.loadVehicles();
+    if(cloudVehicles.length){
+      localStorage.setItem("truck_vehicles", JSON.stringify(cloudVehicles));
+    }else{
+      const localVehicles=JSON.parse(localStorage.getItem("truck_vehicles")||"[]");
+      for(const v of localVehicles){
+        if(v && v.name){ const id=await window.firebaseCloud.saveVehicle(v); v._cloudId=id; }
       }
-      const masterData=await window.firebaseCloud.loadMasterData();
-      if(Array.isArray(masterData.drivers)){
-        localStorage.setItem("truck_drivers", JSON.stringify(masterData.drivers));
-      }else{
-        const localDrivers=JSON.parse(localStorage.getItem("truck_drivers")||"[]");
-        if(localDrivers.length) await window.firebaseCloud.saveDrivers(localDrivers);
-      }
-      if(Array.isArray(masterData.managers)){
-        localStorage.setItem("truck_managers", JSON.stringify(masterData.managers));
-      }else{
-        const localManagers=JSON.parse(localStorage.getItem("truck_managers")||"[]");
-        if(localManagers.length) await window.firebaseCloud.saveManagers(localManagers);
-      }
-      if(typeof renderMasters === "function") renderMasters();
-      if(typeof renderRecords === "function") renderRecords();
-      if(typeof renderSavedRecords === "function") renderSavedRecords();
-      cloudStatus(`☁️ Firebase：接続済み（${merged.length}件）`, "ok");
+      if(localVehicles.length) localStorage.setItem("truck_vehicles", JSON.stringify(localVehicles));
+    }
+    const masterData=await window.firebaseCloud.loadMasterData();
+    if(Array.isArray(masterData.drivers)){ localStorage.setItem("truck_drivers", JSON.stringify(masterData.drivers)); }
+    else { const x=JSON.parse(localStorage.getItem("truck_drivers")||"[]"); if(x.length) await window.firebaseCloud.saveDrivers(x); }
+    if(Array.isArray(masterData.managers)){ localStorage.setItem("truck_managers", JSON.stringify(masterData.managers)); }
+    else { const x=JSON.parse(localStorage.getItem("truck_managers")||"[]"); if(x.length) await window.firebaseCloud.saveManagers(x); }
+    if(typeof renderMasters === "function") renderMasters();
+    if(typeof renderRecords === "function") renderRecords();
+    if(typeof renderSavedRecords === "function") renderSavedRecords();
+    cloudStatus(`☁️ Firebase：接続済み（${merged.length}件）`, "ok");
+  }
+
+  const loginButton=document.getElementById("loginButton");
+  const loginEmail=document.getElementById("loginEmail");
+  const loginPassword=document.getElementById("loginPassword");
+  const authError=document.getElementById("authError");
+  const authGate=document.getElementById("authGate");
+  loginButton.addEventListener("click", async ()=>{
+    authError.textContent="";
+    const email=loginEmail.value.trim();
+    const password=loginPassword.value;
+    if(!email || !password){ authError.textContent="メールアドレスとパスワードを入力してください。"; return; }
+    loginButton.disabled=true; loginButton.textContent="ログイン中…";
+    try { await signInWithEmailAndPassword(firebaseAuth,email,password); }
+    catch(e){ console.error(e); authError.textContent="ログインできません。メールアドレスまたはパスワードを確認してください。"; }
+    finally { loginButton.disabled=false; loginButton.textContent="ログイン"; }
+  });
+  loginPassword.addEventListener("keydown",e=>{ if(e.key==="Enter") loginButton.click(); });
+  document.getElementById("logoutButton").addEventListener("click",()=>signOut(firebaseAuth));
+
+  onAuthStateChanged(firebaseAuth, async user=>{
+    if(!user){
+      window.firebaseUser=null; window.firebaseReady=false;
+      authGate.classList.remove("auth-hidden");
+      document.getElementById("userBar").classList.remove("show");
+      cloudStatus("☁️ Firebase：ログイン待ち");
+      return;
+    }
+    try{
+      cloudStatus("☁️ Firebase：権限確認中…");
+      const profile=await loadUserProfile(user);
+      window.firebaseUser=user; window.firebaseReady=true; window.firebaseProfile=profile;
+      window.firebaseCloud.status="接続済み";
+      applyRole(profile,user);
+      await syncAfterLogin();
+      authGate.classList.add("auth-hidden");
+      authError.textContent="";
     }catch(e){
       console.error(e);
-      window.firebaseCloud.status="接続エラー";
-      cloudStatus("⚠️ Firebase：接続できません。設定を確認してください。", "ng");
+      window.firebaseReady=false;
+      authError.textContent=e?.message||"権限を確認できませんでした。";
+      cloudStatus("⚠️ Firebase：権限確認エラー", "ng");
+      authGate.classList.remove("auth-hidden");
+      await signOut(firebaseAuth).catch(()=>{});
     }
-  });
-
-  signInAnonymously(firebaseAuth).catch(e=>{
-    console.error(e);
-    window.firebaseCloud.status="認証エラー";
-    cloudStatus("⚠️ Firebase認証が未設定です", "ng");
   });
 </script>
 <script>
@@ -1216,7 +1279,7 @@ async function saveRecord(){
   }catch(e){
     console.error(e);
     document.getElementById("status").textContent=`⚠️ 端末には保存済みですが、Firebase保存に失敗しました。設定を確認してください。`;
-    alert("点検記録はこの端末には保存されましたが、Firebaseへのクラウド保存に失敗しました。\n\n次の設定を確認してください：\n・Authenticationの匿名ログイン\n・Firestoreのルール\n\nエラー："+(e&&e.message?e.message:e));
+    alert("点検記録はこの端末には保存されましたが、Firebaseへのクラウド保存に失敗しました。\n\n次の設定を確認してください：\n・管理者ログイン\n・Firestoreのルール\n\nエラー："+(e&&e.message?e.message:e));
   }
   resetAfterSave();
 }
