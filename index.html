@@ -398,9 +398,12 @@ textarea{min-height:80px;resize:vertical}
       const local = JSON.parse(localStorage.getItem("truck_inspection_records_v1")||"[]");
       const cloud = await window.firebaseCloud.loadRecords();
       const byId = new Map();
-      [...cloud, ...local].forEach(r=>{ if(r && r.id) byId.set(String(r.id), r); });
+      [...local, ...cloud].forEach(r=>{ if(r && r.id) byId.set(String(r.id), r); });
       const merged=[...byId.values()];
       localStorage.setItem("truck_inspection_records_v1", JSON.stringify(merged));
+      // ③保存版もクラウド上の確認済み記録から再構築する
+      const formalSaved = merged.filter(r=>r && r.managerConfirmedAt && !r.deletedAt).map(r=>JSON.parse(JSON.stringify(r)));
+      localStorage.setItem("truck_inspection_saved_v1", JSON.stringify(formalSaved));
       const localIds=new Set(local.map(r=>String(r.id||"")));
       const needUpload=local.filter(r=>r && r.id && !cloud.some(c=>String(c.id)===String(r.id)));
       if(needUpload.length) await window.firebaseCloud.migrateLocal(needUpload);
@@ -619,7 +622,7 @@ function renderSavedRecords(){
   }).join("");
 }
 
-function deleteHistoryRecord(index){
+async function deleteHistoryRecord(index){
   const records=getRecords();
   if(!Number.isInteger(index) || index<0 || index>=records.length){
     alert("点検記録が見つかりません。画面を更新してください。");
@@ -651,8 +654,17 @@ function deleteHistoryRecord(index){
   // これにより履歴・日別Excel・月別Excelのすべてで同じ記録を確実に除外できる。
   records[index]=target;
   localStorage.setItem(key,JSON.stringify(records));
-  document.getElementById("status").textContent="点検記録を1件消去しました。Excel出力からも除外されます。";
+  try{
+    if(window.firebaseCloud && window.firebaseCloud.saveRecord){
+      await window.firebaseCloud.saveRecord(target);
+    }
+    document.getElementById("status").textContent="点検記録を消去し、クラウドにも同期しました。Excel出力からも除外されます。";
+  }catch(e){
+    document.getElementById("status").textContent="端末では消去しましたが、クラウド同期に失敗しました。通信状態を確認してください。";
+    alert("クラウド同期に失敗しました。\n"+(e&&e.message?e.message:e));
+  }
   renderRecords();
+  renderSavedRecords();
 }
 
 // 旧ボタンや保存データとの互換用
@@ -663,7 +675,7 @@ function deleteRecord(id){
   deleteHistoryRecord(index);
 }
 
-function confirmAndExportRecordByIndex(index){
+async function confirmAndExportRecordByIndex(index){
   const records=getRecords();
   if(!Number.isInteger(index) || index<0 || index>=records.length){
     alert("点検記録が見つかりません。画面を更新してください。");
@@ -704,8 +716,17 @@ function confirmAndExportRecordByIndex(index){
     latestRecords[targetIndex]=target;
     localStorage.setItem(key,JSON.stringify(latestRecords));
   }
-  document.getElementById("status").textContent="管理者確認・承認を保存しました。確認済みの点検は履歴一覧から非表示になります。";
+  try{
+    if(window.firebaseCloud && window.firebaseCloud.saveRecord){
+      await window.firebaseCloud.saveRecord(target);
+    }
+    document.getElementById("status").textContent="管理者確認・承認を保存し、クラウドにも同期しました。";
+  }catch(e){
+    document.getElementById("status").textContent="端末には承認を保存しましたが、クラウド同期に失敗しました。";
+    alert("クラウド同期に失敗しました。\n"+(e&&e.message?e.message:e));
+  }
   renderRecords();
+  renderSavedRecords();
 }
 
 // 旧ボタンや保存データとの互換用
