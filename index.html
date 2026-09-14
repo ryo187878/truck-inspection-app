@@ -374,7 +374,7 @@ textarea{min-height:80px;resize:vertical}
   const CLOUD_COLLECTION = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/inspections`;
   const CLOUD_VEHICLES = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/vehicles`;
   const CLOUD_MASTER_DOC = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/settings/masterData`;
-  const CLOUD_USERS = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/users`;
+  const CLOUD_USERS = `users`;
 
   function vehicleDocId(name){
     return String(name||"").trim().replaceAll("/","／") || crypto.randomUUID();
