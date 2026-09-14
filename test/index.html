@@ -1,0 +1,2284 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6f82a6">
+<title>トラック日常点検</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f4f6f8;color:#222}
+header{position:sticky;top:0;z-index:5;background:#6f82a6;color:white;padding:14px 16px calc(14px + env(safe-area-inset-top));box-shadow:0 2px 8px #0002}
+h1{font-size:20px;margin:0 0 4px}
+.sub{font-size:12px;opacity:.9}
+main{max-width:760px;margin:auto;padding:14px 12px 90px}
+.card{background:white;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px #0001}
+.grid{display:grid;grid-template-columns:1fr;gap:10px}
+label{font-size:13px;font-weight:700;display:block;margin-bottom:5px}
+input,textarea,select{width:100%;font-size:15px;border:1px solid #ccd2d8;border-radius:10px;padding:12px;background:white}
+textarea{min-height:80px;resize:vertical}
+.section-title{font-weight:800;background:#ddeed8;padding:10px;border-radius:10px;margin-bottom:8px}
+.item{border:1px solid #d5d9dd;border-radius:12px;margin:8px 0;overflow:hidden;background:#fff}
+.item.brown .q{background:#d9d1be}
+.q{padding:11px;font-size:15px;line-height:1.45;font-weight:600}
+.result{padding:10px;background:#eaf3f8;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.result.four-choice{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important}.result.four-choice button{display:block!important;visibility:visible!important;min-width:0!important}
+.bulk-actions button{border:0;border-radius:10px;padding:11px 6px;font-size:14px;font-weight:800;background:#fff;box-shadow:0 1px 3px #0002}.bulk-actions button.active-change{background:#dcecff;color:#17365d;box-shadow:inset 0 0 0 2px #6f82a6}.changeover-box{display:none;margin:12px 0 2px;padding:12px;border:2px solid #9ab1cf;border-radius:12px;background:#f5f9ff}.changeover-box.show{display:block}.choice-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.choice-row button{border:0;border-radius:10px;padding:12px 8px;font-size:15px;font-weight:800;background:#fff;box-shadow:0 1px 3px #0002}.choice-row button.active{background:#dcefdc;box-shadow:inset 0 0 0 2px #70ad47}.required-note{display:none;color:#a30000;font-size:12px;font-weight:800;margin-top:4px}.required-note.show{display:block}.result button{border:0;border-radius:10px;padding:11px 4px;font-size:16px;font-weight:800;background:#fff;box-shadow:0 1px 3px #0002}
+.result button.active.ok{background:#cfead0}
+.result button.active.warn{background:#fff0b8}
+.result button.active.ng{background:#ffd0d0}.result button.active.mix{background:#e6d8f7}
+.actions{position:fixed;bottom:0;left:0;right:0;background:#ffffffee;backdrop-filter:blur(8px);padding:10px max(12px,env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom));box-shadow:0 -2px 8px #0002;z-index:10}
+.actions-inner{max-width:760px;margin:auto;display:flex;gap:8px}
+.actions button{flex:1;border:0;border-radius:12px;padding:13px;font-size:16px;font-weight:800}
+.save{background:#6f82a6;color:#fff}
+.clear{background:#eee}
+.status{font-size:13px;text-align:center;margin-top:7px;color:#53606b}
+.badge.ok{background:#e7f6ea}.badge.caution{background:#fff3cd}.badge.danger{background:#ffd9d9}.badge.warn{background:#fff3cd}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2f6;font-size:12px}
+.confirm-box{display:flex;align-items:center;background:#f5f8fb;border:1px solid #d5dce3;border-radius:10px;padding:10px;font-size:13px;font-weight:700}
+
+@media(min-width:650px){.grid{grid-template-columns:1fr 1fr}}
+
+.tabs{max-width:760px;margin:10px auto 0;display:flex;gap:5px;padding:0 12px}
+.tab{flex:1;border:0;border-radius:10px 10px 0 0;padding:10px 4px;font-size:13px;font-weight:800;background:#dfe5ec;color:#334}
+.tab.active{background:#6f82a6;color:white}
+.page{display:none}
+.page.active{display:block}
+/* 整備管理者の確認欄は①点検入力だけに表示 */
+.page:not(#inspectionPage) .manager-simple-card{display:none !important;}
+.master-row{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:7px 0}.master-row input,.master-row select,.master-row button{min-width:0;width:100%}
+.master-row input{flex:1}
+.master-row button{border:0;border-radius:9px;padding:8px 12px;font-weight:800}
+.delete{background:#ffd7d7}
+.edit{background:#e8edf3}
+.list-item{display:flex;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid #ddd}
+.small{font-size:12px;color:#667}
+.record{border:1px solid #d5d9dd;border-radius:10px;padding:10px;margin:8px 0}
+
+.alert{border-radius:10px;padding:10px;margin:7px 0;font-weight:700}
+.alert.red{background:#ffd7d7;color:#8b0000}
+.alert.yellow{background:#fff0b8;color:#755600}
+.alert.green{background:#dcefdc;color:#245c2a}
+
+.manager-simple-card{margin-bottom:110px!important}
+.manager-simple-card .section-title{background:#eef3f8}
+.manager-simple-card select{margin-top:4px;min-height:50px;font-size:15px}
+
+.manager-form{width:100%!important;display:grid!important;grid-template-columns:1fr!important}
+.manager-form label{display:block!important;width:100%!important}
+.manager-form input[type="text"],.manager-form input[type="date"],.manager-form select{
+  display:block!important;width:100%!important;min-width:0!important;height:48px!important;
+  margin-top:5px!important;padding:12px!important;font-size:15px!important;
+}
+.manager-form button{width:100%!important;min-height:48px!important}
+
+
+.vehicle-master-form{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+.vehicle-master-form label{display:block!important;width:100%!important;font-weight:700}
+.vehicle-master-form input{display:block!important;width:100%!important;box-sizing:border-box!important;margin-top:4px!important;min-height:44px!important}
+.vehicle-master-form button{width:100%!important;min-height:46px!important}
+
+
+.cloud-status{margin:8px 0;padding:8px 10px;border-radius:8px;background:#f1f5f9;color:#53606b;font-size:13px;font-weight:700}.cloud-status.ok{background:#eaf7ee;color:#176b35}.cloud-status.ng{background:#fff0f0;color:#a30000}
+
+/* 管理者ログイン */
+.auth-gate{position:fixed;inset:0;z-index:100;background:#f4f6f8;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-card{width:min(430px,100%);background:#fff;border-radius:16px;padding:22px;box-shadow:0 8px 30px #0002}
+.auth-card h2{margin:0 0 8px;font-size:22px}.auth-card p{margin:0 0 16px;color:#667;font-size:13px;line-height:1.6}
+.auth-card input{margin-bottom:10px}.auth-card button{width:100%;border:0;border-radius:11px;padding:13px;font-size:16px;font-weight:800;background:#6f82a6;color:#fff}
+.auth-error{min-height:22px;color:#a30000;font-size:13px;font-weight:700;margin-top:10px}.auth-hidden{display:none!important}
+.auth-switch{margin-top:10px;background:#eef2f6!important;color:#334!important}
+.auth-back{margin-top:8px;background:#eee!important;color:#334!important}
+.register-panel{display:none}.register-panel.show{display:block}.login-panel.hide{display:none}
+.tenant-chip{background:#eef5ff;border:1px solid #c7d8ef;border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;color:#42566f}
+.auth-success{margin-top:10px;padding:10px;border-radius:10px;background:#eaf7ee;color:#176b35;font-size:13px;font-weight:700;display:none}.auth-success.show{display:block}
+.registration-request{border:1px solid #d8e0e8;border-radius:10px;padding:10px;margin:8px 0;background:#fafcff}
+.registration-request .req-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.registration-request button{border:0;border-radius:9px;padding:10px;font-weight:800}
+.registration-request .approve{background:#dcefdc;color:#245c2a}.registration-request .reject{background:#ffd7d7;color:#8b0000}
+.user-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px}.user-bar.show{display:flex}.logout-btn{width:auto;border:1px solid #ffffff88;border-radius:8px;background:#ffffff20;color:#fff;padding:5px 9px;font-weight:700}
+</style>
+</head>
+<body>
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <div id="loginPanel" class="login-panel">
+      <h2>🔐 トラック日常点検 ログイン</h2>
+      <p>個人IDまたは管理者メールアドレスとパスワードでログインしてください。</p>
+      <label>ログインID または メールアドレス</label>
+      <input id="loginEmail" type="text" autocomplete="username" placeholder="例：tanaka01">
+      <label>パスワード</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード">
+      <button type="button" id="loginButton">ログイン</button>
+      <button type="button" id="showRegisterButton" class="auth-switch" style="display:none">初めての方：アカウント登録</button>
+      <div id="authError" class="auth-error"></div>
+      <div id="authSuccess" class="auth-success"></div>
+    </div>
+
+    <div id="registerPanel" class="register-panel">
+      <h2>👤 初回アカウント登録</h2>
+      <p>会社・営業所はQRコードから自動設定されます。入力するのは名前、ログインID、パスワードだけです。</p>
+      <div id="registerTenant" class="tenant-chip">会社・営業所を確認中...</div>
+      <label>名前</label>
+      <input id="registerName" type="text" autocomplete="name" placeholder="例：田中 太郎">
+      <label>ログインID</label>
+      <input id="registerLoginId" type="text" autocapitalize="none" autocomplete="username" placeholder="例：tanaka01">
+      <div class="small" style="margin:-4px 0 10px">半角英数字・「.」「_」「-」で3〜30文字</div>
+      <label>パスワード</label>
+      <input id="registerPassword" type="password" autocomplete="new-password" placeholder="6文字以上">
+      <label>パスワード確認</label>
+      <input id="registerPassword2" type="password" autocomplete="new-password" placeholder="もう一度入力">
+      <button type="button" id="registerButton">登録申請する</button>
+      <button type="button" id="backToLoginButton" class="auth-back">ログインに戻る</button>
+      <div id="registerError" class="auth-error"></div>
+    </div>
+  </div>
+</div>
+<header>
+<h1>🚚 トラック日常点検</h1>
+<div class="sub">iPad縦長入力版 · 1台ごとに保存 · 整備管理者欄は①のみ · 18番☆ミックスタイヤ対応・確実表示版</div>
+<div id="cloudStatus" class="cloud-status">☁️ Firebase：ログイン待ち</div>
+<div id="userBar" class="user-bar"><span id="loginUserLabel"></span><button type="button" id="logoutButton" class="logout-btn">ログアウト</button></div>
+</header>
+
+
+<div class="tabs">
+  <button class="tab active" onclick="showPage('inspection',this)">① 点検入力</button>
+  <button class="tab" onclick="showPage('records',this)">② 点検履歴</button>
+  <button class="tab" onclick="showPage('savedRecords',this)">③ 点検履歴（保存版）</button>
+  <button class="tab" onclick="showPage('master',this)">④ 管理画面</button>
+</div>
+<main>
+<div id="inspectionPage" class="page active">
+<section class="card">
+  <div class="grid">
+    <div><label>点検日</label><input id="date" type="date"></div>
+    <div>
+      <label>車両ナンバー</label>
+      <select id="vehicleSelect" onchange="syncVehicle()">
+        <option value="">車両を選択してください</option>
+        <option value="水戸 100 あ 1234">水戸 100 あ 1234</option>
+        <option value="水戸 100 い 5678">水戸 100 い 5678</option>
+        <option value="その他">その他</option>
+      </select>
+      <input id="vehicle" placeholder="その他の場合は入力" style="display:none;margin-top:7px">
+      <div id="shakenInfo" class="small" style="margin-top:7px"></div>
+      <label id="shakenConfirmWrap" class="confirm-box" style="display:none;margin-top:9px">
+        <input type="checkbox" id="shakenConfirm" style="width:auto;margin-right:7px">
+        車検満了日を確認しました
+      </label>
+    </div>
+    <div style="grid-column:1/-1">
+      <label>点検実施者（運転者）</label>
+      <select id="driverSelect" onchange="syncDriver()">
+        <option value="">運転者を選択してください</option>
+        <option value="運転者A">運転者A</option>
+        <option value="運転者B">運転者B</option>
+        <option value="運転者C">運転者C</option>
+        <option value="その他">その他</option>
+      </select>
+      <input id="driver" placeholder="その他の場合は入力" style="display:none;margin-top:7px">
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="section-title">点検項目 <span class="badge" id="progress">0 / 27</span></div>
+  <div class="bulk-actions" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 12px">
+    <button type="button" onclick="bulkSelectAll()">☑️ 全項目チェック</button>
+    <button type="button" onclick="bulkSelectRequired()">☑️ 茶色以外チェック</button>
+    <button type="button" id="changeDriverButton" onclick="toggleDriverChange()">🔄 運転者乗り換え</button>
+  </div>
+  <div class="small" style="margin-bottom:10px">※ 茶色の点検項目は未選択でも保存できます。18番は「全項目チェック」を使った時だけ手動選択が必須です。</div>
+  <div id="items"></div>
+</section>
+
+<section class="card">
+  <div class="section-title">点検結果・確認事項 <span class="badge">必須</span></div>
+  <label>総合判定</label>
+  <select id="overall" required><option value="">選択してください（必須）</option><option>良好</option><option>要注意</option><option>異常</option></select>
+
+  <div id="changeoverBox" class="changeover-box">
+    <label>乗り換え時　前運転者からの報告事項の有無 <span class="badge">必須</span></label>
+    <div class="choice-row">
+      <button type="button" id="previousReportNone" onclick="setPreviousDriverReport('無')">無</button>
+      <button type="button" id="previousReportYes" onclick="setPreviousDriverReport('有')">有</button>
+    </div>
+    <div class="small" style="margin-top:8px">※「有」を選択した場合は「当日の異常箇所、処置状況の報告」の入力が必須です。</div>
+    <div class="small" style="margin-top:5px">※運転者乗り換えの場合は、27項目の点検結果を選択しなくても保存できます。</div>
+  </div>
+
+  <br><br>
+  <label>異常内容・処置</label><textarea id="abnormal" placeholder="異常があれば入力"></textarea>
+  <label>前日の異常箇所、処置状況</label><textarea id="previous"></textarea>
+  <label>当日の異常箇所、処置状況の報告 <span id="todayRequiredBadge" class="badge" style="display:none">必須</span></label><textarea id="today"></textarea><div id="todayRequiredNote" class="required-note">前運転者からの報告事項が「有」のため入力必須です。</div>
+</section>
+
+<section class="card manager-simple-card">
+  <div class="section-title">🔧 整備管理者</div>
+  <div class="small">確認した人がいる場合だけ選択してください。選択しなくても保存できます。</div>
+  <select id="managerConfirmPerson" aria-label="整備管理者選択">
+    <option value="">選択しない</option>
+  </select>
+</section>
+</div>
+
+<div id="recordsPage" class="page">
+<section class="card">
+<div class="section-title">点検履歴</div>
+<div class="small">🔧 管理者が確認者を選択して「確認してExcel保存」を押すと、Excel出力が成功した後にその点検記録を一覧から「保存済みデータ」へ移動します。元データは削除せず保存され、月間Excelにも含まれます。</div>
+<div id="recordList"></div>
+</section>
+</div>
+
+<div id="savedRecordsPage" class="page">
+<section class="card">
+<div class="section-title">点検履歴（保存版）</div>
+<div class="small">管理者が「確認・承認する」で保存した正式な点検記録だけを表示します。ここには消去ボタンはありません。②の点検履歴から消去した記録は、この保存版には入りません。</div>
+<div id="savedRecordList"></div>
+</section>
+</div>
+
+<div id="masterPage" class="page">
+<section class="card">
+<div class="section-title">🚛 車両マスター</div>
+<div class="small">車両番号・車検満了日・自賠責保険満了日・任意保険満了日を登録します。点検入力時には車検満了日が自動表示されます。</div>
+<div id="vehicleMasterList"></div>
+<div class="master-row vehicle-master-form">
+  <label>車両番号
+    <input id="newVehicle" placeholder="例：水戸 100 あ 1234">
+  </label>
+  <label>車検満了日
+    <input id="newShaken" type="date">
+  </label>
+  <label>自賠責保険満了日
+    <input id="newJibaiseki" type="date">
+  </label>
+  <label>任意保険満了日
+    <input id="newOptional" type="date">
+  </label>
+  <button class="save" onclick="addVehicle()">追加</button>
+</div>
+</section>
+<section class="card">
+<div class="section-title">🔔 車検期限アラート</div>
+<div id="shakenAlerts"></div>
+</section>
+<section class="card">
+<div class="section-title">📱 初回アカウント登録申請</div>
+<div class="small">QRコードから申請された運転者を確認します。「承認」すると、その人の個人IDでログインできるようになります。</div>
+<div id="registrationRequestList" style="margin-top:10px"><div class="small">申請を読み込み中...</div></div>
+</section>
+<section class="card">
+<div class="section-title">👤 運転者マスター</div>
+<div class="small">ここで登録した運転者が点検入力画面の選択肢に表示されます。</div>
+<div id="driverMasterList"></div>
+<div class="master-row"><input id="newDriver" placeholder="例：田中 太郎"><button class="save" onclick="addDriver()">追加</button></div>
+</section>
+<section class="card">
+<div class="section-title">🔧 整備管理者・補助者 選任マスター</div>
+<div class="small">整備管理者または補助者として選任した方を登録します。登録した方は、点検後の確認者選択に表示されます。</div>
+<div id="managerList"></div>
+<div class="manager-form" style="margin-top:10px">
+  <label>氏名
+    <input id="managerName" type="text" placeholder="例：田中 太郎" autocomplete="off">
+  </label>
+  <label>区分
+    <select id="managerRole">
+      <option value="整備管理者">整備管理者</option>
+      <option value="補助者">補助者</option>
+    </select>
+  </label>
+  <label>選任日
+    <input id="managerAppointed" type="date">
+  </label>
+  <button type="button" class="save" onclick="addManager()">＋ 選任登録</button>
+</div>
+</section>
+<section class="card">
+<div class="section-title">📊 Excel出力</div>
+<div class="small">③「点検履歴（保存版）」に保存された正式な点検記録をExcelファイル（.xlsx）として出力します。期間・車両を指定して絞り込めます。</div><div class="small" style="margin-top:6px">※Excel出力は記録を消しません。②で「確認・承認」された記録だけが③の保存版とExcelの対象になります。②で消去した記録はExcelにも出ません。</div>
+<div class="manager-form" style="margin-top:10px">
+  <label>開始日
+    <input id="excelFrom" type="date">
+  </label>
+  <label>終了日
+    <input id="excelTo" type="date">
+  </label>
+  <label>車両
+    <select id="excelVehicle">
+      <option value="">全車両</option>
+    </select>
+  </label>
+  <button type="button" class="save" onclick="exportExcel()">📥 保存版をExcel出力</button><div class="small" style="margin-top:6px">管理Excel出力版 v2026-09-12 / XML修正版・18番手動選択対応｜③保存版の記録だけをExcel出力。Excel出力では履歴は消えません。</div>
+  <div class="small" style="margin-top:8px">※「確認・承認する」で保存された記録は③保存版に残ります。Excel出力だけでは記録は消えません。</div>
+</div>
+<div class="daily-print-box" style="margin-top:14px;padding:12px;border:2px solid #8a6d3b;border-radius:10px;background:#fffaf0">
+  <div style="font-weight:700;margin-bottom:6px">🖨️ 1日・全車両 A4印刷用</div>
+  <div class="small">指定した1日の全車両を、点検項目名を省略せずにA4横・1ページへまとめます。</div>
+  <div class="manager-form" style="margin-top:10px">
+    <label>印刷日
+      <input id="dailyPrintDate" type="date">
+    </label>
+    <button type="button" class="save" onclick="exportDailyPrintExcel()">📄 日別全車両をExcel出力</button>
+  </div>
+</div>
+<div class="daily-print-box" style="margin-top:14px;padding:12px;border:2px solid #5b7f9b;border-radius:10px;background:#f5f9fc">
+  <div style="font-weight:700;margin-bottom:6px">📅 1カ月・全車両 A4印刷用</div>
+  <div class="small">指定した月の各日の全車両を、1日ごとに同じ形式のシートへまとめます。各シートはA4横・1ページ設定です。</div>
+  <div class="manager-form" style="margin-top:10px">
+    <label>対象月
+      <input id="monthlyPrintMonth" type="month">
+    </label>
+    <button type="button" class="save" onclick="exportMonthlyPrintExcel()">📄 1カ月分をExcel出力</button>
+    <div class="small" style="margin-top:6px">※③保存版に正式保存された点検実績だけを出力します。点検していない日・車両の「未点検」行は作りません。</div>
+  </div>
+</div>
+<div class="small" style="margin-top:8px">出力したExcelの「点検記録」シートで、整備管理者・補助者確認者を▽から選択できます。</div>
+</section>
+</div>
+</main>
+
+
+<div class="actions"><div class="actions-inner">
+<button class="clear" onclick="clearForm()">クリア</button>
+<button class="save" onclick="saveRecord()">💾 点検記録を保存</button>
+</div><div class="status" id="status"></div></div>
+
+<section id="helpSection" class="section" style="display:none">
+  <div class="card">
+    <h2>📖 アプリの使い方</h2>
+    <p><b>このアプリは「日常点検 → 保存 → Excelで管理」を一つにまとめたものです。</b></p>
+
+    <h3>🚛 ① 運転者：日常点検</h3>
+    <ol>
+      <li>「点検入力」を開きます。</li>
+      <li>車両番号を選択します。</li>
+      <li>表示された<strong>車検満了日</strong>を確認します。</li>
+      <li>「車検満了日を確認しました」にチェックを入れます。</li>
+      <li>運転者名を選択します。</li>
+      <li>各点検項目の <b>○・△・×</b> をタップします。</li>
+      <li>すべて入力したら「保存」を押します。</li>
+    </ol>
+
+    <h3>📊 ② 管理者：Excelで確認者を選択</h3>
+    <ol>
+      <li>「管理画面」を開きます。</li>
+      <li>「📄 監査用 点検記録PDF出力」まで移動します。</li>
+      <li>必要に応じて車両を選択します。</li>
+      <li>開始日・終了日を入力します。</li>
+      <li>出したい期間のボタンを押します。</li>
+    </ol>
+
+    <div class="card" style="background:#f5f8fb">
+      <b>📅 1日</b>：指定した1日の全車両の記録<br>
+      <b>📆 1週間</b>：開始日から7日間<br>
+      <b>🗓️ 1ヶ月</b>：開始日の月1ヶ月分<br>
+      <b>📚 1年間</b>：開始年の1月1日～12月31日<br>
+      <b>🚛 車両別</b>：選択した車両を指定期間で出力
+    </div>
+
+    <h3>💾 ③ PDFとして保存</h3>
+    <ol>
+      <li>PDF出力ボタンを押すと印刷画面が開きます。</li>
+      <li>「印刷」または「共有」からPDF保存を選択します。</li>
+      <li>iPadなら「ファイルに保存」を選ぶと、指定したフォルダに保管できます。</li>
+    </ol>
+
+    <h3>🛡️ ④ 車両情報の管理</h3>
+    <p>管理者画面では、車検・自賠責・任意保険の満了日を登録できます。期限が近づくとアラート表示されます。</p>
+
+    <h3>🔎 ⑤ 監査前のおすすめ</h3>
+    <ul>
+      <li>1年分の記録が保存されているか確認</li>
+      <li>車両別PDFを確認</li>
+      <li>必要なら「1年間」で全体のPDFを作成</li>
+      <li>PDFを会社の指定フォルダへバックアップ</li>
+    </ul>
+
+    <div class="card">
+      <b>⚠️ 保存について</b><br>
+      点検記録と管理マスターはFirebaseクラウドにも保存します。端末内にも一時保存しますが、通信状況によって同期に時間がかかる場合があります。監査用の長期保存では、Excelの定期バックアップもおすすめします。
+    </div>
+  </div>
+</section>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCnnljHeudw5t_US6v5nkZ4555NGfH-vF8",
+    authDomain: "truck-inspection-app-6a0c8.firebaseapp.com",
+    projectId: "truck-inspection-app-6a0c8",
+    storageBucket: "truck-inspection-app-6a0c8.firebasestorage.app",
+    messagingSenderId: "597073700511",
+    appId: "1:597073700511:web:59e8ee8d9112e6c659a4aa"
+  };
+
+  const firebaseApp = initializeApp(firebaseConfig);
+  const firebaseAuth = getAuth(firebaseApp);
+  const firestoreDb = getFirestore(firebaseApp);
+  const CLOUD_USERS = `users`;
+  let CLOUD_COMPANY = "";
+  let CLOUD_OFFICE = "";
+  let CLOUD_COLLECTION = "";
+  let CLOUD_VEHICLES = "";
+  let CLOUD_MASTER_DOC = "";
+  let CLOUD_REGISTRATION_REQUESTS = "";
+
+  const TENANT_CONTEXT_KEY = "truck_registration_tenant_v1";
+
+  function sanitizeLoginPart(value){
+    return String(value||"").trim().toLowerCase().replace(/[^a-z0-9._-]/g,"");
+  }
+
+  function makeInternalEmail(companyId, officeId, loginId){
+    const c=sanitizeLoginPart(companyId);
+    const o=sanitizeLoginPart(officeId);
+    const u=sanitizeLoginPart(loginId);
+    return `${u}.${o}.${c}@truck-inspection.invalid`;
+  }
+
+  function getTenantContext(){
+    const params=new URLSearchParams(location.search);
+    const companyId=String(params.get("company")||"").trim();
+    const officeId=String(params.get("office")||"").trim();
+    if(companyId && officeId){
+      const ctx={companyId,officeId};
+      localStorage.setItem(TENANT_CONTEXT_KEY, JSON.stringify(ctx));
+      return ctx;
+    }
+    try{
+      const saved=JSON.parse(localStorage.getItem(TENANT_CONTEXT_KEY)||"null");
+      if(saved && saved.companyId && saved.officeId) return saved;
+    }catch(e){}
+    return null;
+  }
+
+  function registrationCollectionPath(companyId,officeId){
+    return `companies/${companyId}/offices/${officeId}/registrationRequests`;
+  }
+
+  function setCloudTenant(profile){
+    const companyId=String(profile?.companyId||"").trim();
+    const officeId=String(profile?.officeId||"").trim();
+    if(!companyId || !officeId || companyId.includes("/") || officeId.includes("/")){
+      throw new Error("会社・営業所の登録情報が正しくありません。");
+    }
+    CLOUD_COMPANY=companyId;
+    CLOUD_OFFICE=officeId;
+    CLOUD_COLLECTION=`companies/${companyId}/offices/${officeId}/inspections`;
+    CLOUD_VEHICLES=`companies/${companyId}/offices/${officeId}/vehicles`;
+    CLOUD_MASTER_DOC=`companies/${companyId}/offices/${officeId}/settings/masterData`;
+  }
+
+  function vehicleDocId(name){
+    return String(name||"").trim().replaceAll("/","／") || crypto.randomUUID();
+  }
+
+  window.firebaseReady = false;
+  window.firebaseUser = null;
+  window.firebaseCloud = {
+    status: "接続中",
+    async saveRecord(record){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      await setDoc(doc(firestoreDb, CLOUD_COLLECTION, String(record.id)), {
+        ...record,
+        companyId: CLOUD_COMPANY,
+        officeId: CLOUD_OFFICE,
+        cloudUpdatedAt: new Date().toISOString()
+      });
+    },
+    async loadRecords(){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      const snap = await getDocs(collection(firestoreDb, CLOUD_COLLECTION));
+      return snap.docs.map(d=>d.data()).filter(x=>x && x.id);
+    },
+    async migrateLocal(records){
+      if(!window.firebaseReady || !records.length) return;
+      for(const record of records){
+        await setDoc(doc(firestoreDb, CLOUD_COLLECTION, String(record.id)), {
+          ...record,
+          companyId: CLOUD_COMPANY,
+          officeId: CLOUD_OFFICE,
+          cloudUpdatedAt: new Date().toISOString()
+        }, {merge:true});
+      }
+    },
+    async loadVehicles(){
+      if(!window.firebaseReady) return [];
+      const snap=await getDocs(collection(firestoreDb, CLOUD_VEHICLES));
+      return snap.docs.map(d=>{
+        const v=d.data()||{};
+        return {
+          _cloudId:d.id,
+          name:String(v.name||v.vehicleNumber||"").trim(),
+          shaken:v.shaken||"",
+          jibaiseki:v.jibaiseki||"",
+          optional:v.optional||""
+        };
+      }).filter(v=>v.name);
+    },
+    async saveVehicle(vehicle){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      const id=vehicle._cloudId||vehicleDocId(vehicle.name);
+      await setDoc(doc(firestoreDb, CLOUD_VEHICLES, id), {
+        name:vehicle.name,
+        vehicleNumber:vehicle.name,
+        shaken:vehicle.shaken||"",
+        jibaiseki:vehicle.jibaiseki||"",
+        optional:vehicle.optional||"",
+        companyId:CLOUD_COMPANY,
+        officeId:CLOUD_OFFICE,
+        cloudUpdatedAt:new Date().toISOString()
+      }, {merge:true});
+      return id;
+    },
+    async deleteVehicle(vehicle){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      const id=vehicle._cloudId||vehicleDocId(vehicle.name);
+      await deleteDoc(doc(firestoreDb, CLOUD_VEHICLES, id));
+    },
+    async loadRegistrationRequests(){
+      if(!window.firebaseReady || !CLOUD_REGISTRATION_REQUESTS) return [];
+      const snap=await getDocs(collection(firestoreDb, CLOUD_REGISTRATION_REQUESTS));
+      return snap.docs.map(d=>({id:d.id,...(d.data()||{})}))
+        .filter(x=>x && x.status==="pending");
+    },
+    async approveRegistration(req){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      if(!req || !req.id) throw new Error("登録申請が見つかりません。");
+      await setDoc(doc(firestoreDb, CLOUD_USERS, req.id), {
+        role:"driver",
+        companyId:CLOUD_COMPANY,
+        officeId:CLOUD_OFFICE,
+        displayName:String(req.displayName||"").trim(),
+        loginId:String(req.loginId||"").trim(),
+        approvedAt:new Date().toISOString()
+      });
+      await setDoc(doc(firestoreDb, CLOUD_REGISTRATION_REQUESTS, req.id), {
+        status:"approved",
+        approvedAt:new Date().toISOString(),
+        approvedBy:window.firebaseUser?.uid||""
+      }, {merge:true});
+    },
+    async rejectRegistration(req){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      await setDoc(doc(firestoreDb, CLOUD_REGISTRATION_REQUESTS, req.id), {
+        status:"rejected",
+        rejectedAt:new Date().toISOString(),
+        rejectedBy:window.firebaseUser?.uid||""
+      }, {merge:true});
+    },
+    async loadMasterData(){
+      if(!window.firebaseReady) return {};
+      const snap=await getDoc(doc(firestoreDb, CLOUD_MASTER_DOC));
+      return snap.exists() ? (snap.data()||{}) : {};
+    },
+    async saveDrivers(drivers){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      await setDoc(doc(firestoreDb, CLOUD_MASTER_DOC), {
+        drivers:Array.isArray(drivers)?drivers:[],
+        cloudUpdatedAt:new Date().toISOString()
+      }, {merge:true});
+    },
+    async saveManagers(managers){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      await setDoc(doc(firestoreDb, CLOUD_MASTER_DOC), {
+        managers:Array.isArray(managers)?managers:[],
+        cloudUpdatedAt:new Date().toISOString()
+      }, {merge:true});
+    }
+  };
+
+  function cloudStatus(message, cls=""){
+    const el=document.getElementById("cloudStatus");
+    if(el){ el.textContent=message; el.className="cloud-status "+cls; }
+  }
+
+  async function loadUserProfile(user){
+    const snap=await getDoc(doc(firestoreDb, CLOUD_USERS, user.uid));
+    if(!snap.exists()) throw new Error("このユーザーには利用権限が登録されていません。");
+    const profile=snap.data()||{};
+    if(!profile.companyId || !profile.officeId){
+      throw new Error("会社・営業所の利用権限が登録されていません。");
+    }
+    if(!["admin","driver"].includes(profile.role)){
+      throw new Error("ユーザー権限が正しく設定されていません。");
+    }
+    return profile;
+  }
+
+  function applyRole(profile, user){
+    const tabs=[...document.querySelectorAll(".tabs .tab")];
+    if(profile.role==="driver") {
+      tabs.forEach((b,i)=>b.style.display=i===0?"":"none");
+      const first=tabs[0]; if(first) first.click();
+    } else {
+      tabs.forEach(b=>b.style.display="");
+    }
+    const label=document.getElementById("loginUserLabel");
+    const bar=document.getElementById("userBar");
+    if(label) label.textContent=`${profile.role==="admin"?"管理者":"運転者"}：${profile.displayName||profile.loginId||user.email||user.uid}｜${profile.companyId}/${profile.officeId}`;
+    if(bar) bar.classList.add("show");
+  }
+
+  function clearTenantLocalCache(){
+    [
+      "truck_inspection_records_v1",
+      "truck_inspection_saved_v1",
+      "truck_inspection_deleted_v1",
+      "truck_inspection_archived_v1",
+      "truck_vehicles",
+      "truck_drivers",
+      "truck_managers"
+    ].forEach(k=>localStorage.removeItem(k));
+  }
+
+  async function syncAfterLogin(profile){
+    // 会社・営業所をまたいで端末内データが混ざらないよう、
+    // ログイン直後に前利用者のローカルキャッシュを破棄し、
+    // 現在の companyId / officeId のクラウドデータだけを読み込む。
+    clearTenantLocalCache();
+
+    const cloudVehicles=await window.firebaseCloud.loadVehicles();
+    localStorage.setItem("truck_vehicles", JSON.stringify(cloudVehicles));
+
+    const masterData=await window.firebaseCloud.loadMasterData();
+    localStorage.setItem("truck_drivers", JSON.stringify(Array.isArray(masterData.drivers)?masterData.drivers:[]));
+    localStorage.setItem("truck_managers", JSON.stringify(Array.isArray(masterData.managers)?masterData.managers:[]));
+
+    if(profile && profile.role==="driver"){
+      // 運転者は点検履歴を端末にも読み込まない。
+      localStorage.setItem("truck_inspection_records_v1", "[]");
+      localStorage.setItem("truck_inspection_saved_v1", "[]");
+      if(typeof renderMasters === "function") renderMasters();
+      if(typeof renderRecords === "function") renderRecords();
+      if(typeof renderSavedRecords === "function") renderSavedRecords();
+      cloudStatus("☁️ Firebase：運転者モード接続済み", "ok");
+      return;
+    }
+
+    // 管理者も現在の会社・営業所のクラウド記録だけを採用する。
+    // 旧仕様のローカル→クラウド自動移行は、別会社への混入防止のため行わない。
+    const cloud = await window.firebaseCloud.loadRecords();
+    const currentTenantRecords = cloud.filter(r =>
+      r && r.id &&
+      (!r.companyId || String(r.companyId)===String(CLOUD_COMPANY)) &&
+      (!r.officeId || String(r.officeId)===String(CLOUD_OFFICE))
+    );
+    localStorage.setItem("truck_inspection_records_v1", JSON.stringify(currentTenantRecords));
+    const formalSaved = currentTenantRecords
+      .filter(r=>r && r.managerConfirmedAt && !r.deletedAt)
+      .map(r=>JSON.parse(JSON.stringify(r)));
+    localStorage.setItem("truck_inspection_saved_v1", JSON.stringify(formalSaved));
+
+    if(typeof renderMasters === "function") renderMasters();
+    if(typeof renderRecords === "function") renderRecords();
+    if(typeof renderSavedRecords === "function") renderSavedRecords();
+    cloudStatus(`☁️ Firebase：接続済み（${currentTenantRecords.length}件）`, "ok");
+  }
+
+  const loginButton=document.getElementById("loginButton");
+  const loginEmail=document.getElementById("loginEmail");
+  const loginPassword=document.getElementById("loginPassword");
+  const authError=document.getElementById("authError");
+  const authSuccess=document.getElementById("authSuccess");
+  const authGate=document.getElementById("authGate");
+  const loginPanel=document.getElementById("loginPanel");
+  const registerPanel=document.getElementById("registerPanel");
+  const showRegisterButton=document.getElementById("showRegisterButton");
+  const backToLoginButton=document.getElementById("backToLoginButton");
+  const registerButton=document.getElementById("registerButton");
+  const registerError=document.getElementById("registerError");
+  const registerTenant=document.getElementById("registerTenant");
+  const tenantContext=getTenantContext();
+
+  function showLoginPanel(message=""){
+    registerPanel.classList.remove("show");
+    loginPanel.classList.remove("hide");
+    authError.textContent="";
+    registerError.textContent="";
+    if(message){
+      authSuccess.textContent=message;
+      authSuccess.classList.add("show");
+    }else{
+      authSuccess.classList.remove("show");
+      authSuccess.textContent="";
+    }
+  }
+
+  function showRegistrationPanel(){
+    if(!tenantContext){
+      authError.textContent="会社専用QRコードから開いてください。";
+      return;
+    }
+    loginPanel.classList.add("hide");
+    registerPanel.classList.add("show");
+    registerError.textContent="";
+  }
+
+  if(tenantContext){
+    showRegisterButton.style.display="";
+    registerTenant.textContent=`会社・営業所：自動設定済み（${tenantContext.companyId} / ${tenantContext.officeId}）`;
+  }else{
+    registerTenant.textContent="会社・営業所情報がありません。会社専用QRコードから開いてください。";
+  }
+
+  showRegisterButton.addEventListener("click",showRegistrationPanel);
+  backToLoginButton.addEventListener("click",()=>showLoginPanel());
+  if(new URLSearchParams(location.search).get("register")==="1" && tenantContext){
+    showRegistrationPanel();
+  }
+
+  loginButton.addEventListener("click", async ()=>{
+    authError.textContent="";
+    authSuccess.classList.remove("show");
+    const loginValue=loginEmail.value.trim();
+    const password=loginPassword.value;
+    if(!loginValue || !password){ authError.textContent="ログインID（またはメールアドレス）とパスワードを入力してください。"; return; }
+
+    let authEmail=loginValue;
+    if(!loginValue.includes("@")){
+      const ctx=getTenantContext();
+      if(!ctx){
+        authError.textContent="個人IDでログインする場合は、会社専用QRコードから開いてください。";
+        return;
+      }
+      const normalized=sanitizeLoginPart(loginValue);
+      if(normalized.length<3){
+        authError.textContent="ログインIDを確認してください。";
+        return;
+      }
+      authEmail=makeInternalEmail(ctx.companyId,ctx.officeId,normalized);
+    }
+
+    loginButton.disabled=true; loginButton.textContent="ログイン中…";
+    try { await signInWithEmailAndPassword(firebaseAuth,authEmail,password); }
+    catch(e){ console.error(e); authError.textContent="ログインできません。ID（またはメールアドレス）とパスワードを確認してください。"; }
+    finally { loginButton.disabled=false; loginButton.textContent="ログイン"; }
+  });
+  loginPassword.addEventListener("keydown",e=>{ if(e.key==="Enter") loginButton.click(); });
+
+  registerButton.addEventListener("click", async ()=>{
+    registerError.textContent="";
+    if(!tenantContext){ registerError.textContent="会社専用QRコードから開いてください。"; return; }
+
+    const displayName=document.getElementById("registerName").value.trim();
+    const loginIdRaw=document.getElementById("registerLoginId").value.trim();
+    const loginId=sanitizeLoginPart(loginIdRaw);
+    const password=document.getElementById("registerPassword").value;
+    const password2=document.getElementById("registerPassword2").value;
+
+    if(!displayName){ registerError.textContent="名前を入力してください。"; return; }
+    if(loginIdRaw!==loginId || !/^[a-z0-9._-]{3,30}$/.test(loginId)){
+      registerError.textContent="ログインIDは半角英数字・. _ - で3〜30文字にしてください。";
+      return;
+    }
+    if(password.length<6){ registerError.textContent="パスワードは6文字以上にしてください。"; return; }
+    if(password!==password2){ registerError.textContent="確認用パスワードが一致しません。"; return; }
+
+    const internalEmail=makeInternalEmail(tenantContext.companyId,tenantContext.officeId,loginId);
+    registerButton.disabled=true; registerButton.textContent="登録申請中…";
+    window.registrationInProgress=true;
+    try{
+      const cred=await createUserWithEmailAndPassword(firebaseAuth,internalEmail,password);
+      const uid=cred.user.uid;
+      const reqPath=registrationCollectionPath(tenantContext.companyId,tenantContext.officeId);
+      await setDoc(doc(firestoreDb, reqPath, uid), {
+        displayName,
+        loginId,
+        role:"driver",
+        companyId:tenantContext.companyId,
+        officeId:tenantContext.officeId,
+        status:"pending",
+        createdAt:new Date().toISOString()
+      });
+      await signOut(firebaseAuth);
+      document.getElementById("registerName").value="";
+      document.getElementById("registerLoginId").value="";
+      document.getElementById("registerPassword").value="";
+      document.getElementById("registerPassword2").value="";
+      showLoginPanel("登録申請を送信しました。管理者の承認後、このIDでログインできます。");
+    }catch(e){
+      console.error(e);
+      if(e?.code==="auth/email-already-in-use"){
+        registerError.textContent="このログインIDはすでに使われています。別のIDを入力してください。";
+      }else{
+        registerError.textContent="登録申請に失敗しました。通信状況またはFirebase設定を確認してください。";
+      }
+      try{ if(firebaseAuth.currentUser) await signOut(firebaseAuth); }catch(_e){}
+    }finally{
+      window.registrationInProgress=false;
+      registerButton.disabled=false; registerButton.textContent="登録申請する";
+    }
+  });
+
+  document.getElementById("logoutButton").addEventListener("click",()=>{
+    clearTenantLocalCache();
+    signOut(firebaseAuth);
+  });
+
+  onAuthStateChanged(firebaseAuth, async user=>{
+    if(window.registrationInProgress) return;
+    if(!user){
+      window.firebaseUser=null; window.firebaseReady=false;
+      authGate.classList.remove("auth-hidden");
+      document.getElementById("userBar").classList.remove("show");
+      cloudStatus("☁️ Firebase：ログイン待ち");
+      return;
+    }
+    try{
+      cloudStatus("☁️ Firebase：権限確認中…");
+      const profile=await loadUserProfile(user);
+      setCloudTenant(profile);
+      window.firebaseUser=user; window.firebaseReady=true; window.firebaseProfile=profile;
+      window.firebaseCloud.status="接続済み";
+      applyRole(profile,user);
+      await syncAfterLogin(profile);
+      authGate.classList.add("auth-hidden");
+      authError.textContent="";
+    }catch(e){
+      console.error(e);
+      window.firebaseReady=false;
+      let msg=e?.message||"権限を確認できませんでした。";
+      const ctx=getTenantContext();
+      if(ctx && user){
+        try{
+          const reqSnap=await getDoc(doc(firestoreDb, registrationCollectionPath(ctx.companyId,ctx.officeId), user.uid));
+          if(reqSnap.exists()){
+            const st=reqSnap.data()?.status;
+            if(st==="pending") msg="このアカウントは管理者の承認待ちです。";
+            if(st==="rejected") msg="このアカウント登録申請は承認されていません。管理者へ確認してください。";
+          }
+        }catch(_e){}
+      }
+      authError.textContent=msg;
+      cloudStatus("⚠️ Firebase：権限確認エラー", "ng");
+      authGate.classList.remove("auth-hidden");
+      await signOut(firebaseAuth).catch(()=>{});
+    }
+  });
+</script>
+<script>
+const items = [{"no": 1, "text": "エンジンのかかり具合、異音"}, {"no": 2, "text": "ブレーキ・ペダルの踏みしろ、効き具合"}, {"no": 3, "text": "駐車ブレーキ・レバーの引きしろ（踏みしろ）"}, {"no": 4, "text": "空気圧力計の上り具合"}, {"no": 5, "text": "ブレーキ・バルブの排気音"}, {"no": 6, "text": "方向指示器の点滅具合"}, {"no": 7, "text": "ブレーキ・オイルのリザーバタンクの液量"}, {"no": 8, "text": "ウインド・ウォッシャの液量、噴射状態"}, {"no": 9, "text": "ワイパーの拭き取り状態"}, {"no": 10, "text": "ラジエータの冷却水の量"}, {"no": 11, "text": "ファン・ベルトの張り具合、損傷"}, {"no": 12, "text": "エンジン・オイルの液量、液漏れ"}, {"no": 13, "text": "バッテリの液量"}, {"no": 14, "text": "前照灯、方向指示器、車幅灯、非常点滅灯、その他灯火の点灯・点滅具合"}, {"no": 15, "text": "灯火類のレンズ、反射器の汚れ、変色、損傷状況（前部）"}, {"no": 16, "text": "タイヤの空気圧、異常摩耗、亀裂、損傷"}, {"no": 17, "text": "タイヤの溝の深さ"}, {"no": 18, "text": "冬用タイヤのプラットホームの露出の有無"}, {"no": 19, "text": "★ ディスク・ホイールの取付け状態（ホイール・ボルトの折損・ゆるみ等）"}, {"no": 20, "text": "エア・タンク内の疑水"}, {"no": 21, "text": "（ブレーキ・ペダルの踏みしろ、効き具合）ブレーキ・チャンバのロッドのストロークドラムとライニングのすき間"}, {"no": 22, "text": "番号灯、方向指示器、尾灯、制動灯、後退灯、非常点滅灯、その他灯火の点灯、点滅具合"}, {"no": 23, "text": "灯火類のレンズ、反射器の汚れ、変色、損傷状況（後部）"}, {"no": 24, "text": "座席（シートベルト）の装着状況"}, {"no": 25, "text": "工具、スペアタイヤの固定状況"}, {"no": 26, "text": "非常信号用具、停止表示器材、車輪止め、自賠責保険証、点検整備記録簿等の車載状況"}, {"no": 27, "text": "チャート紙の装着状況"}];
+window.items = items;
+const results = {};
+let requireItem18 = false; // 「全項目チェック」を使った時だけ18番を必須にする
+const key = "truck_inspection_records_v1";
+
+
+const defaultVehicles = [
+  {name:"水戸 100 あ 1234", shaken:""},
+  {name:"水戸 100 い 5678", shaken:""}
+];
+const defaultDrivers = ["運転者A","運転者B","運転者C"];
+
+function getMaster(name, defaults){
+  const saved=localStorage.getItem(name);
+  const value=saved?JSON.parse(saved):JSON.parse(JSON.stringify(defaults));
+  if(name==="truck_vehicles") return value.map(v=>({_cloudId:v._cloudId||"",name:v.name||v.vehicleNumber||"",shaken:v.shaken||"",jibaiseki:v.jibaiseki||"",optional:v.optional||""}));
+  return value;
+}
+function saveMaster(name, arr){ localStorage.setItem(name, JSON.stringify(arr)); }
+
+
+function getDaysToShaken(dateStr){
+  if(!dateStr) return null;
+  const d=new Date(dateStr+"T00:00:00");
+  const t=new Date(); t.setHours(0,0,0,0);
+  return Math.ceil((d-t)/86400000);
+}
+function renderShakenAlerts(){
+  const arr=getMaster("truck_vehicles",defaultVehicles);
+  const root=document.getElementById("shakenAlerts");
+  if(!arr.length){root.innerHTML='<div class="small">登録車両がありません。</div>';return;}
+  const alerts=arr.map(v=>({...v,days:getDaysToShaken(v.shaken)}))
+    .filter(v=>v.days!==null && v.days<=30)
+    .sort((a,b)=>a.days-b.days);
+  if(!alerts.length){
+    root.innerHTML='<div class="alert green">✅ 30日以内に車検期限を迎える車両はありません。</div>';
+    return;
+  }
+  root.innerHTML=alerts.map(v=>{
+    let cls="yellow", msg="";
+    if(v.days<0){cls="red";msg=`⚠️ 車検期限切れ：${Math.abs(v.days)}日前`;}
+    else if(v.days<=7){cls="red";msg=`🚨 車検まであと ${v.days} 日`;}
+    else if(v.days<=15){cls="yellow";msg=`⚠️ 車検まであと ${v.days} 日`;}
+    else {cls="yellow";msg=`📅 車検まであと ${v.days} 日`;}
+    return `<div class="alert ${cls}">${escapeHtml(v.name)}　${msg}<br><span class="small">満了日：${escapeHtml(v.shaken)}</span></div>`;
+  }).join("");
+}
+
+
+function populateExcelVehicle(){
+  const el=document.getElementById("excelVehicle");
+  if(!el) return;
+  const arr=getMaster("truck_vehicles",defaultVehicles);
+  el.innerHTML='<option value="">全車両</option>'+
+    arr.map(x=>`<option value="${escapeAttr(x.name||"")}">${escapeHtml(x.name||"")}</option>`).join("");
+}
+
+async function renderRegistrationRequests(){
+  const root=document.getElementById("registrationRequestList");
+  if(!root) return;
+  if(!window.firebaseReady || window.firebaseProfile?.role!=="admin"){
+    root.innerHTML='<div class="small">管理者ログイン時のみ表示します。</div>';
+    return;
+  }
+  root.innerHTML='<div class="small">申請を読み込み中...</div>';
+  try{
+    const requests=await window.firebaseCloud.loadRegistrationRequests();
+    window._registrationRequests=requests;
+    if(!requests.length){
+      root.innerHTML='<div class="small">現在、承認待ちの申請はありません。</div>';
+      return;
+    }
+    root.innerHTML=requests.map((r,i)=>`
+      <div class="registration-request">
+        <b>${escapeHtml(String(r.displayName||"名前未設定"))}</b><br>
+        <span class="small">ログインID：${escapeHtml(String(r.loginId||""))}</span>
+        <div class="req-actions">
+          <button class="approve" onclick="approveRegistrationRequest(${i})">✅ 承認</button>
+          <button class="reject" onclick="rejectRegistrationRequest(${i})">却下</button>
+        </div>
+      </div>`).join("");
+  }catch(e){
+    console.error(e);
+    root.innerHTML='<div class="small" style="color:#a30000">登録申請を読み込めませんでした。Firestoreルールを確認してください。</div>';
+  }
+}
+
+async function approveRegistrationRequest(i){
+  const req=(window._registrationRequests||[])[i];
+  if(!req) return;
+  if(!confirm(`「${req.displayName||req.loginId}」さんの登録を承認しますか？`)) return;
+  try{
+    await window.firebaseCloud.approveRegistration(req);
+    const drivers=getMaster("truck_drivers",defaultDrivers);
+    const name=String(req.displayName||"").trim();
+    if(name && !drivers.includes(name)){
+      drivers.push(name);
+      saveMaster("truck_drivers",drivers);
+      await window.firebaseCloud.saveDrivers(drivers);
+    }
+    renderMasters();
+    alert("登録を承認しました。本人は個人IDでログインできます。");
+  }catch(e){
+    console.error(e);
+    alert("承認に失敗しました。Firestoreルールを確認してください。");
+  }
+}
+
+async function rejectRegistrationRequest(i){
+  const req=(window._registrationRequests||[])[i];
+  if(!req) return;
+  if(!confirm(`「${req.displayName||req.loginId}」さんの申請を却下しますか？`)) return;
+  try{
+    await window.firebaseCloud.rejectRegistration(req);
+    renderRegistrationRequests();
+  }catch(e){
+    console.error(e);
+    alert("却下処理に失敗しました。");
+  }
+}
+
+function renderMasters(){
+  renderShakenAlerts();
+  renderRegistrationRequests();
+  const vehicles=getMaster("truck_vehicles",defaultVehicles);
+  const drivers=getMaster("truck_drivers",defaultDrivers);
+
+  document.getElementById("vehicleMasterList").innerHTML=vehicles.map((v,i)=>
+    `<div class="list-item"><span><b>${escapeHtml(v.name)}</b><br><span class="small">車検満了：${v.shaken ? escapeHtml(v.shaken) : "未登録"}</span></span><button class="delete" onclick="removeVehicle(${i})">削除</button></div>`).join("");
+
+  document.getElementById("driverMasterList").innerHTML=drivers.map((v,i)=>
+    `<div class="list-item"><span>${escapeHtml(v)}</span><button class="delete" onclick="removeDriver(${i})">削除</button></div>`).join("");
+
+  const vs=document.getElementById("vehicleSelect");
+  const ds=document.getElementById("driverSelect");
+  const vcur=vs.value, dcur=ds.value;
+  vs.innerHTML='<option value="">車両を選択してください</option>'+vehicles.map(v=>`<option value="${escapeAttr(v.name)}">${escapeHtml(v.name)}</option>`).join("")+'<option value="その他">その他</option>';
+  ds.innerHTML='<option value="">運転者を選択してください</option>'+drivers.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("")+'<option value="その他">その他</option>';
+  if(vehicles.some(v=>v.name===vcur)) vs.value=vcur; else if(vcur==="その他") vs.value="その他";
+  if(drivers.includes(dcur)) ds.value=dcur; else if(dcur==="その他") ds.value="その他";
+  updateShakenInfo();
+}
+  populateExcelVehicle();
+async function addVehicle(){
+  const name=document.getElementById("newVehicle").value.trim();
+  const shaken=document.getElementById("newShaken").value;
+  const jibaiseki=document.getElementById("newJibaiseki").value;
+  const optional=document.getElementById("newOptional").value;
+  if(!name){alert("車両番号を入力してください。");return}
+  const arr=getMaster("truck_vehicles",defaultVehicles);
+  if(arr.some(v=>v.name===name)){alert("同じ車両番号が既に登録されています。");return}
+  const vehicle={name,shaken,jibaiseki,optional,_cloudId:""};
+  arr.push(vehicle);
+  saveMaster("truck_vehicles",arr);
+  try{
+    if(window.firebaseReady && window.firebaseCloud){
+      vehicle._cloudId=await window.firebaseCloud.saveVehicle(vehicle);
+      saveMaster("truck_vehicles",arr);
+    }
+  }catch(e){
+    console.error(e);
+    alert("車両はこの端末に保存しましたが、Firebaseへの保存に失敗しました。");
+  }
+  document.getElementById("newVehicle").value="";
+  document.getElementById("newShaken").value="";
+  document.getElementById("newJibaiseki").value="";
+  document.getElementById("newOptional").value="";
+  renderMasters();
+}
+function addDriver(){
+  const v=document.getElementById("newDriver").value.trim();
+  if(!v) return;
+  const arr=getMaster("truck_drivers",defaultDrivers);
+  if(!arr.includes(v)) arr.push(v);
+  saveMaster("truck_drivers",arr);
+  if(window.firebaseReady && window.firebaseCloud){
+    window.firebaseCloud.saveDrivers(arr).catch(e=>{console.error(e);alert("運転者のクラウド保存に失敗しました。");});
+  }
+  document.getElementById("newDriver").value="";
+  renderMasters();
+}
+async function removeVehicle(i){
+  const arr=getMaster("truck_vehicles",defaultVehicles);
+  const target=arr[i];
+  if(!target) return;
+  if(confirm(`「${target.name}」を削除しますか？`)){
+    arr.splice(i,1);
+    saveMaster("truck_vehicles",arr);
+    try{
+      if(window.firebaseReady && window.firebaseCloud) await window.firebaseCloud.deleteVehicle(target);
+    }catch(e){
+      console.error(e);
+      alert("この端末では削除しましたが、Firebase側の削除に失敗しました。");
+    }
+    renderMasters();
+  }
+}
+function removeDriver(i){
+  const arr=getMaster("truck_drivers",defaultDrivers);
+  if(confirm(`「${arr[i]}」を削除しますか？`)){
+    arr.splice(i,1);
+    saveMaster("truck_drivers",arr);
+    if(window.firebaseReady && window.firebaseCloud){
+      window.firebaseCloud.saveDrivers(arr).catch(e=>{console.error(e);alert("運転者のクラウド更新に失敗しました。");});
+    }
+    renderMasters();
+  }
+}
+function showPage(page,btn){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  document.getElementById(page+"Page").classList.add("active");
+  btn.classList.add("active");
+  document.querySelector(".actions").style.display=page==="inspection"?"block":"none";
+  if(page==="records") renderRecords();
+  if(page==="savedRecords"){
+    renderSavedRecords();
+    refreshSavedRecordsFromCloud();
+  }
+  if(page==="master") renderMasters();
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function escapeAttr(s){return s.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function renderRecords(){
+  const all=getRecords();
+  // Excel出力済みの記録は履歴一覧からだけ非表示。元データはlocalStorageに残す。
+  const arr=all.filter(r=>!r.managerConfirmedAt && !r.deletedAt).slice().reverse();
+  const root=document.getElementById("recordList");
+  if(!arr.length){root.innerHTML='<div class="small">保存された点検記録はありません。</div>';return;}
+  const managers=getManagers();
+  const managerOptions='<option value="">確認者を選択</option>'+managers.map((m,i)=>{
+    const name=typeof m==="string"?m:(m.name||"");
+    const role=typeof m==="string"?"":(m.role||"");
+    return `<option value="${i}">${escapeHtml(name)}${role?`（${escapeHtml(role)}）`:''}</option>`;
+  }).join("");
+  root.innerHTML=arr.map((r,i)=>{
+    const ng=Object.values(r.results||{}).filter(v=>v==="×").length;
+    const warn=Object.values(r.results||{}).filter(v=>v==="△").length;
+    const historyIndex=all.findIndex(x=>String(x.id||"")===String(r.id||""));
+    const id=String(r.id||"");
+    return `<div class="record">
+      <b>${escapeHtml(r.date||"")}</b>　${escapeHtml(r.vehicle||"")}<br>
+      運転者：${escapeHtml(r.driver||"")}　判定：${escapeHtml(r.overall||"未入力")}<br>
+      ${r.driverChange?`乗り換え：あり　前運転者からの報告事項：${escapeHtml(r.previousDriverReport||"未選択")}<br>`:""}
+      車検満了：${escapeHtml(r.shaken||"未登録")}<br>
+      <span class="small">△ ${warn}件 / × ${ng}件</span>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #ddd">
+        <label style="display:block;font-weight:bold;margin-bottom:5px">🔧 管理者確認</label>
+        <select id="confirmManager_${historyIndex}">${managerOptions}</select>
+        <button class="save" style="margin-top:8px;width:100%" onclick="confirmAndExportRecordByIndex(${historyIndex})">✅ 確認・承認する</button>
+        <button type="button" class="clear" style="margin-top:8px;width:100%" onclick="deleteHistoryRecord(${historyIndex})">🗑️ この点検記録を消去</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function getSavedRecords(){
+  // ③「点検履歴（保存版）」専用の正式保存台帳。
+  // ここに入った記録だけが③と月別Excelの対象になる。
+  let saved=[];
+  let hasSavedStore=false;
+  try{
+    const raw=localStorage.getItem("truck_inspection_saved_v1");
+    if(raw!==null){ saved=JSON.parse(raw)||[]; hasSavedStore=true; }
+  }catch(e){ saved=[]; }
+  if(!hasSavedStore){
+    // 旧バージョンからの初回移行。確認済みの記録だけを一度だけ正式保存台帳へ移す。
+    saved=getRecords().filter(r=>r && r.managerConfirmedAt && !r.deletedAt).map(r=>JSON.parse(JSON.stringify(r)));
+    try{localStorage.setItem("truck_inspection_saved_v1",JSON.stringify(saved));}catch(e){}
+  }
+  // 削除済みIDを必ず除外し、③から復活しないようにする。
+  let deletedIds=[];
+  try{deletedIds=JSON.parse(localStorage.getItem("truck_inspection_deleted_v1")||"[]");}catch(e){deletedIds=[];}
+  const deleted=new Set(deletedIds.map(x=>String(x)));
+  return saved.filter(r=>r && !r.deletedAt && !deleted.has(String(r.id||"")));
+}
+function saveSavedRecords(arr){
+  localStorage.setItem("truck_inspection_saved_v1",JSON.stringify(arr||[]));
+}
+
+
+async function refreshSavedRecordsFromCloud(){
+  if(!window.firebaseReady || !window.firebaseCloud || !window.firebaseCloud.loadRecords) return;
+  const root=document.getElementById("savedRecordList");
+  try{
+    const cloud=await window.firebaseCloud.loadRecords();
+    const local=getRecords();
+    const byId=new Map();
+    [...local,...cloud].forEach(r=>{ if(r && r.id) byId.set(String(r.id),r); });
+    const merged=[...byId.values()];
+    localStorage.setItem(key,JSON.stringify(merged));
+    const formalSaved=merged
+      .filter(r=>r && r.managerConfirmedAt && !r.deletedAt)
+      .map(r=>JSON.parse(JSON.stringify(r)));
+    saveSavedRecords(formalSaved);
+    renderSavedRecords();
+    const status=document.getElementById("status");
+    if(status) status.textContent=`保存版をクラウドと同期しました（${formalSaved.length}件）。`;
+  }catch(e){
+    console.error(e);
+    if(root && !root.children.length) root.innerHTML='<div class="small">クラウド同期に失敗しました。通信状態を確認してください。</div>';
+  }
+}
+
+function renderSavedRecords(){
+  const arr=getSavedRecords().slice().sort((a,b)=>String(b.managerConfirmedAt||b.savedAt||b.date||"").localeCompare(String(a.managerConfirmedAt||a.savedAt||a.date||"")));
+  const root=document.getElementById("savedRecordList");
+  if(!root) return;
+  if(!arr.length){root.innerHTML='<div class="small">保存済みの点検記録はありません。</div>';return;}
+  root.innerHTML=arr.map(r=>{
+    const ng=Object.values(r.results||{}).filter(v=>v==="×").length;
+    const warn=Object.values(r.results||{}).filter(v=>v==="△").length;
+    const confirmedAt=r.managerConfirmedAt ? new Date(r.managerConfirmedAt).toLocaleString("ja-JP") : "";
+    return `<div class="record" style="border-left:5px solid #5b7f9b">
+      <b>${escapeHtml(r.date||"")}</b>　${escapeHtml(r.vehicle||"")}<br>
+      運転者：${escapeHtml(r.driver||"")}　判定：${escapeHtml(r.overall||"未入力")}<br>
+      ${r.driverChange?`乗り換え：あり　前運転者からの報告事項：${escapeHtml(r.previousDriverReport||"未選択")}<br>`:""}
+      車検満了：${escapeHtml(r.shaken||"未登録")}<br>
+      確認者：${escapeHtml(r.managerConfirmedBy||"")}${r.managerConfirmedRole?`（${escapeHtml(r.managerConfirmedRole)}）`:''}<br>
+      <span class="small">保存日時：${escapeHtml(confirmedAt)}　/　△ ${warn}件 / × ${ng}件</span>
+    </div>`;
+  }).join("");
+}
+
+async function deleteHistoryRecord(index){
+  const records=getRecords();
+  if(!Number.isInteger(index) || index<0 || index>=records.length){
+    alert("点検記録が見つかりません。画面を更新してください。");
+    return;
+  }
+  const target=records[index];
+  const detail=`点検日：${target.date||""}\n車両：${target.vehicle||""}\n運転者：${target.driver||""}\n\nこの点検記録を完全に消去しますか？\n※この操作は元に戻せません。`;
+  if(!window.confirm(detail)) return;
+  // 履歴から消去した記録は「削除台帳」にIDを残す。
+  // これにより、月間・日別Excelの元データ側に古いコピーが残っていても、
+  // 今後のExcel出力には再登場しないようにする。
+  // IDがない旧データにも確実に削除印を付ける
+  if(!target.id){ target.id='R'+Date.now()+Math.random().toString(16).slice(2); }
+  target.deletedAt=new Date().toISOString();
+  // ③保存版に入っていた記録も、②で消去した時点で保存版から除外する。
+  try{
+    const saved=getSavedRecords();
+    const targetId=String(target.id||"");
+    const kept=saved.filter(r=>String(r.id||"")!==targetId);
+    saveSavedRecords(kept);
+  }catch(e){}
+  const deletedId=String(target.id||"");
+  let deletedIds=[];
+  try{ deletedIds=JSON.parse(localStorage.getItem("truck_inspection_deleted_v1")||"[]"); }catch(e){ deletedIds=[]; }
+  if(deletedId && !deletedIds.includes(deletedId)) deletedIds.push(deletedId);
+  localStorage.setItem("truck_inspection_deleted_v1",JSON.stringify(deletedIds));
+
+  // 元データは物理削除せず、削除済みフラグを保持する。
+  // これにより履歴・日別Excel・月別Excelのすべてで同じ記録を確実に除外できる。
+  records[index]=target;
+  localStorage.setItem(key,JSON.stringify(records));
+  try{
+    if(window.firebaseCloud && window.firebaseCloud.saveRecord){
+      await window.firebaseCloud.saveRecord(target);
+    }
+    document.getElementById("status").textContent="点検記録を消去し、クラウドにも同期しました。Excel出力からも除外されます。";
+  }catch(e){
+    document.getElementById("status").textContent="端末では消去しましたが、クラウド同期に失敗しました。通信状態を確認してください。";
+    alert("クラウド同期に失敗しました。\n"+(e&&e.message?e.message:e));
+  }
+  renderRecords();
+  renderSavedRecords();
+}
+
+// 旧ボタンや保存データとの互換用
+function deleteRecord(id){
+  const records=getRecords();
+  const index=records.findIndex(r=>String(r.id||"")===String(id||""));
+  if(index<0){ alert("点検記録が見つかりません。画面を更新してください。"); return; }
+  deleteHistoryRecord(index);
+}
+
+async function confirmAndExportRecordByIndex(index){
+  const records=getRecords();
+  if(!Number.isInteger(index) || index<0 || index>=records.length){
+    alert("点検記録が見つかりません。画面を更新してください。");
+    return;
+  }
+  const target=records[index];
+  const id=String(target.id||"");
+  const sel=document.getElementById("confirmManager_"+index);
+  if(!sel || sel.value===""){
+    alert("整備管理者または補助者を選択してください。");
+    return;
+  }
+  const managers=getManagers();
+  const manager=managers[Number(sel.value)];
+  if(!manager){alert("選択した確認者が見つかりません。");return;}
+  const managerName=typeof manager==="string"?manager:(manager.name||"");
+  const managerRole=typeof manager==="string"?"":(manager.role||"");
+  if(!confirm(`確認者：${managerName}${managerRole?`（${managerRole}）`:''}\n\nこの点検記録の確認者を保存しますか？\n※確認・承認すると履歴一覧から非表示になります。Excel出力とは別の処理です。元データは削除されません。`)) return;
+
+  target.managerConfirmedBy=managerName;
+  target.managerConfirmedRole=managerRole;
+  target.managerConfirmedAt=new Date().toISOString();
+
+  // 確認・承認された瞬間に③「保存版」へ正式保存する。
+  try{
+    const saved=getSavedRecords();
+    const targetId=String(target.id||"");
+    const withoutTarget=saved.filter(r=>String(r.id||"")!==targetId);
+    withoutTarget.push(JSON.parse(JSON.stringify(target)));
+    saveSavedRecords(withoutTarget);
+  }catch(e){ alert("保存版への保存に失敗しました。\n"+(e&&e.message?e.message:e)); return; }
+
+  // ここでは確認者情報だけ保存する。点検履歴からは消さない。
+  const latestRecords=getRecords();
+  const targetId=String(target.id||"");
+  const targetIndex=latestRecords.findIndex(r=>String(r.id||"")===targetId);
+  if(targetIndex>=0){
+    latestRecords[targetIndex]=target;
+    localStorage.setItem(key,JSON.stringify(latestRecords));
+  }
+  try{
+    if(window.firebaseCloud && window.firebaseCloud.saveRecord){
+      await window.firebaseCloud.saveRecord(target);
+    }
+    document.getElementById("status").textContent="管理者確認・承認を保存し、クラウドにも同期しました。";
+  }catch(e){
+    document.getElementById("status").textContent="端末には承認を保存しましたが、クラウド同期に失敗しました。";
+    alert("クラウド同期に失敗しました。\n"+(e&&e.message?e.message:e));
+  }
+  renderRecords();
+  renderSavedRecords();
+}
+
+// 旧ボタンや保存データとの互換用
+function confirmAndExportRecord(id){
+  const records=getRecords();
+  const index=records.findIndex(r=>String(r.id||"")===String(id||""));
+  if(index<0){ alert("点検記録が見つかりません。画面を更新してください。"); return; }
+  confirmAndExportRecordByIndex(index);
+}
+
+function exportSingleRecordExcel(r){
+  // 既存のExcel出力機能を利用し、1件だけを出力するため一時的にフィルター値を設定する。
+  const from=document.getElementById("excelFrom");
+  const to=document.getElementById("excelTo");
+  const vehicle=document.getElementById("excelVehicle");
+  const oldFrom=from?from.value:"", oldTo=to?to.value:"", oldVehicle=vehicle?vehicle.value:"";
+  if(from) from.value=(r.date||"").slice(0,10);
+  if(to) to.value=(r.date||"").slice(0,10);
+  if(vehicle) vehicle.value=r.vehicle||"";
+  try{ return exportExcel(); }
+  finally{
+    if(from) from.value=oldFrom;
+    if(to) to.value=oldTo;
+    if(vehicle) vehicle.value=oldVehicle;
+  }
+}
+
+function localDateKey(d=new Date()){
+  const z=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+}
+function today(){ return localDateKey(); }
+document.getElementById("date").value=today();
+renderMasters();
+
+const root=document.getElementById("items");
+items.forEach(x=>{
+  const div=document.createElement("div");
+  div.className="item" + ([1,8,9,10,11,12,13,17,18,21].includes(Number(x.no)) ? " brown" : ""); div.dataset.no=x.no;
+  const isMixedTire=(Number(x.no)===18);
+  div.innerHTML=`<div class="q">${x.no}. ${x.text}</div>
+  <div class="result${isMixedTire?' four-choice':''}">
+    <button onclick="setResult(${x.no},'○',this)" class="ok">○ 良好</button>
+    <button onclick="setResult(${x.no},'△',this)" class="warn">△ 要注意</button>
+    <button onclick="setResult(${x.no},'×',this)" class="ng">× 異常</button>
+    ${isMixedTire ? `<button type="button" onclick="setResult(${x.no},'☆',this)" class="mix" style="display:block!important;visibility:visible!important">☆ ミックスタイヤ</button>` : ''}
+  </div>`;
+  root.appendChild(div);
+  // 18番は必ず4択を表示（既存コードやキャッシュ由来の表示崩れ対策）
+  if(Number(x.no)===18 && !div.querySelector("button.mix")){
+    const mixBtn=document.createElement("button");
+    mixBtn.type="button";
+    mixBtn.className="mix";
+    mixBtn.textContent="☆ ミックスタイヤ";
+    mixBtn.style.display="block";
+    mixBtn.style.visibility="visible";
+    mixBtn.onclick=function(){setResult(18,"☆",this);};
+    const resultBox=div.querySelector(".result");
+    if(resultBox){
+      resultBox.classList.add("four-choice");
+      resultBox.appendChild(mixBtn);
+    }
+  }
+});
+
+function setResult(no,val,btn){
+  results[no]=val;
+  btn.parentElement.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  updateProgress();
+}
+
+function bulkSelectAll(){
+  requireItem18 = true;
+  items.forEach(x=>{
+    // 18番は4択のため、全項目チェックでは絶対に自動選択しない
+    if(Number(x.no)===18) return;
+    const div=[...document.querySelectorAll(".item")].find(d=>{
+      const q=d.querySelector(".q");
+      return q && q.textContent.trim().startsWith(String(x.no)+".");
+    });
+    const btn=div?.querySelector(".result button.ok");
+    if(btn) setResult(x.no,"○",btn);
+  });
+  updateProgress();
+}
+function bulkSelectRequired(){
+  requireItem18 = false;
+  items.forEach(x=>{
+    const div=document.querySelector(`.item[data-no="${x.no}"]`);
+    if(!div) return;
+    const isBrown=[1,8,9,10,11,12,13,17,18,21].includes(Number(x.no));
+    if(isBrown) return;
+    const btn=div.querySelector(".result button.ok");
+    if(btn) setResult(x.no,"○",btn);
+  });
+  updateProgress();
+}
+
+function updateProgress(){
+  document.getElementById("progress").textContent=`${Object.keys(results).length} / ${items.length}`;
+}
+function syncVehicle(){
+  const s=document.getElementById("vehicleSelect");
+  const input=document.getElementById("vehicle");
+  if(s.value==="その他"){ input.style.display="block"; input.focus(); }
+  else { input.style.display="none"; input.value=""; }
+  updateShakenInfo();
+}
+function updateShakenInfo(){
+  const value=document.getElementById("vehicleSelect").value;
+  const box=document.getElementById("shakenInfo");
+  const wrap=document.getElementById("shakenConfirmWrap");
+  const confirmBox=document.getElementById("shakenConfirm");
+  if(wrap) wrap.style.display="none";
+  if(confirmBox) confirmBox.checked=false;
+  if(value==="その他" || !value){box.textContent="";return}
+  const arr=getMaster("truck_vehicles",defaultVehicles);
+  const v=arr.find(x=>x.name===value);
+  if(!v || !v.shaken){box.textContent="車検満了日：未登録";return}
+  const days=getDaysToShaken(v.shaken);
+  box.textContent=`車検満了日：${v.shaken}　（${days>=0 ? "あと "+days+" 日" : "期限切れ"}）`;
+  box.style.fontWeight="700";
+  box.style.color=days<30 ? "#b00020" : "#53606b";
+  if(wrap) wrap.style.display="flex";
+}
+function syncDriver(){
+  const s=document.getElementById("driverSelect");
+  const input=document.getElementById("driver");
+  if(s.value==="その他"){ input.style.display="block"; input.focus(); }
+  else { input.style.display="none"; input.value=""; }
+}
+function insuranceStatus(date){
+  if(!date) return {label:"未登録",cls:"warn"};
+  const d=new Date(date+"T00:00:00"), now=new Date(); now.setHours(0,0,0,0);
+  const days=Math.ceil((d-now)/86400000);
+  if(days<0) return {label:"期限切れ",cls:"danger"};
+  if(days<=7) return {label:"7日以内",cls:"danger"};
+  if(days<=15) return {label:"15日以内",cls:"danger"};
+  if(days<=30) return {label:"30日以内",cls:"caution"};
+  return {label:"問題なし",cls:"ok"};
+}
+
+function setManagers(arr){
+  localStorage.setItem("truck_managers",JSON.stringify(arr));
+}
+function managerLabel(x){
+  if(typeof x==="string") return x;
+  const role=x.role ? `（${x.role}）` : "";
+  return `${x.name||""}${role}`;
+}
+
+
+function editManager(i){
+  const managers=getManagers();
+  const m=managers[i];
+  if(!m) return;
+
+  const nameEl=document.getElementById("managerName");
+  const roleEl=document.getElementById("managerRole");
+  const appointedEl=document.getElementById("managerAppointed");
+  const noteEl=document.getElementById("managerNote");
+
+  if(nameEl) nameEl.value=m.name||"";
+  if(roleEl) roleEl.value=m.role||"整備管理者";
+  if(appointedEl) appointedEl.value=m.appointed||"";
+  if(noteEl) noteEl.value=m.note||"";
+
+  const activeEl=document.getElementById("managerActive");
+  if(activeEl) activeEl.checked=m.active!==false;
+
+  const btn=document.getElementById("addManagerBtn");
+  if(btn){
+    btn.textContent="💾 変更を保存";
+    btn.dataset.editIndex=String(i);
+  }
+  if(nameEl) nameEl.focus();
+}
+function cancelManagerEdit(){
+  const btn=document.getElementById("addManagerBtn");
+  const nameEl=document.getElementById("managerName");
+  const roleEl=document.getElementById("managerRole");
+  const appointedEl=document.getElementById("managerAppointed");
+  const noteEl=document.getElementById("managerNote");
+  const activeEl=document.getElementById("managerActive");
+  if(btn){ delete btn.dataset.editIndex; btn.textContent="＋ 選任登録"; }
+  if(nameEl) nameEl.value="";
+  if(appointedEl) appointedEl.value="";
+  if(noteEl) noteEl.value="";
+  if(activeEl) activeEl.checked=true;
+}
+
+function deleteManager(i){
+  const arr=getManagers();
+  if(!arr[i]) return;
+  if(!confirm(managerLabel(arr[i])+"を削除しますか？")) return;
+  arr.splice(i,1);
+  setManagers(arr);
+  renderManagers();
+  populateManagerSelect();
+}
+
+function confirmManager(){
+  const person=document.getElementById("managerConfirmPerson");
+  if(!person || person.value===""){alert("整備管理者または補助者を選択してください。");return;}
+  const record=getCurrentInspectionRecord();
+  if(!record){alert("先に点検記録を保存してください。");return;}
+  const arr=getManagers();
+  const idx=Number(person.value);
+  const manager=arr[idx];
+  if(!manager){alert("選択した整備管理者・補助者が見つかりません。");return;}
+  record.managerConfirmedBy=typeof manager==="string" ? manager : manager.name;
+  record.managerConfirmedRole=typeof manager==="string" ? "" : (manager.role||"");
+  record.managerConfirmedAt=new Date().toISOString();
+  saveInspectionRecord(record);
+  showManagerStatus(record);
+}
+function getCurrentInspectionRecord(){
+  const records=JSON.parse(localStorage.getItem("truck_inspection_records_v1")||"[]");
+  const v=document.getElementById("vehicleSelect");
+  const d=document.getElementById("driverSelect");
+  const today=localDateKey();
+  for(let i=records.length-1;i>=0;i--){
+    if((records[i].date||"").slice(0,10)===today && records[i].vehicle===(v?v.value:"") && records[i].driver===(d?d.value:"")) return records[i];
+  }
+  return null;
+}
+function saveInspectionRecord(record){
+  // 点検1回ごとに固有IDを持たせる。
+  // 日付・車両・運転者が同じでも、別の点検として安全に積み上げられる。
+  const records=JSON.parse(localStorage.getItem("truck_inspection_records_v1")||"[]");
+  if(!record.id){
+    record.id="R"+Date.now()+"_"+Math.random().toString(36).slice(2,10);
+  }
+  const idx=records.findIndex(x=>String(x.id||"")===String(record.id||""));
+  if(idx>=0) records[idx]=record; else records.push(record);
+  localStorage.setItem("truck_inspection_records_v1",JSON.stringify(records));
+  if(typeof renderHistory==="function") renderHistory();
+}
+function showManagerStatus(record){
+  const el=document.getElementById("managerConfirmStatus");
+  if(!el) return;
+  if(record && record.managerConfirmedBy){
+    el.textContent=`✅ ${record.managerConfirmedBy}${record.managerConfirmedRole ? "（"+record.managerConfirmedRole+"）" : ""}が確認済み`;
+  }else{
+    el.textContent="";
+  }
+}
+function getSelectedVehicleMaster(){
+  const s=document.getElementById("vehicleSelect");
+  if(!s || s.value==="その他" || !s.value) return null;
+  const arr=getMaster("truck_vehicles",defaultVehicles);
+  return arr.find(v=>v.name===s.value)||null;
+}
+function selectedVehicle(){
+  const s=document.getElementById("vehicleSelect");
+  return s.value==="その他" ? document.getElementById("vehicle").value.trim() : s.value;
+}
+function selectedDriver(){
+  const s=document.getElementById("driverSelect");
+  return s.value==="その他" ? document.getElementById("driver").value.trim() : s.value;
+}
+function getSelectedShaken(){
+  const value=document.getElementById("vehicleSelect").value;
+  if(value==="その他" || !value) return "";
+  const arr=getMaster("truck_vehicles",defaultVehicles);
+  const v=arr.find(x=>x.name===value);
+  return v ? (v.shaken||"") : "";
+}
+function getRecords(){return JSON.parse(localStorage.getItem(key)||"[]")}
+
+let driverChangeMode=false;
+let previousDriverReport="";
+
+function toggleDriverChange(){
+  driverChangeMode=!driverChangeMode;
+  const box=document.getElementById("changeoverBox");
+  const btn=document.getElementById("changeDriverButton");
+  if(box) box.classList.toggle("show",driverChangeMode);
+  if(btn) btn.classList.toggle("active-change",driverChangeMode);
+  if(!driverChangeMode){
+    previousDriverReport="";
+    ["previousReportNone","previousReportYes"].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.classList.remove("active");
+    });
+    updateTodayRequiredState();
+  }
+}
+
+function setPreviousDriverReport(value){
+  if(!driverChangeMode) return;
+  previousDriverReport=value;
+  const none=document.getElementById("previousReportNone");
+  const yes=document.getElementById("previousReportYes");
+  if(none) none.classList.toggle("active",value==="無");
+  if(yes) yes.classList.toggle("active",value==="有");
+  updateTodayRequiredState();
+}
+
+function updateTodayRequiredState(){
+  const required=driverChangeMode && previousDriverReport==="有";
+  const todayEl=document.getElementById("today");
+  const badge=document.getElementById("todayRequiredBadge");
+  const note=document.getElementById("todayRequiredNote");
+  if(todayEl) todayEl.required=required;
+  if(badge) badge.style.display=required?"inline-block":"none";
+  if(note) note.classList.toggle("show",required);
+}
+
+function resetDriverChange(){
+  driverChangeMode=false;
+  previousDriverReport="";
+  const box=document.getElementById("changeoverBox");
+  const btn=document.getElementById("changeDriverButton");
+  if(box) box.classList.remove("show");
+  if(btn) btn.classList.remove("active-change");
+  ["previousReportNone","previousReportYes"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.remove("active");
+  });
+  updateTodayRequiredState();
+}
+
+function resetAfterSave(){
+  // 保存後は「次の車両」をすぐ入力できるよう、入力画面を完全に初期化する。
+  Object.keys(results).forEach(k=>delete results[k]);
+  document.querySelectorAll(".result button").forEach(b=>b.classList.remove("active"));
+  const ids=["overall","abnormal","previous","today","vehicle","driver"];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value="";
+  });
+  const vehicleSelect=document.getElementById("vehicleSelect");
+  const driverSelect=document.getElementById("driverSelect");
+  if(vehicleSelect) vehicleSelect.value="";
+  if(driverSelect) driverSelect.value="";
+  const vehicle=document.getElementById("vehicle");
+  const driver=document.getElementById("driver");
+  if(vehicle) vehicle.style.display="none";
+  if(driver) driver.style.display="none";
+  const shaken=document.getElementById("shakenConfirm");
+  if(shaken) shaken.checked=false;
+  const manager=document.getElementById("managerConfirmPerson");
+  if(manager) manager.value="";
+  resetDriverChange();
+  if(typeof updateProgress==="function") updateProgress();
+}
+
+async function saveRecord(){
+  const record={
+    id:(crypto.randomUUID ? crypto.randomUUID() : ('R'+Date.now()+Math.random().toString(16).slice(2))),
+    date:document.getElementById("date").value,
+    vehicle:selectedVehicle(), driver:selectedDriver(),
+    shaken:getSelectedShaken(), shakenConfirmed:!!document.getElementById("shakenConfirm").checked,
+    managerConfirmedBy:(document.getElementById("managerConfirmPerson")||{}).value||"",
+    managerConfirmedRole:"",
+    results:{...results},
+    overall:document.getElementById("overall").value,
+    abnormal:document.getElementById("abnormal").value,
+    previous:document.getElementById("previous").value,
+    today:document.getElementById("today").value,
+    driverChange:driverChangeMode,
+    previousDriverReport:driverChangeMode ? previousDriverReport : "",
+    savedAt:new Date().toISOString()
+  };
+  if(!record.vehicle || !record.driver){alert("車両番号と点検実施者を入力してください。");return}
+  if(!record.overall){alert("点検結果・確認事項の「総合判定」を選択してください。");return;}
+  if(record.driverChange && !record.previousDriverReport){
+    alert("運転者乗り換え時は「前運転者からの報告事項の有無」を「無」または「有」から選択してください。");
+    return;
+  }
+  if(record.driverChange && record.previousDriverReport==="有" && !String(record.today||"").trim()){
+    alert("前運転者からの報告事項が「有」の場合は「当日の異常箇所、処置状況の報告」を入力してください。");
+    const todayEl=document.getElementById("today"); if(todayEl) todayEl.focus();
+    return;
+  }
+  const selected=getSelectedVehicleMaster();
+  if(selected && selected.shaken && !document.getElementById("shakenConfirm").checked){
+    alert("車検満了日を確認してから点検を保存してください。");return;
+  }
+  // 通常点検では茶色項目は任意。必須17項目を確認する。
+  // 運転者乗り換え時は27項目の選択を省略して保存できる。
+  if(!record.driverChange){
+    const optionalNos = [1,8,9,10,11,12,13,17,18,21];
+    const requiredItems = items.filter(x => !optionalNos.includes(Number(x.no)));
+    const missingRequired = requiredItems.filter(x => !results[x.no]);
+    if(requireItem18 && !results[18]){
+      alert("「全項目チェック」を使用した場合は、18番「冬用タイヤのプラットホームの露出の有無」を○・△・×・☆から手動で選択してください。");
+      return;
+    }
+    if(missingRequired.length){
+      alert(`必須点検項目が未入力です。あと ${missingRequired.length} 項目です。`);
+      return;
+    }
+  }
+  const records=getRecords(); records.push(record);
+  localStorage.setItem(key,JSON.stringify(records));
+  document.getElementById("status").textContent=`保存中…（累計 ${records.length} 件）`;
+  try{
+    if(window.firebaseCloud && window.firebaseCloud.saveRecord){
+      await window.firebaseCloud.saveRecord(record);
+      document.getElementById("status").textContent=`☁️ Firebaseへ保存しました（累計 ${records.length} 件）`;
+    }else{
+      document.getElementById("status").textContent=`端末に保存しました（累計 ${records.length} 件）`;
+    }
+  }catch(e){
+    console.error(e);
+    document.getElementById("status").textContent=`⚠️ 端末には保存済みですが、Firebase保存に失敗しました。設定を確認してください。`;
+    alert("点検記録はこの端末には保存されましたが、Firebaseへのクラウド保存に失敗しました。\n\n次の設定を確認してください：\n・管理者ログイン\n・Firestoreのルール\n\nエラー："+(e&&e.message?e.message:e));
+  }
+  resetAfterSave();
+}
+
+/* ===== Excel export =====
+   Creates a minimal XLSX workbook in-browser, without external libraries.
+*/
+function cleanXmlText(v){
+  // XML 1.0で許可されない制御文字を除去
+  return String(v==null?"":v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"").replace(/[\uD800-\uDFFF]/g,"");
+}
+function xmlEsc(v){
+  return cleanXmlText(v).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\'/g,"&apos;");
+}
+function colName(n){
+  let s="";
+  while(n>0){ let r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); }
+  return s;
+}
+function cellXml(row, col, value, styleId){
+  const ref=colName(col)+row;
+  const st=(styleId!==undefined && styleId!==null) ? ` s="${styleId}"` : "";
+  return `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${xmlEsc(value)}</t></is></c>`;
+}
+function sheetXml(data, validations, styleFn){
+  let rows="";
+  data.forEach((row,ri)=>{
+    const r=ri+1;
+    rows += `<row r="${r}">`;
+    row.forEach((v,ci)=>{ const styleId=styleFn ? styleFn(r,ci+1,v) : undefined; rows += cellXml(r,ci+1,v,styleId); });
+    rows += `</row>`;
+  });
+  const maxCol=Math.max(1,...data.map(r=>r.length));
+  const maxRow=Math.max(1,data.length);
+  const dv = (validations && validations.length) ? `<dataValidations count="${validations.length}">` + validations.map(v=>`<dataValidation type="list" allowBlank="1" showErrorMessage="1" showInputMessage="1" errorTitle="選択" error="一覧から選択してください。" promptTitle="▽で選択" prompt="登録済みの一覧から選択できます。" sqref="${v.sqref}"><formula1>${v.formula1}</formula1></dataValidation>`).join("") + `</dataValidations>` : "";
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<dimension ref="A1:${colName(maxCol)}${maxRow}"/>
+<sheetViews><sheetView workbookViewId="0"/></sheetViews>
+<sheetData>${rows}</sheetData>${dv}
+</worksheet>`;
+}
+function crc32(bytes){
+  let table=crc32.table;
+  if(!table){
+    table=new Uint32Array(256);
+    for(let n=0;n<256;n++){
+      let c=n;
+      for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);
+      table[n]=c>>>0;
+    }
+    crc32.table=table;
+  }
+  let c=0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++) c=table[(c^bytes[i])&255]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0;
+}
+function u16(n){ return new Uint8Array([n&255,(n>>>8)&255]); }
+function u32(n){ return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]); }
+function concatBytes(parts){
+  let total=parts.reduce((s,p)=>s+p.length,0), out=new Uint8Array(total), off=0;
+  parts.forEach(p=>{out.set(p,off);off+=p.length;});
+  return out;
+}
+function zipStore(files){
+  const enc=new TextEncoder(), locals=[], centrals=[];
+  let offset=0;
+  files.forEach(f=>{
+    const name=enc.encode(f.name), data=enc.encode(f.data), crc=crc32(data);
+    const local=concatBytes([
+      u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0),
+      u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name,data
+    ]);
+    locals.push(local);
+    const central=concatBytes([
+      u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0),
+      u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),
+      u16(0),u16(0),u32(0),u32(offset),name
+    ]);
+    centrals.push(central);
+    offset += local.length;
+  });
+  const centralBytes=concatBytes(centrals);
+  const localBytes=concatBytes(locals);
+  const eocd=concatBytes([
+    u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),
+    u32(centralBytes.length),u32(localBytes.length),u16(0)
+  ]);
+  return concatBytes([localBytes,centralBytes,eocd]);
+}
+function xlsxDate(s){
+  return s || "";
+}
+
+function getManagers(){
+  try{
+    const data=JSON.parse(localStorage.getItem("truck_managers")||"[]");
+    return Array.isArray(data)?data:[];
+  }catch(e){ return []; }
+}
+function saveManagers(data){
+  localStorage.setItem("truck_managers",JSON.stringify(data));
+  if(window.firebaseReady && window.firebaseCloud){
+    window.firebaseCloud.saveManagers(data).catch(e=>{console.error(e);alert("整備管理者マスターのクラウド保存に失敗しました。");});
+  }
+}
+function addManager(){
+  const nameEl=document.getElementById("managerName");
+  if(!nameEl) return;
+  const name=nameEl.value.trim();
+  if(!name){
+    alert("氏名を入力してください。");
+    nameEl.focus();
+    return;
+  }
+
+  const btn=document.getElementById("addManagerBtn");
+  const managers=getManagers();
+  const record={
+    name:name,
+    role:(document.getElementById("managerRole")||{}).value||"整備管理者",
+    appointed:(document.getElementById("managerAppointed")||{}).value||"",
+    active:(document.getElementById("managerActive")||{}).checked!==false,
+    note:((document.getElementById("managerNote")||{}).value||"").trim()
+  };
+
+  const editIndex=btn && btn.dataset.editIndex!==undefined ? Number(btn.dataset.editIndex) : -1;
+  if(editIndex>=0 && managers[editIndex]){
+    managers[editIndex]=record;
+  }else{
+    managers.push(record);
+  }
+  saveManagers(managers);
+  cancelManagerEdit();
+  renderManagers();
+  populateManagerSelect();
+}
+function deleteManager(i){
+  const managers=getManagers();
+  if(!managers[i]) return;
+  managers.splice(i,1);
+  saveManagers(managers);
+  renderManagers();
+  populateManagerSelect();
+}
+function renderManagers(){
+  const el=document.getElementById("managerList");
+  if(!el) return;
+  const managers=getManagers();
+  if(!managers.length){
+    el.innerHTML='<div class="small">登録者はいません。</div>';
+    return;
+  }
+  el.innerHTML=managers.map((m,i)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px;border-bottom:1px solid #ddd">
+      <div><strong>${escapeHtml(m.name||"")}</strong><div class="small">${escapeHtml(m.role||"整備管理者")}｜選任日 ${escapeHtml(m.appointed||"未設定")}｜${m.active===false?"無効":"有効"}</div></div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button type="button" onclick="editManager(${i})">変更</button>
+        <button type="button" onclick="deleteManager(${i})">削除</button>
+      </div>
+    </div>`).join("");
+}
+function populateManagerSelect(){
+  const el=document.getElementById("managerConfirmPerson");
+  if(!el) return;
+  const managers=getManagers().filter(m=>m&&m.name&&m.active!==false);
+  el.innerHTML='<option value="">選択しない</option>'+
+    managers.map(m=>`<option value="${escapeAttr(m.name)}">${escapeHtml(m.name)}（${escapeHtml(m.role||"整備管理者")}）</option>`).join("");
+}
+
+function exportExcel(){
+  const records=getRecords();
+  // 管理Excel出力は確認・承認とは独立。削除されていない記録を条件に従って出力する。
+  // 旧データを含め、各点検記録に必ず一意のIDを付与してから出力対象を決定する
+  let idsChanged=false;
+  records.forEach((r,i)=>{
+    if(!r.id){ r.id=`R-${Date.now()}-${i}-${Math.random().toString(36).slice(2,10)}`; idsChanged=true; }
+  });
+  if(idsChanged) localStorage.setItem(key,JSON.stringify(records));
+  const from=(document.getElementById("excelFrom")||{}).value||"";
+  const to=(document.getElementById("excelTo")||{}).value||"";
+  const vehicle=(document.getElementById("excelVehicle")||{}).value||"";
+  const filtered=records.filter(r=>{
+    // 管理Excelは③「点検履歴（保存版）」に入った正式保存記録だけを出力する
+    if(r.deletedAt || !r.managerConfirmedAt) return false;
+    const d=(r.date||"").slice(0,10);
+    if(from && d<from) return false;
+    if(to && d>to) return false;
+    if(vehicle && r.vehicle!==vehicle) return false;
+    return true;
+  });
+
+  const items=[
+    "エンジンのかかり具合、異音","ブレーキ・ペダルの踏みしろ、効き具合","駐車ブレーキ・レバーの引きしろ（踏みしろ）","空気圧力計の上り具合","ブレーキ・バルブの排気音","方向指示器の点滅具合","ブレーキ・オイルのリザーバタンクの液量","ウインド・ウォッシャの液量、噴射状態","ワイパーの拭き取り状態","ラジエータの冷却水の量","ファン・ベルトの張り具合、損傷","エンジン・オイルの液量、液漏れ","バッテリの液量","前照灯、方向指示器、車幅灯、非常点滅灯、その他灯火の点灯・点滅具合","灯火類のレンズ、反射器の汚れ、変色、損傷状況（前部）","タイヤの空気圧、異常摩耗、亀裂、損傷","タイヤの溝の深さ","冬用タイヤのプラットホームの露出の有無","★ ディスク・ホイールの取付け状態（ホイール・ボルトの折損・ゆるみ等）","エア・タンク内の疑水","（ブレーキ・ペダルの踏みしろ、効き具合）ブレーキ・チャンバのロッドのストロークドラムとライニングのすき間","番号灯、方向指示器、尾灯、制動灯、後退灯、非常点滅灯、その他灯火の点灯、点滅具合","灯火類のレンズ、反射器の汚れ、変色、損傷状況（後部）","座席（シートベルト）の装着状況","工具、スペアタイヤの固定状況","非常信号用具、停止表示器材、車輪止め、自賠責保険証、点検整備記録簿等の車載状況","チャート紙の装着状況"
+  ];
+  const brownSet=new Set([1,8,9,10,11,12,13,17,18,21]);
+
+  // ① 月間一覧
+  const monthlyHeaders=["点検日","車両番号","運転者","車検満了日","総合判定","異常内容","前回点検からの異常","当日の異常箇所、処置状況の報告","運転者乗り換え","前運転者からの報告事項","整備管理者・補助者確認者","確認者区分"];
+  const monthly=[monthlyHeaders];
+  filtered.forEach(r=>monthly.push([
+    r.date||"",r.vehicle||"",r.driver||"",r.shaken||"",r.overall||"",r.abnormal||"",r.previous||"",r.today||"",r.driverChange?"あり":"",r.driverChange?(r.previousDriverReport||""):"",r.managerConfirmedBy||"",r.managerConfirmedRole||""
+  ]));
+
+  // ② 点検記録：1行＝1回の点検の表形式
+  const detailHeaders=["点検日","車両番号","運転者","車検満了日","車検確認","総合判定","異常内容","前回点検からの異常","当日の異常箇所、処置状況の報告","運転者乗り換え","前運転者からの報告事項","整備管理者・補助者確認者","確認者区分"];
+  for(let i=1;i<=27;i++) detailHeaders.push(`${i}.${items[i-1]}`);
+  const detail=[detailHeaders];
+  filtered.forEach(r=>{
+    const row=[
+      r.date||"",r.vehicle||"",r.driver||"",r.shaken||"",r.shaken ? (r.shakenConfirmed?"確認済み":"未確認"):"対象外",
+      r.overall||"",r.abnormal||"",r.previous||"",r.today||"",r.driverChange?"あり":"",r.driverChange?(r.previousDriverReport||""):"",r.managerConfirmedBy||"",r.managerConfirmedRole||""
+    ];
+    for(let i=1;i<=27;i++) row.push(getResultValue(r,i));
+    detail.push(row);
+  });
+  if(!filtered.length){
+    alert("指定条件に該当する点検記録がありません。Excel出力も履歴消去も行いません。");
+    return false;
+  }
+
+  const trucks=getMaster("truck_vehicles",defaultVehicles);
+  const drivers=getMaster("truck_drivers",defaultDrivers);
+  const managers=getManagers();
+  const truckRows=[["車両番号","車検満了日","自賠責保険満了日","任意保険満了日","備考"]];
+  trucks.forEach(v=>truckRows.push([v.name||"",v.shaken||"",v.jibaiseki||"",v.optional||"",v.note||""]));
+  const driverRows=[["運転者"]]; drivers.forEach(v=>driverRows.push([typeof v==="string"?v:(v.name||"")]));
+  const managerRows=[["氏名","区分","選任日","有効","備考"]];
+  managers.forEach(v=>managerRows.push(typeof v==="string"?[v,"","","",""]:[v.name||"",v.role||"",v.appointed||"",v.active===false?"無効":"有効",v.note||""]));
+  const infoRows=[["トラック日常点検アプリ Excel出力"],["出力期間",`${from||"指定なし"} ～ ${to||"指定なし"}`],["車両条件",vehicle||"全車両"],["構成","月間一覧＋1台1枠の点検記録"]];
+
+  function styledSheet(data, opts){
+    opts=opts||{};
+    let rows="";
+    data.forEach((row,ri)=>{
+      const rr=ri+1; rows+=`<row r="${rr}"${opts.rowHeightFn?` ht="${opts.rowHeightFn(rr,row)}" customHeight="1"`:""}>`;
+      row.forEach((v,ci)=>{
+        let sid=opts.styleFn?opts.styleFn(rr,ci+1,v,row):0;
+        rows+=cellXml(rr,ci+1,v,sid);
+      }); rows+="</row>";
+    });
+    const maxCol=Math.max(1,...data.map(r=>r.length)); const maxRow=Math.max(1,data.length);
+    const dvs=(opts.validations||[]).length?`<dataValidations count="${opts.validations.length}">`+opts.validations.map(v=>`<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="${v.sqref}"><formula1>${v.formula1}</formula1></dataValidation>`).join("")+`</dataValidations>`:"";
+    const cols=opts.cols?`<cols>${opts.cols.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")}</cols>`:"";
+    const pane=opts.freeze?`<sheetViews><sheetView workbookViewId="0"><pane ySplit="${opts.freeze}" topLeftCell="A${opts.freeze+1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`:`<sheetViews><sheetView workbookViewId="0"/></sheetViews>`;
+    const autof=opts.autoFilter?`<autoFilter ref="${opts.autoFilter}"/>`:"";
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${colName(maxCol)}${maxRow}"/>${pane}${cols}<sheetData>${rows}</sheetData>${autof}${dvs}</worksheet>`;
+  }
+
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="0"/><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="12"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D1BE"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE2F0D9"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="4" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs></styleSheet>`;
+
+  const monthlyXml=styledSheet(monthly,{cols:[15,18,16,15,12,28,28,28,24,14],freeze:1,autoFilter:`A1:J${Math.max(1,monthly.length)}`,validations:[{sqref:"B2:B10000",formula1:"TruckList"},{sqref:"C2:C10000",formula1:"DriverList"},{sqref:"E2:E10000",formula1:'"良好,要注意,異常"'},{sqref:"I2:I10000",formula1:"ManagerList"}],styleFn:(r,c)=>r===1?3:0});
+  const detailXml=styledSheet(detail,{
+    cols:[15,18,16,15,12,12,28,28,28,24,14].concat(Array(27).fill(28)),
+    freeze:1,
+    autoFilter:`A1:AL${Math.max(1,detail.length)}`,
+    validations:[
+      {sqref:"B2:B10000",formula1:"TruckList"},
+      {sqref:"C2:C10000",formula1:"DriverList"},
+      {sqref:"F2:F10000",formula1:'"良好,要注意,異常"'},
+      {sqref:"J2:J10000",formula1:"ManagerList"}
+    ],
+    rowHeightFn:(r)=>r===1?60:38,
+    styleFn:(r,c)=>{
+      if(r===1){
+        if(c>=12) return brownSet.has(c-11)?1:2;
+        return 3;
+      }
+      if(c>=12) return brownSet.has(c-11)?1:5;
+      return 0;
+    }
+  });
+  const truckXml=styledSheet(truckRows,{cols:[20,16,20,20,30],styleFn:(r)=>r===1?3:0});
+  const driverXml=styledSheet(driverRows,{cols:[24],styleFn:(r)=>r===1?3:0});
+  const managerXml=styledSheet(managerRows,{cols:[24,18,16,12,30],styleFn:(r)=>r===1?3:0});
+  const infoXml=styledSheet(infoRows,{cols:[22,70],styleFn:(r)=>r===1?4:0});
+
+  const files=[
+    {name:"[Content_Types].xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${[1,2,3,4,5,6].map(n=>`<Override PartName="/xl/worksheets/sheet${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`},
+    {name:"_rels/.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:"xl/styles.xml",data:styles},
+    {name:"xl/workbook.xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="月間一覧" sheetId="1" r:id="rId1"/><sheet name="点検記録" sheetId="2" r:id="rId2"/><sheet name="車両マスター" sheetId="3" r:id="rId3"/><sheet name="運転者マスター" sheetId="4" r:id="rId4"/><sheet name="整備管理者マスター" sheetId="5" r:id="rId5"/><sheet name="出力条件" sheetId="6" r:id="rId6"/></sheets><definedNames><definedName name="TruckList">'車両マスター'!$A$2:$A$200</definedName><definedName name="DriverList">'運転者マスター'!$A$2:$A$200</definedName><definedName name="ManagerList">'整備管理者マスター'!$A$2:$A$200</definedName></definedNames></workbook>`},
+    {name:"xl/_rels/workbook.xml.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId7" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${[1,2,3,4,5,6].map(n=>`<Relationship Id="rId${n}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${n}.xml"/>`).join("")}</Relationships>`},
+    {name:"xl/worksheets/sheet1.xml",data:monthlyXml},{name:"xl/worksheets/sheet2.xml",data:detailXml},{name:"xl/worksheets/sheet3.xml",data:truckXml},{name:"xl/worksheets/sheet4.xml",data:driverXml},{name:"xl/worksheets/sheet5.xml",data:managerXml},{name:"xl/worksheets/sheet6.xml",data:infoXml}
+  ];
+  // Excelファイルの生成が成功した場合だけ、出力対象を保存済みデータへ移動する。
+  let blob;
+  try{
+    const bytes=zipStore(files);
+    blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    if(!blob || blob.size<=0) throw new Error("Excelファイルを作成できませんでした。");
+  }catch(e){
+    alert("Excelの作成に失敗したため、点検履歴は残しました。\n"+(e&&e.message?e.message:""));
+    return false;
+  }
+
+  // Excel出力は「確認・承認」と独立した処理。
+  // ここでは履歴の表示状態を変更せず、元データも削除・更新しない。
+  // Excelをダウンロードする。履歴の確認状態には影響しない。
+  const d=new Date(), z=n=>String(n).padStart(2,"0");
+  const filename=`トラック日常点検_${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}.xlsx`;
+  // 状態保存後にExcelをダウンロードする。
+  const a=document.createElement("a");
+  const url=URL.createObjectURL(blob);
+  a.href=url; a.download=filename; a.style.display="none";
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{a.remove(); URL.revokeObjectURL(url);},1500);
+
+  renderRecords();
+  const st=document.getElementById("status");
+  if(st) st.textContent=`保存版のExcelを出力しました（${filtered.length}件）。履歴・保存版は変更していません。`;
+  return true;
+}
+
+function getInspectionDateKey(value){
+  // 点検日は「YYYY-MM-DD」の文字列として扱い、new Date()によるUTC変換をしない。
+  // これで日本時間で前日になる問題を防ぐ。
+  const m=String(value==null?"":value).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : String(value==null?"":value).slice(0,10);
+}
+function getResultValue(record, no){
+  const r=record && record.results ? record.results : {};
+  return r[no] || r[String(no)] || r[`item_${no}`] || r[`result_${no}`] || "";
+}
+function uniqueRecordsForExports(){
+  // Excelの正式保存データは③「点検履歴（保存版）」と同じ集合にする。
+  // つまり「確認・承認済み」かつ「削除されていない」記録だけを対象にする。
+  let a=getRecords(); let b=[]; let deletedIds=[];
+  try{ b=JSON.parse(localStorage.getItem("truck_inspection_archived_v1")||"[]"); }catch(e){ b=[]; }
+  try{ deletedIds=JSON.parse(localStorage.getItem("truck_inspection_deleted_v1")||"[]"); }catch(e){ deletedIds=[]; }
+  const deletedSet=new Set(deletedIds.map(x=>String(x)));
+  const out=[], seen=new Set();
+  const deletedFingerprints=new Set();
+  a.forEach(r=>{ if(r && r.deletedAt) deletedFingerprints.add(`${r.date||""}|${r.vehicle||""}|${r.driver||""}|${r.savedAt||r.createdAt||""}`); });
+  b.forEach(r=>{ if(r && r.deletedAt) deletedFingerprints.add(`${r.date||""}|${r.vehicle||""}|${r.driver||""}|${r.savedAt||r.createdAt||""}`); });
+  [...a,...b].forEach((r,i)=>{
+    if(!r || r.deletedAt || !r.managerConfirmedAt) return;
+    let id=String(r.id||"").trim();
+    if(!id) id=`legacy|${r.date||""}|${r.vehicle||""}|${r.driver||""}|${r.savedAt||r.createdAt||i}`;
+    const fp=`${r.date||""}|${r.vehicle||""}|${r.driver||""}|${r.savedAt||r.createdAt||""}`;
+    if(deletedSet.has(id) || deletedFingerprints.has(fp)) return;
+    if(!seen.has(id)){ seen.add(id); out.push(r); }
+  });
+  return out;
+}
+function downloadXlsxBlob(blob, filename){
+  if(!blob || blob.size<=0) throw new Error("Excelデータが空です。");
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=filename; a.style.display="none";
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{a.remove(); URL.revokeObjectURL(url);},1500);
+}
+
+function exportDailyPrintExcel(){
+  const target=(document.getElementById("dailyPrintDate")||{}).value||"";
+  if(!target){alert("印刷日を選択してください。");return;}
+  const allRecords=uniqueRecordsForExports();
+  const dayRecords=allRecords.filter(r=>getInspectionDateKey(r.date)===target);
+  const trucks=getMaster("truck_vehicles",defaultVehicles);
+  if(!trucks.length){alert("車両マスターに車両が登録されていません。");return;}
+
+  const brownSet=new Set([1,8,9,10,11,12,13,17,18,21]);
+  const headers=["車両番号","運転者","総合判定",...items.map(x=>x.text),"整備管理者・補助者確認者","運転者乗り換え","前運転者からの報告事項","当日の異常箇所、処置状況の報告"];
+  const latestByVehicle=new Map();
+  dayRecords.slice().sort((a,b)=>String(a.savedAt||a.createdAt||"").localeCompare(String(b.savedAt||b.createdAt||""))).forEach(r=>{
+    const k=String(r.vehicle||"").trim();
+    if(k) latestByVehicle.set(k,r);
+  });
+  const rows=[headers];
+  trucks.forEach(v=>{
+    const vehicle=String(v.name||"");
+    const r=latestByVehicle.get(vehicle);
+    rows.push([
+      vehicle,
+      r ? (r.driver||"") : "",
+      r ? (r.overall||"") : "未点検",
+      ...items.map(x=>r ? getResultValue(r,x.no) : ""),
+      r ? (r.managerConfirmedBy||"") : "",
+      r && r.driverChange ? "あり" : "",
+      r && r.driverChange ? (r.previousDriverReport||"") : "",
+      r ? (r.today||"") : ""
+    ]);
+  });
+
+  // 1日分を全車両1枚にまとめる。点検内容は③の正式保存記録だけを使用する。
+  const validations=[
+    {sqref:`A2:A${Math.max(10000,rows.length+50)}`,formula1:"TruckList"},
+    {sqref:`B2:B${Math.max(10000,rows.length+50)}`,formula1:"DriverList"},
+    {sqref:`C2:C${Math.max(10000,rows.length+50)}`,formula1:'"良好,要注意,異常"'},
+    {sqref:`AE2:AE${Math.max(10000,rows.length+50)}`,formula1:"ManagerList"}
+  ];
+
+  const dailyStyles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="0"/><fonts count="2"><font><sz val="8"/><name val="Calibri"/></font><font><b/><sz val="6"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D1BE"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE2F0D9"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment horizontal="right" vertical="center" wrapText="1"/></xf></cellXfs></styleSheet>`;
+
+  function dailyCell(row,col,value,styleId){
+    return `<c r="${colName(col)}${row}" s="${styleId}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(value)}</t></is></c>`;
+  }
+  let sheetData="";
+  rows.forEach((row,ri)=>{
+    const rr=ri+1;
+    sheetData+=`<row r="${rr}" ht="${rr===1?115:24}" customHeight="1">`;
+    row.forEach((v,ci)=>{
+      let sid=0;
+      if(rr===1) sid=(ci>=3&&ci<=29&&brownSet.has(ci-2))?1:2;
+      else sid=(ci>=3&&ci<=29&&brownSet.has(ci-2))?3:4;
+      sheetData+=dailyCell(rr,ci+1,v,sid);
+    });
+    sheetData+="</row>";
+  });
+  const widths=[12,11,10,...Array(27).fill(9),18,12,16,24];
+  const cols=widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
+  const endRow=rows.length, endCol=colName(headers.length), last=Math.max(10000,endRow+50);
+  const dv=`<dataValidations count="4"><dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="A2:A${last}"><formula1>TruckList</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="B2:B${last}"><formula1>DriverList</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="C2:C${last}"><formula1>"良好,要注意,異常"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="AF2:AF${last}"><formula1>ManagerList</formula1></dataValidation></dataValidations>`;
+  // 注意事項を表の右下に配置（AA:AF、1行目見出しは6pt）
+  const noteRow=Math.max(12,endRow+1);
+  const noteText="※冬用タイヤのプラットホームの露出の有無 ☆ミックスタイヤ";
+  const noteXml=`<row r="${noteRow}" ht="18" customHeight="1"><c r="AA${noteRow}" s="5" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(noteText)}</t></is></c></row>`;
+  sheetData+=noteXml;
+  const noteMerge=`<mergeCells count="1"><mergeCell ref="AA${noteRow}:AF${noteRow}"/></mergeCells>`;
+  const finalEndRow=Math.max(endRow,noteRow);
+  const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:AG${finalEndRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${sheetData}</sheetData><autoFilter ref="A1:${endCol}${endRow}"/>${noteMerge}${dv}<printOptions horizontalCentered="1"/><pageMargins left="0.15" right="0.15" top="0.2" bottom="0.2" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="1"/></worksheet>`;
+
+  // マスターを同じブックに含め、▽の参照先を確実に存在させる。
+  const trucksForMaster=getMaster("truck_vehicles",defaultVehicles);
+  const drivers=getMaster("truck_drivers",defaultDrivers);
+  const managers=getManagers();
+  const masterSheet=(data,width)=>sheetXml(data,null,()=>0); // 下で単純XMLを作成
+  function simpleSheet(data){
+    let x=""; data.forEach((row,ri)=>{x+=`<row r="${ri+1}">`;row.forEach((v,ci)=>x+=cellXml(ri+1,ci+1,v,0));x+="</row>";});
+    const mc=Math.max(1,...data.map(r=>r.length)); return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${colName(mc)}${Math.max(1,data.length)}"/><sheetData>${x}</sheetData></worksheet>`;
+  }
+  const truckRows=[["車両番号"],...trucksForMaster.map(v=>[v.name||""])];
+  const driverRows=[["運転者"],...drivers.map(v=>[typeof v==="string"?v:(v.name||"")])];
+  const managerRows=[["氏名"],...managers.map(v=>[typeof v==="string"?v:(v.name||"")])];
+
+  const files=[
+    {name:"[Content_Types].xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`},
+    {name:"_rels/.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:"xl/styles.xml",data:dailyStyles},
+    {name:"xl/workbook.xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="1日全車両印刷" sheetId="1" r:id="rId1"/><sheet name="車両マスター" sheetId="2" r:id="rId2"/><sheet name="運転者マスター" sheetId="3" r:id="rId3"/><sheet name="整備管理者マスター" sheetId="4" r:id="rId4"/></sheets><definedNames><definedName name="TruckList">'車両マスター'!$A$2:$A$200</definedName><definedName name="DriverList">'運転者マスター'!$A$2:$A$200</definedName><definedName name="ManagerList">'整備管理者マスター'!$A$2:$A$200</definedName></definedNames></workbook>`},
+    {name:"xl/_rels/workbook.xml.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/><Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:"xl/worksheets/sheet1.xml",data:sheetXml},{name:"xl/worksheets/sheet2.xml",data:simpleSheet(truckRows)},{name:"xl/worksheets/sheet3.xml",data:simpleSheet(driverRows)},{name:"xl/worksheets/sheet4.xml",data:simpleSheet(managerRows)}
+  ];
+  const bytes=zipStore(files); const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`トラック日常点検_${target.replaceAll("-","")}_全車両_A4印刷.xlsx`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  const st=document.getElementById("status"); if(st) st.textContent=`${target} の全車両印刷用Excelを出力しました（全${trucks.length}台・点検済み${dayRecords.length}件）`;
+}
+
+
+function exportMonthlyPrintExcel(){
+  const month=(document.getElementById("monthlyPrintMonth")||{}).value||"";
+  if(!month){alert("対象月を選択してください。");return;}
+
+  // ③「点検履歴（保存版）」に入っている正式保存記録だけを対象にする。
+  const records=getSavedRecords();
+
+  const trucks=getMaster("truck_vehicles",defaultVehicles);
+  const drivers=getMaster("truck_drivers",defaultDrivers);
+  const managers=getManagers();
+  const brownSet=new Set([1,8,9,10,11,12,13,17,18,21]);
+  const headers=["点検日","車両番号","運転者","総合判定",...items.map(x=>x.text),"整備管理者・補助者確認者","運転者乗り換え","前運転者からの報告事項","当日の異常箇所、処置状況の報告"];
+
+  const [yy,mm]=month.split("-").map(Number);
+  const lastDay=new Date(yy,mm,0).getDate();
+  const monthStart=`${month}-01`, monthEnd=`${month}-${String(lastDay).padStart(2,"0")}`;
+
+  // ③「点検履歴（保存版）」に実際に存在する正式保存記録だけを出力する。
+  // 点検していない日・車両の「未点検」行は作らない。
+  const monthRecords=records
+    .filter(r=>{
+      if(!r || r.deletedAt) return false;
+      const date=getInspectionDateKey(r.date);
+      return /^\d{4}-\d{2}-\d{2}$/.test(date) && date>=monthStart && date<=monthEnd;
+    })
+    // ID単位で重複を除去。別IDの同日・同車両・同運転者は別点検として残す。
+    .filter((r,i,arr)=>arr.findIndex(x=>String(x.id||"")===String(r.id||""))===i)
+    .sort((a,b)=>{
+      const da=getInspectionDateKey(a.date), db=getInspectionDateKey(b.date);
+      if(da!==db) return da.localeCompare(db);
+      return String(a.savedAt||a.createdAt||"").localeCompare(String(b.savedAt||b.createdAt||""));
+    });
+
+  if(!monthRecords.length){alert(`${month}には③保存版の点検記録がありません。`);return;}
+
+  const rows=[headers];
+  monthRecords.forEach(r=>{
+    const date=getInspectionDateKey(r.date);
+    const [ry,rm,rd]=date.split("-").map(Number);
+    rows.push([
+      `${rm}月${rd}日`,
+      r.vehicle||"",
+      r.driver||"",
+      r.overall||"",
+      ...items.map(x=>getResultValue(r,x.no)),
+      r.managerConfirmedBy||"",
+      r.driverChange ? "あり" : "",
+      r.driverChange ? (r.previousDriverReport||"") : "",
+      r.today||""
+    ]);
+  });
+
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="0"/><fonts count="2"><font><sz val="8"/><name val="Calibri"/></font><font><b/><sz val="6"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D1BE"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE2F0D9"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment horizontal="right" vertical="center" wrapText="1"/></xf></cellXfs></styleSheet>`;
+
+  let sheetData="";
+  rows.forEach((row,ri)=>{
+    const rr=ri+1;
+    sheetData+=`<row r="${rr}" ht="${rr===1?115:22}" customHeight="1">`;
+    row.forEach((v,ci)=>{
+      let sid=0;
+      if(rr===1) sid=(ci>=4 && ci<=30 && brownSet.has(ci-3))?1:2;
+      else sid=(ci>=4 && ci<=30 && brownSet.has(ci-3))?3:4;
+      sheetData+=`<c r="${colName(ci+1)}${rr}" s="${sid}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`;
+    });
+    sheetData+="</row>";
+  });
+  const widths=[12,14,12,10,...Array(27).fill(9),18,12,16];
+  const cols=widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
+  const endRow=rows.length, endCol=colName(headers.length);
+  const validations=[
+    `<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="B2:B${endRow}"><formula1>TruckList</formula1></dataValidation>`,
+    `<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="C2:C${endRow}"><formula1>DriverList</formula1></dataValidation>`,
+    `<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="D2:D${endRow}"><formula1>"良好,要注意,異常,未点検"</formula1></dataValidation>`,
+    `<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="AF2:AF${endRow}"><formula1>ManagerList</formula1></dataValidation>`
+  ].join("");
+  // 注意事項を表の右下に配置（AA:AF、1行目見出しは6pt）
+  const noteRow=Math.max(12,endRow+1);
+  const noteText="※冬用タイヤのプラットホームの露出の有無 ☆ミックスタイヤ";
+  const noteXml=`<row r="${noteRow}" ht="18" customHeight="1"><c r="AA${noteRow}" s="5" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(noteText)}</t></is></c></row>`;
+  sheetData+=noteXml;
+  const noteMerge=`<mergeCells count="1"><mergeCell ref="AA${noteRow}:AF${noteRow}"/></mergeCells>`;
+  const finalEndRow=Math.max(endRow,noteRow);
+  const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:AH${finalEndRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${sheetData}</sheetData><autoFilter ref="A1:${endCol}${endRow}"/>${noteMerge}<dataValidations count="4">${validations}</dataValidations><printOptions horizontalCentered="1"/><pageMargins left="0.15" right="0.15" top="0.2" bottom="0.2" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
+
+  const exportVehicleNames=[]; monthRecords.forEach(r=>{const v=String(r.vehicle||"").trim(); if(v&&!exportVehicleNames.includes(v)) exportVehicleNames.push(v);});
+  const truckRows=[["車両番号"],...exportVehicleNames.map(v=>[v])];
+  const driverRows=[["運転者"],...drivers.map(v=>[typeof v==="string"?v:(v.name||"")])];
+  const managerRows=[["氏名"],...managers.map(v=>[typeof v==="string"?v:(v.name||"")])];
+  function simpleSheet(data){let x="";data.forEach((row,ri)=>{x+=`<row r="${ri+1}">`;row.forEach((v,ci)=>x+=cellXml(ri+1,ci+1,v,0));x+="</row>";});const mc=Math.max(1,...data.map(r=>r.length));return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${colName(mc)}${Math.max(1,data.length)}"/><sheetData>${x}</sheetData></worksheet>`;}
+
+  const workbook=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="1カ月全車両" sheetId="1" r:id="rId1"/><sheet name="車両マスター" sheetId="2" r:id="rId2"/><sheet name="運転者マスター" sheetId="3" r:id="rId3"/><sheet name="整備管理者マスター" sheetId="4" r:id="rId4"/></sheets><definedNames><definedName name="TruckList">'車両マスター'!$A$2:$A$200</definedName><definedName name="DriverList">'運転者マスター'!$A$2:$A$200</definedName><definedName name="ManagerList">'整備管理者マスター'!$A$2:$A$200</definedName></definedNames></workbook>`;
+  const files=[
+    {name:"[Content_Types].xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`},
+    {name:"_rels/.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:"xl/styles.xml",data:styles},{name:"xl/workbook.xml",data:workbook},
+    {name:"xl/_rels/workbook.xml.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/><Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:"xl/worksheets/sheet1.xml",data:sheetXml},{name:"xl/worksheets/sheet2.xml",data:simpleSheet(truckRows)},{name:"xl/worksheets/sheet3.xml",data:simpleSheet(driverRows)},{name:"xl/worksheets/sheet4.xml",data:simpleSheet(managerRows)}
+  ];
+  try{
+    const bytes=zipStore(files);
+    const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    downloadXlsxBlob(blob,`トラック日常点検_${month.replaceAll("-","")}_1カ月全車両_全履歴.xlsx`);
+    const st=document.getElementById("status"); if(st) st.textContent=`${month} の1カ月Excelを出力しました（③保存版の実績${rows.length-1}件）。`;
+  }catch(e){ alert("1カ月・全車両Excelの出力に失敗しました。\n"+(e&&e.message?e.message:e)); console.error(e); }
+}
+
+function clearForm(){
+  if(!confirm("入力内容をクリアしますか？")) return;
+  requireItem18 = false;
+  Object.keys(results).forEach(k=>delete results[k]);
+  document.querySelectorAll(".result button").forEach(b=>b.classList.remove("active"));
+  overall.value=""; abnormal.value=""; previous.value=""; today.value="";
+  document.getElementById("vehicleSelect").value=""; document.getElementById("driverSelect").value="";
+  document.getElementById("vehicle").value=""; document.getElementById("driver").value="";
+  document.getElementById("vehicle").style.display="none"; document.getElementById("driver").style.display="none";
+  updateProgress();
+  document.getElementById("shakenConfirm").checked=false;
+  const managerSel=document.getElementById("managerConfirmPerson");
+  if(managerSel) managerSel.value="";
+  resetDriverChange();
+  document.getElementById("status").textContent="";
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const dp=document.getElementById("dailyPrintDate"); if(dp) dp.value=localDateKey();
+  const mp=document.getElementById("monthlyPrintMonth"); if(mp) mp.value=localDateKey().slice(0,7);
+  renderManagers();
+  populateManagerSelect();
+});
+
+</script>
+
+</body>
+</html>
