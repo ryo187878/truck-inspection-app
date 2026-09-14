@@ -509,48 +509,60 @@ textarea{min-height:80px;resize:vertical}
     if(bar) bar.classList.add("show");
   }
 
+  function clearTenantLocalCache(){
+    [
+      "truck_inspection_records_v1",
+      "truck_inspection_saved_v1",
+      "truck_inspection_deleted_v1",
+      "truck_inspection_archived_v1",
+      "truck_vehicles",
+      "truck_drivers",
+      "truck_managers"
+    ].forEach(k=>localStorage.removeItem(k));
+  }
+
   async function syncAfterLogin(profile){
+    // 会社・営業所をまたいで端末内データが混ざらないよう、
+    // ログイン直後に前利用者のローカルキャッシュを破棄し、
+    // 現在の companyId / officeId のクラウドデータだけを読み込む。
+    clearTenantLocalCache();
+
+    const cloudVehicles=await window.firebaseCloud.loadVehicles();
+    localStorage.setItem("truck_vehicles", JSON.stringify(cloudVehicles));
+
+    const masterData=await window.firebaseCloud.loadMasterData();
+    localStorage.setItem("truck_drivers", JSON.stringify(Array.isArray(masterData.drivers)?masterData.drivers:[]));
+    localStorage.setItem("truck_managers", JSON.stringify(Array.isArray(masterData.managers)?masterData.managers:[]));
+
     if(profile && profile.role==="driver"){
-      localStorage.removeItem("truck_inspection_records_v1");
-      localStorage.removeItem("truck_inspection_saved_v1");
-      const cloudVehicles=await window.firebaseCloud.loadVehicles();
-      if(cloudVehicles.length) localStorage.setItem("truck_vehicles", JSON.stringify(cloudVehicles));
-      const masterData=await window.firebaseCloud.loadMasterData();
-      if(Array.isArray(masterData.drivers)) localStorage.setItem("truck_drivers", JSON.stringify(masterData.drivers));
+      // 運転者は点検履歴を端末にも読み込まない。
+      localStorage.setItem("truck_inspection_records_v1", "[]");
+      localStorage.setItem("truck_inspection_saved_v1", "[]");
       if(typeof renderMasters === "function") renderMasters();
+      if(typeof renderRecords === "function") renderRecords();
+      if(typeof renderSavedRecords === "function") renderSavedRecords();
       cloudStatus("☁️ Firebase：運転者モード接続済み", "ok");
       return;
     }
-    const local = JSON.parse(localStorage.getItem("truck_inspection_records_v1")||"[]");
-    const cloud = await window.firebaseCloud.loadRecords();
-    const byId = new Map();
-    [...local, ...cloud].forEach(r=>{ if(r && r.id) byId.set(String(r.id), r); });
-    const merged=[...byId.values()];
-    localStorage.setItem("truck_inspection_records_v1", JSON.stringify(merged));
-    const formalSaved = merged.filter(r=>r && r.managerConfirmedAt && !r.deletedAt).map(r=>JSON.parse(JSON.stringify(r)));
-    localStorage.setItem("truck_inspection_saved_v1", JSON.stringify(formalSaved));
-    const needUpload=local.filter(r=>r && r.id && !cloud.some(c=>String(c.id)===String(r.id)));
-    if(needUpload.length) await window.firebaseCloud.migrateLocal(needUpload);
 
-    const cloudVehicles=await window.firebaseCloud.loadVehicles();
-    if(cloudVehicles.length){
-      localStorage.setItem("truck_vehicles", JSON.stringify(cloudVehicles));
-    }else{
-      const localVehicles=JSON.parse(localStorage.getItem("truck_vehicles")||"[]");
-      for(const v of localVehicles){
-        if(v && v.name){ const id=await window.firebaseCloud.saveVehicle(v); v._cloudId=id; }
-      }
-      if(localVehicles.length) localStorage.setItem("truck_vehicles", JSON.stringify(localVehicles));
-    }
-    const masterData=await window.firebaseCloud.loadMasterData();
-    if(Array.isArray(masterData.drivers)){ localStorage.setItem("truck_drivers", JSON.stringify(masterData.drivers)); }
-    else { const x=JSON.parse(localStorage.getItem("truck_drivers")||"[]"); if(x.length) await window.firebaseCloud.saveDrivers(x); }
-    if(Array.isArray(masterData.managers)){ localStorage.setItem("truck_managers", JSON.stringify(masterData.managers)); }
-    else { const x=JSON.parse(localStorage.getItem("truck_managers")||"[]"); if(x.length) await window.firebaseCloud.saveManagers(x); }
+    // 管理者も現在の会社・営業所のクラウド記録だけを採用する。
+    // 旧仕様のローカル→クラウド自動移行は、別会社への混入防止のため行わない。
+    const cloud = await window.firebaseCloud.loadRecords();
+    const currentTenantRecords = cloud.filter(r =>
+      r && r.id &&
+      (!r.companyId || String(r.companyId)===String(CLOUD_COMPANY)) &&
+      (!r.officeId || String(r.officeId)===String(CLOUD_OFFICE))
+    );
+    localStorage.setItem("truck_inspection_records_v1", JSON.stringify(currentTenantRecords));
+    const formalSaved = currentTenantRecords
+      .filter(r=>r && r.managerConfirmedAt && !r.deletedAt)
+      .map(r=>JSON.parse(JSON.stringify(r)));
+    localStorage.setItem("truck_inspection_saved_v1", JSON.stringify(formalSaved));
+
     if(typeof renderMasters === "function") renderMasters();
     if(typeof renderRecords === "function") renderRecords();
     if(typeof renderSavedRecords === "function") renderSavedRecords();
-    cloudStatus(`☁️ Firebase：接続済み（${merged.length}件）`, "ok");
+    cloudStatus(`☁️ Firebase：接続済み（${currentTenantRecords.length}件）`, "ok");
   }
 
   const loginButton=document.getElementById("loginButton");
@@ -569,7 +581,10 @@ textarea{min-height:80px;resize:vertical}
     finally { loginButton.disabled=false; loginButton.textContent="ログイン"; }
   });
   loginPassword.addEventListener("keydown",e=>{ if(e.key==="Enter") loginButton.click(); });
-  document.getElementById("logoutButton").addEventListener("click",()=>signOut(firebaseAuth));
+  document.getElementById("logoutButton").addEventListener("click",()=>{
+    clearTenantLocalCache();
+    signOut(firebaseAuth);
+  });
 
   onAuthStateChanged(firebaseAuth, async user=>{
     if(!user){
