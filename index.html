@@ -76,12 +76,15 @@ textarea{min-height:80px;resize:vertical}
 .vehicle-master-form input{display:block!important;width:100%!important;box-sizing:border-box!important;margin-top:4px!important;min-height:44px!important}
 .vehicle-master-form button{width:100%!important;min-height:46px!important}
 
+
+.cloud-status{margin:8px 0;padding:8px 10px;border-radius:8px;background:#f1f5f9;color:#53606b;font-size:13px;font-weight:700}.cloud-status.ok{background:#eaf7ee;color:#176b35}.cloud-status.ng{background:#fff0f0;color:#a30000}
 </style>
 </head>
 <body>
 <header>
 <h1>🚚 トラック日常点検</h1>
 <div class="sub">iPad縦長入力版 · 1台ごとに保存 · 整備管理者欄は①のみ · 18番☆ミックスタイヤ対応・確実表示版</div>
+<div id="cloudStatus" class="cloud-status">☁️ Firebase：接続準備中…</div>
 </header>
 
 
@@ -328,6 +331,95 @@ textarea{min-height:80px;resize:vertical}
     </div>
   </div>
 </section>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCnnljHeudw5t_US6v5nkZ4555NGfH-vF8",
+    authDomain: "truck-inspection-app-6a0c8.firebaseapp.com",
+    projectId: "truck-inspection-app-6a0c8",
+    storageBucket: "truck-inspection-app-6a0c8.firebasestorage.app",
+    messagingSenderId: "597073700511",
+    appId: "1:597073700511:web:59e8ee8d9112e6c659a4aa"
+  };
+
+  const firebaseApp = initializeApp(firebaseConfig);
+  const firebaseAuth = getAuth(firebaseApp);
+  const firestoreDb = getFirestore(firebaseApp);
+  const CLOUD_COMPANY = "kantotanami";
+  const CLOUD_OFFICE = "ibaraki";
+  const CLOUD_COLLECTION = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/inspections`;
+
+  window.firebaseReady = false;
+  window.firebaseUser = null;
+  window.firebaseCloud = {
+    status: "接続中",
+    async saveRecord(record){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      await setDoc(doc(firestoreDb, CLOUD_COLLECTION, String(record.id)), {
+        ...record,
+        companyId: CLOUD_COMPANY,
+        officeId: CLOUD_OFFICE,
+        cloudUpdatedAt: new Date().toISOString()
+      });
+    },
+    async loadRecords(){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      const snap = await getDocs(collection(firestoreDb, CLOUD_COLLECTION));
+      return snap.docs.map(d=>d.data()).filter(x=>x && x.id);
+    },
+    async migrateLocal(records){
+      if(!window.firebaseReady || !records.length) return;
+      for(const record of records){
+        await setDoc(doc(firestoreDb, CLOUD_COLLECTION, String(record.id)), {
+          ...record,
+          companyId: CLOUD_COMPANY,
+          officeId: CLOUD_OFFICE,
+          cloudUpdatedAt: new Date().toISOString()
+        }, {merge:true});
+      }
+    }
+  };
+
+  function cloudStatus(message, cls=""){
+    const el=document.getElementById("cloudStatus");
+    if(el){ el.textContent=message; el.className="cloud-status "+cls; }
+  }
+
+  onAuthStateChanged(firebaseAuth, async user=>{
+    if(!user) return;
+    window.firebaseUser=user;
+    window.firebaseReady=true;
+    window.firebaseCloud.status="接続済み";
+    cloudStatus("☁️ Firebase：接続済み", "ok");
+    try{
+      const local = JSON.parse(localStorage.getItem("truck_inspection_records_v1")||"[]");
+      const cloud = await window.firebaseCloud.loadRecords();
+      const byId = new Map();
+      [...cloud, ...local].forEach(r=>{ if(r && r.id) byId.set(String(r.id), r); });
+      const merged=[...byId.values()];
+      localStorage.setItem("truck_inspection_records_v1", JSON.stringify(merged));
+      const localIds=new Set(local.map(r=>String(r.id||"")));
+      const needUpload=local.filter(r=>r && r.id && !cloud.some(c=>String(c.id)===String(r.id)));
+      if(needUpload.length) await window.firebaseCloud.migrateLocal(needUpload);
+      if(typeof renderRecords === "function") renderRecords();
+      if(typeof renderSavedRecords === "function") renderSavedRecords();
+      cloudStatus(`☁️ Firebase：接続済み（${merged.length}件）`, "ok");
+    }catch(e){
+      console.error(e);
+      window.firebaseCloud.status="接続エラー";
+      cloudStatus("⚠️ Firebase：接続できません。設定を確認してください。", "ng");
+    }
+  });
+
+  signInAnonymously(firebaseAuth).catch(e=>{
+    console.error(e);
+    window.firebaseCloud.status="認証エラー";
+    cloudStatus("⚠️ Firebase認証が未設定です", "ng");
+  });
+</script>
 <script>
 const items = [{"no": 1, "text": "エンジンのかかり具合、異音"}, {"no": 2, "text": "ブレーキ・ペダルの踏みしろ、効き具合"}, {"no": 3, "text": "駐車ブレーキ・レバーの引きしろ（踏みしろ）"}, {"no": 4, "text": "空気圧力計の上り具合"}, {"no": 5, "text": "ブレーキ・バルブの排気音"}, {"no": 6, "text": "方向指示器の点滅具合"}, {"no": 7, "text": "ブレーキ・オイルのリザーバタンクの液量"}, {"no": 8, "text": "ウインド・ウォッシャの液量、噴射状態"}, {"no": 9, "text": "ワイパーの拭き取り状態"}, {"no": 10, "text": "ラジエータの冷却水の量"}, {"no": 11, "text": "ファン・ベルトの張り具合、損傷"}, {"no": 12, "text": "エンジン・オイルの液量、液漏れ"}, {"no": 13, "text": "バッテリの液量"}, {"no": 14, "text": "前照灯、方向指示器、車幅灯、非常点滅灯、その他灯火の点灯・点滅具合"}, {"no": 15, "text": "灯火類のレンズ、反射器の汚れ、変色、損傷状況（前部）"}, {"no": 16, "text": "タイヤの空気圧、異常摩耗、亀裂、損傷"}, {"no": 17, "text": "タイヤの溝の深さ"}, {"no": 18, "text": "冬用タイヤのプラットホームの露出の有無"}, {"no": 19, "text": "★ ディスク・ホイールの取付け状態（ホイール・ボルトの折損・ゆるみ等）"}, {"no": 20, "text": "エア・タンク内の疑水"}, {"no": 21, "text": "（ブレーキ・ペダルの踏みしろ、効き具合）ブレーキ・チャンバのロッドのストロークドラムとライニングのすき間"}, {"no": 22, "text": "番号灯、方向指示器、尾灯、制動灯、後退灯、非常点滅灯、その他灯火の点灯、点滅具合"}, {"no": 23, "text": "灯火類のレンズ、反射器の汚れ、変色、損傷状況（後部）"}, {"no": 24, "text": "座席（シートベルト）の装着状況"}, {"no": 25, "text": "工具、スペアタイヤの固定状況"}, {"no": 26, "text": "非常信号用具、停止表示器材、車輪止め、自賠責保険証、点検整備記録簿等の車載状況"}, {"no": 27, "text": "チャート紙の装着状況"}];
 window.items = items;
@@ -906,7 +998,7 @@ function resetAfterSave(){
   if(typeof updateProgress==="function") updateProgress();
 }
 
-function saveRecord(){
+async function saveRecord(){
   const record={
     id:(crypto.randomUUID ? crypto.randomUUID() : ('R'+Date.now()+Math.random().toString(16).slice(2))),
     date:document.getElementById("date").value,
@@ -945,7 +1037,19 @@ function saveRecord(){
   }
   const records=getRecords(); records.push(record);
   localStorage.setItem(key,JSON.stringify(records));
-  document.getElementById("status").textContent=`保存しました（累計 ${records.length} 件）`;
+  document.getElementById("status").textContent=`保存中…（累計 ${records.length} 件）`;
+  try{
+    if(window.firebaseCloud && window.firebaseCloud.saveRecord){
+      await window.firebaseCloud.saveRecord(record);
+      document.getElementById("status").textContent=`☁️ Firebaseへ保存しました（累計 ${records.length} 件）`;
+    }else{
+      document.getElementById("status").textContent=`端末に保存しました（累計 ${records.length} 件）`;
+    }
+  }catch(e){
+    console.error(e);
+    document.getElementById("status").textContent=`⚠️ 端末には保存済みですが、Firebase保存に失敗しました。設定を確認してください。`;
+    alert("点検記録はこの端末には保存されましたが、Firebaseへのクラウド保存に失敗しました。\n\n次の設定を確認してください：\n・Authenticationの匿名ログイン\n・Firestoreのルール\n\nエラー："+(e&&e.message?e.message:e));
+  }
   resetAfterSave();
 }
 
