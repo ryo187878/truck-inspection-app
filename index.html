@@ -155,7 +155,7 @@ textarea{min-height:80px;resize:vertical}
     <button type="button" onclick="bulkSelectAll()">☑️ 全項目チェック</button>
     <button type="button" onclick="bulkSelectRequired()">☑️ 茶色以外チェック</button>
   </div>
-  <div class="small" style="margin-bottom:10px">※ 茶色の点検項目は未選択のままでも保存できます。</div>
+  <div class="small" style="margin-bottom:10px">※ 茶色の点検項目は未選択でも保存できます。18番は「全項目チェック」を使った時だけ手動選択が必須です。</div>
   <div id="items"></div>
 </section>
 
@@ -589,6 +589,7 @@ textarea{min-height:80px;resize:vertical}
 const items = [{"no": 1, "text": "エンジンのかかり具合、異音"}, {"no": 2, "text": "ブレーキ・ペダルの踏みしろ、効き具合"}, {"no": 3, "text": "駐車ブレーキ・レバーの引きしろ（踏みしろ）"}, {"no": 4, "text": "空気圧力計の上り具合"}, {"no": 5, "text": "ブレーキ・バルブの排気音"}, {"no": 6, "text": "方向指示器の点滅具合"}, {"no": 7, "text": "ブレーキ・オイルのリザーバタンクの液量"}, {"no": 8, "text": "ウインド・ウォッシャの液量、噴射状態"}, {"no": 9, "text": "ワイパーの拭き取り状態"}, {"no": 10, "text": "ラジエータの冷却水の量"}, {"no": 11, "text": "ファン・ベルトの張り具合、損傷"}, {"no": 12, "text": "エンジン・オイルの液量、液漏れ"}, {"no": 13, "text": "バッテリの液量"}, {"no": 14, "text": "前照灯、方向指示器、車幅灯、非常点滅灯、その他灯火の点灯・点滅具合"}, {"no": 15, "text": "灯火類のレンズ、反射器の汚れ、変色、損傷状況（前部）"}, {"no": 16, "text": "タイヤの空気圧、異常摩耗、亀裂、損傷"}, {"no": 17, "text": "タイヤの溝の深さ"}, {"no": 18, "text": "冬用タイヤのプラットホームの露出の有無"}, {"no": 19, "text": "★ ディスク・ホイールの取付け状態（ホイール・ボルトの折損・ゆるみ等）"}, {"no": 20, "text": "エア・タンク内の疑水"}, {"no": 21, "text": "（ブレーキ・ペダルの踏みしろ、効き具合）ブレーキ・チャンバのロッドのストロークドラムとライニングのすき間"}, {"no": 22, "text": "番号灯、方向指示器、尾灯、制動灯、後退灯、非常点滅灯、その他灯火の点灯、点滅具合"}, {"no": 23, "text": "灯火類のレンズ、反射器の汚れ、変色、損傷状況（後部）"}, {"no": 24, "text": "座席（シートベルト）の装着状況"}, {"no": 25, "text": "工具、スペアタイヤの固定状況"}, {"no": 26, "text": "非常信号用具、停止表示器材、車輪止め、自賠責保険証、点検整備記録簿等の車載状況"}, {"no": 27, "text": "チャート紙の装着状況"}];
 window.items = items;
 const results = {};
+let requireItem18 = false; // 「全項目チェック」を使った時だけ18番を必須にする
 const key = "truck_inspection_records_v1";
 
 
@@ -1021,6 +1022,7 @@ function setResult(no,val,btn){
 }
 
 function bulkSelectAll(){
+  requireItem18 = true;
   items.forEach(x=>{
     // 18番は4択のため、全項目チェックでは絶対に自動選択しない
     if(Number(x.no)===18) return;
@@ -1034,6 +1036,7 @@ function bulkSelectAll(){
   updateProgress();
 }
 function bulkSelectRequired(){
+  requireItem18 = false;
   items.forEach(x=>{
     const div=document.querySelector(`.item[data-no="${x.no}"]`);
     if(!div) return;
@@ -1261,20 +1264,16 @@ async function saveRecord(){
   if(selected && selected.shaken && !document.getElementById("shakenConfirm").checked){
     alert("車検満了日を確認してから点検を保存してください。");return;
   }
-  // 茶色項目は原則任意。ただし18番だけは4択を必ず手動選択する。
-  const requiredItems = items.filter(x => ![1,8,9,10,11,12,13,17,21].includes(Number(x.no)));
+  // 茶色項目は任意。18番は「全項目チェック」を使った時だけ手動選択を必須にする。
+  const optionalNos = [1,8,9,10,11,12,13,17,18,21];
+  const requiredItems = items.filter(x => !optionalNos.includes(Number(x.no)));
   const missingRequired = requiredItems.filter(x => !results[x.no]);
-    if(!results[18]){
-      alert("18番「冬用タイヤのプラットホームの露出の有無」は、○・△・×・☆のいずれかを手動で選択してください。");
-      return;
-    }
+  if(requireItem18 && !results[18]){
+    alert("「全項目チェック」を使用した場合は、18番「冬用タイヤのプラットホームの露出の有無」を○・△・×・☆から手動で選択してください。");
+    return;
+  }
   if(missingRequired.length){
-    const missing18 = missingRequired.some(x=>Number(x.no)===18);
-    if(missing18){
-      alert("18番「冬用タイヤのプラットホームの露出の有無」は、○・△・×・☆のいずれかを必ず手動で選択してください。");
-    }else{
-      alert(`必須点検項目が未入力です。あと ${missingRequired.length} 項目です。`);
-    }
+    alert(`必須点検項目が未入力です。あと ${missingRequired.length} 項目です。`);
     return;
   }
   const records=getRecords(); records.push(record);
@@ -1843,6 +1842,7 @@ function exportMonthlyPrintExcel(){
 
 function clearForm(){
   if(!confirm("入力内容をクリアしますか？")) return;
+  requireItem18 = false;
   Object.keys(results).forEach(k=>delete results[k]);
   document.querySelectorAll(".result button").forEach(b=>b.classList.remove("active"));
   overall.value=""; abnormal.value=""; previous.value=""; today.value="";
