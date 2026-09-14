@@ -369,12 +369,25 @@ textarea{min-height:80px;resize:vertical}
   const firebaseApp = initializeApp(firebaseConfig);
   const firebaseAuth = getAuth(firebaseApp);
   const firestoreDb = getFirestore(firebaseApp);
-  const CLOUD_COMPANY = "kantotanami";
-  const CLOUD_OFFICE = "ibaraki";
-  const CLOUD_COLLECTION = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/inspections`;
-  const CLOUD_VEHICLES = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/vehicles`;
-  const CLOUD_MASTER_DOC = `companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/settings/masterData`;
   const CLOUD_USERS = `users`;
+  let CLOUD_COMPANY = "";
+  let CLOUD_OFFICE = "";
+  let CLOUD_COLLECTION = "";
+  let CLOUD_VEHICLES = "";
+  let CLOUD_MASTER_DOC = "";
+
+  function setCloudTenant(profile){
+    const companyId=String(profile?.companyId||"").trim();
+    const officeId=String(profile?.officeId||"").trim();
+    if(!companyId || !officeId || companyId.includes("/") || officeId.includes("/")){
+      throw new Error("会社・営業所の登録情報が正しくありません。");
+    }
+    CLOUD_COMPANY=companyId;
+    CLOUD_OFFICE=officeId;
+    CLOUD_COLLECTION=`companies/${companyId}/offices/${officeId}/inspections`;
+    CLOUD_VEHICLES=`companies/${companyId}/offices/${officeId}/vehicles`;
+    CLOUD_MASTER_DOC=`companies/${companyId}/offices/${officeId}/settings/masterData`;
+  }
 
   function vehicleDocId(name){
     return String(name||"").trim().replaceAll("/","／") || crypto.randomUUID();
@@ -473,8 +486,8 @@ textarea{min-height:80px;resize:vertical}
     const snap=await getDoc(doc(firestoreDb, CLOUD_USERS, user.uid));
     if(!snap.exists()) throw new Error("このユーザーには利用権限が登録されていません。");
     const profile=snap.data()||{};
-    if(profile.companyId!==CLOUD_COMPANY || profile.officeId!==CLOUD_OFFICE){
-      throw new Error("この営業所を利用する権限がありません。");
+    if(!profile.companyId || !profile.officeId){
+      throw new Error("会社・営業所の利用権限が登録されていません。");
     }
     if(!["admin","driver"].includes(profile.role)){
       throw new Error("ユーザー権限が正しく設定されていません。");
@@ -492,7 +505,7 @@ textarea{min-height:80px;resize:vertical}
     }
     const label=document.getElementById("loginUserLabel");
     const bar=document.getElementById("userBar");
-    if(label) label.textContent=`${profile.role==="admin"?"管理者":"運転者"}：${user.email||user.uid}`;
+    if(label) label.textContent=`${profile.role==="admin"?"管理者":"運転者"}：${user.email||user.uid}｜${profile.companyId}/${profile.officeId}`;
     if(bar) bar.classList.add("show");
   }
 
@@ -569,6 +582,7 @@ textarea{min-height:80px;resize:vertical}
     try{
       cloudStatus("☁️ Firebase：権限確認中…");
       const profile=await loadUserProfile(user);
+      setCloudTenant(profile);
       window.firebaseUser=user; window.firebaseReady=true; window.firebaseProfile=profile;
       window.firebaseCloud.status="接続済み";
       applyRole(profile,user);
