@@ -469,6 +469,7 @@ textarea{min-height:80px;resize:vertical}
     CLOUD_COLLECTION=`companies/${companyId}/offices/${officeId}/inspections`;
     CLOUD_VEHICLES=`companies/${companyId}/offices/${officeId}/vehicles`;
     CLOUD_MASTER_DOC=`companies/${companyId}/offices/${officeId}/settings/masterData`;
+    CLOUD_REGISTRATION_REQUESTS=registrationCollectionPath(companyId,officeId);
   }
 
   function vehicleDocId(name){
@@ -539,8 +540,10 @@ textarea{min-height:80px;resize:vertical}
       await deleteDoc(doc(firestoreDb, CLOUD_VEHICLES, id));
     },
     async loadRegistrationRequests(){
-      if(!window.firebaseReady || !CLOUD_REGISTRATION_REQUESTS) return [];
-      const snap=await getDocs(collection(firestoreDb, CLOUD_REGISTRATION_REQUESTS));
+      if(!window.firebaseReady) return [];
+      const requestPath=CLOUD_REGISTRATION_REQUESTS || registrationCollectionPath(CLOUD_COMPANY,CLOUD_OFFICE);
+      if(!requestPath) return [];
+      const snap=await getDocs(collection(firestoreDb, requestPath));
       return snap.docs.map(d=>({id:d.id,...(d.data()||{})}))
         .filter(x=>x && x.status==="pending");
     },
