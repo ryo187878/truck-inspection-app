@@ -85,20 +85,51 @@ textarea{min-height:80px;resize:vertical}
 .auth-card h2{margin:0 0 8px;font-size:22px}.auth-card p{margin:0 0 16px;color:#667;font-size:13px;line-height:1.6}
 .auth-card input{margin-bottom:10px}.auth-card button{width:100%;border:0;border-radius:11px;padding:13px;font-size:16px;font-weight:800;background:#6f82a6;color:#fff}
 .auth-error{min-height:22px;color:#a30000;font-size:13px;font-weight:700;margin-top:10px}.auth-hidden{display:none!important}
+.auth-switch{margin-top:10px;background:#eef2f6!important;color:#334!important}
+.auth-back{margin-top:8px;background:#eee!important;color:#334!important}
+.register-panel{display:none}.register-panel.show{display:block}.login-panel.hide{display:none}
+.tenant-chip{background:#eef5ff;border:1px solid #c7d8ef;border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;color:#42566f}
+.auth-success{margin-top:10px;padding:10px;border-radius:10px;background:#eaf7ee;color:#176b35;font-size:13px;font-weight:700;display:none}.auth-success.show{display:block}
+.registration-request{border:1px solid #d8e0e8;border-radius:10px;padding:10px;margin:8px 0;background:#fafcff}
+.registration-request .req-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.registration-request button{border:0;border-radius:9px;padding:10px;font-weight:800}
+.registration-request .approve{background:#dcefdc;color:#245c2a}.registration-request .reject{background:#ffd7d7;color:#8b0000}
 .user-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px}.user-bar.show{display:flex}.logout-btn{width:auto;border:1px solid #ffffff88;border-radius:8px;background:#ffffff20;color:#fff;padding:5px 9px;font-weight:700}
 </style>
 </head>
 <body>
 <div id="authGate" class="auth-gate">
   <div class="auth-card">
-    <h2>🔐 管理者ログイン</h2>
-    <p>会社の管理画面を利用するには、登録済みのメールアドレスとパスワードでログインしてください。</p>
-    <label>メールアドレス</label>
-    <input id="loginEmail" type="email" autocomplete="username" placeholder="メールアドレス">
-    <label>パスワード</label>
-    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード">
-    <button type="button" id="loginButton">ログイン</button>
-    <div id="authError" class="auth-error"></div>
+    <div id="loginPanel" class="login-panel">
+      <h2>🔐 トラック日常点検 ログイン</h2>
+      <p>個人IDまたは管理者メールアドレスとパスワードでログインしてください。</p>
+      <label>ログインID または メールアドレス</label>
+      <input id="loginEmail" type="text" autocomplete="username" placeholder="例：tanaka01">
+      <label>パスワード</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード">
+      <button type="button" id="loginButton">ログイン</button>
+      <button type="button" id="showRegisterButton" class="auth-switch" style="display:none">初めての方：アカウント登録</button>
+      <div id="authError" class="auth-error"></div>
+      <div id="authSuccess" class="auth-success"></div>
+    </div>
+
+    <div id="registerPanel" class="register-panel">
+      <h2>👤 初回アカウント登録</h2>
+      <p>会社・営業所はQRコードから自動設定されます。入力するのは名前、ログインID、パスワードだけです。</p>
+      <div id="registerTenant" class="tenant-chip">会社・営業所を確認中...</div>
+      <label>名前</label>
+      <input id="registerName" type="text" autocomplete="name" placeholder="例：田中 太郎">
+      <label>ログインID</label>
+      <input id="registerLoginId" type="text" autocapitalize="none" autocomplete="username" placeholder="例：tanaka01">
+      <div class="small" style="margin:-4px 0 10px">半角英数字・「.」「_」「-」で3〜30文字</div>
+      <label>パスワード</label>
+      <input id="registerPassword" type="password" autocomplete="new-password" placeholder="6文字以上">
+      <label>パスワード確認</label>
+      <input id="registerPassword2" type="password" autocomplete="new-password" placeholder="もう一度入力">
+      <button type="button" id="registerButton">登録申請する</button>
+      <button type="button" id="backToLoginButton" class="auth-back">ログインに戻る</button>
+      <div id="registerError" class="auth-error"></div>
+    </div>
   </div>
 </div>
 <header>
@@ -230,6 +261,11 @@ textarea{min-height:80px;resize:vertical}
 <section class="card">
 <div class="section-title">🔔 車検期限アラート</div>
 <div id="shakenAlerts"></div>
+</section>
+<section class="card">
+<div class="section-title">📱 初回アカウント登録申請</div>
+<div class="small">QRコードから申請された運転者を確認します。「承認」すると、その人の個人IDでログインできるようになります。</div>
+<div id="registrationRequestList" style="margin-top:10px"><div class="small">申請を読み込み中...</div></div>
 </section>
 <section class="card">
 <div class="section-title">👤 運転者マスター</div>
@@ -366,7 +402,7 @@ textarea{min-height:80px;resize:vertical}
 </section>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
   import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -387,6 +423,40 @@ textarea{min-height:80px;resize:vertical}
   let CLOUD_COLLECTION = "";
   let CLOUD_VEHICLES = "";
   let CLOUD_MASTER_DOC = "";
+  let CLOUD_REGISTRATION_REQUESTS = "";
+
+  const TENANT_CONTEXT_KEY = "truck_registration_tenant_v1";
+
+  function sanitizeLoginPart(value){
+    return String(value||"").trim().toLowerCase().replace(/[^a-z0-9._-]/g,"");
+  }
+
+  function makeInternalEmail(companyId, officeId, loginId){
+    const c=sanitizeLoginPart(companyId);
+    const o=sanitizeLoginPart(officeId);
+    const u=sanitizeLoginPart(loginId);
+    return `${u}.${o}.${c}@truck-inspection.invalid`;
+  }
+
+  function getTenantContext(){
+    const params=new URLSearchParams(location.search);
+    const companyId=String(params.get("company")||"").trim();
+    const officeId=String(params.get("office")||"").trim();
+    if(companyId && officeId){
+      const ctx={companyId,officeId};
+      localStorage.setItem(TENANT_CONTEXT_KEY, JSON.stringify(ctx));
+      return ctx;
+    }
+    try{
+      const saved=JSON.parse(localStorage.getItem(TENANT_CONTEXT_KEY)||"null");
+      if(saved && saved.companyId && saved.officeId) return saved;
+    }catch(e){}
+    return null;
+  }
+
+  function registrationCollectionPath(companyId,officeId){
+    return `companies/${companyId}/offices/${officeId}/registrationRequests`;
+  }
 
   function setCloudTenant(profile){
     const companyId=String(profile?.companyId||"").trim();
@@ -468,6 +538,37 @@ textarea{min-height:80px;resize:vertical}
       const id=vehicle._cloudId||vehicleDocId(vehicle.name);
       await deleteDoc(doc(firestoreDb, CLOUD_VEHICLES, id));
     },
+    async loadRegistrationRequests(){
+      if(!window.firebaseReady || !CLOUD_REGISTRATION_REQUESTS) return [];
+      const snap=await getDocs(collection(firestoreDb, CLOUD_REGISTRATION_REQUESTS));
+      return snap.docs.map(d=>({id:d.id,...(d.data()||{})}))
+        .filter(x=>x && x.status==="pending");
+    },
+    async approveRegistration(req){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      if(!req || !req.id) throw new Error("登録申請が見つかりません。");
+      await setDoc(doc(firestoreDb, CLOUD_USERS, req.id), {
+        role:"driver",
+        companyId:CLOUD_COMPANY,
+        officeId:CLOUD_OFFICE,
+        displayName:String(req.displayName||"").trim(),
+        loginId:String(req.loginId||"").trim(),
+        approvedAt:new Date().toISOString()
+      });
+      await setDoc(doc(firestoreDb, CLOUD_REGISTRATION_REQUESTS, req.id), {
+        status:"approved",
+        approvedAt:new Date().toISOString(),
+        approvedBy:window.firebaseUser?.uid||""
+      }, {merge:true});
+    },
+    async rejectRegistration(req){
+      if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
+      await setDoc(doc(firestoreDb, CLOUD_REGISTRATION_REQUESTS, req.id), {
+        status:"rejected",
+        rejectedAt:new Date().toISOString(),
+        rejectedBy:window.firebaseUser?.uid||""
+      }, {merge:true});
+    },
     async loadMasterData(){
       if(!window.firebaseReady) return {};
       const snap=await getDoc(doc(firestoreDb, CLOUD_MASTER_DOC));
@@ -517,7 +618,7 @@ textarea{min-height:80px;resize:vertical}
     }
     const label=document.getElementById("loginUserLabel");
     const bar=document.getElementById("userBar");
-    if(label) label.textContent=`${profile.role==="admin"?"管理者":"運転者"}：${user.email||user.uid}｜${profile.companyId}/${profile.officeId}`;
+    if(label) label.textContent=`${profile.role==="admin"?"管理者":"運転者"}：${profile.displayName||profile.loginId||user.email||user.uid}｜${profile.companyId}/${profile.officeId}`;
     if(bar) bar.classList.add("show");
   }
 
@@ -581,24 +682,144 @@ textarea{min-height:80px;resize:vertical}
   const loginEmail=document.getElementById("loginEmail");
   const loginPassword=document.getElementById("loginPassword");
   const authError=document.getElementById("authError");
+  const authSuccess=document.getElementById("authSuccess");
   const authGate=document.getElementById("authGate");
+  const loginPanel=document.getElementById("loginPanel");
+  const registerPanel=document.getElementById("registerPanel");
+  const showRegisterButton=document.getElementById("showRegisterButton");
+  const backToLoginButton=document.getElementById("backToLoginButton");
+  const registerButton=document.getElementById("registerButton");
+  const registerError=document.getElementById("registerError");
+  const registerTenant=document.getElementById("registerTenant");
+  const tenantContext=getTenantContext();
+
+  function showLoginPanel(message=""){
+    registerPanel.classList.remove("show");
+    loginPanel.classList.remove("hide");
+    authError.textContent="";
+    registerError.textContent="";
+    if(message){
+      authSuccess.textContent=message;
+      authSuccess.classList.add("show");
+    }else{
+      authSuccess.classList.remove("show");
+      authSuccess.textContent="";
+    }
+  }
+
+  function showRegistrationPanel(){
+    if(!tenantContext){
+      authError.textContent="会社専用QRコードから開いてください。";
+      return;
+    }
+    loginPanel.classList.add("hide");
+    registerPanel.classList.add("show");
+    registerError.textContent="";
+  }
+
+  if(tenantContext){
+    showRegisterButton.style.display="";
+    registerTenant.textContent=`会社・営業所：自動設定済み（${tenantContext.companyId} / ${tenantContext.officeId}）`;
+  }else{
+    registerTenant.textContent="会社・営業所情報がありません。会社専用QRコードから開いてください。";
+  }
+
+  showRegisterButton.addEventListener("click",showRegistrationPanel);
+  backToLoginButton.addEventListener("click",()=>showLoginPanel());
+  if(new URLSearchParams(location.search).get("register")==="1" && tenantContext){
+    showRegistrationPanel();
+  }
+
   loginButton.addEventListener("click", async ()=>{
     authError.textContent="";
-    const email=loginEmail.value.trim();
+    authSuccess.classList.remove("show");
+    const loginValue=loginEmail.value.trim();
     const password=loginPassword.value;
-    if(!email || !password){ authError.textContent="メールアドレスとパスワードを入力してください。"; return; }
+    if(!loginValue || !password){ authError.textContent="ログインID（またはメールアドレス）とパスワードを入力してください。"; return; }
+
+    let authEmail=loginValue;
+    if(!loginValue.includes("@")){
+      const ctx=getTenantContext();
+      if(!ctx){
+        authError.textContent="個人IDでログインする場合は、会社専用QRコードから開いてください。";
+        return;
+      }
+      const normalized=sanitizeLoginPart(loginValue);
+      if(normalized.length<3){
+        authError.textContent="ログインIDを確認してください。";
+        return;
+      }
+      authEmail=makeInternalEmail(ctx.companyId,ctx.officeId,normalized);
+    }
+
     loginButton.disabled=true; loginButton.textContent="ログイン中…";
-    try { await signInWithEmailAndPassword(firebaseAuth,email,password); }
-    catch(e){ console.error(e); authError.textContent="ログインできません。メールアドレスまたはパスワードを確認してください。"; }
+    try { await signInWithEmailAndPassword(firebaseAuth,authEmail,password); }
+    catch(e){ console.error(e); authError.textContent="ログインできません。ID（またはメールアドレス）とパスワードを確認してください。"; }
     finally { loginButton.disabled=false; loginButton.textContent="ログイン"; }
   });
   loginPassword.addEventListener("keydown",e=>{ if(e.key==="Enter") loginButton.click(); });
+
+  registerButton.addEventListener("click", async ()=>{
+    registerError.textContent="";
+    if(!tenantContext){ registerError.textContent="会社専用QRコードから開いてください。"; return; }
+
+    const displayName=document.getElementById("registerName").value.trim();
+    const loginIdRaw=document.getElementById("registerLoginId").value.trim();
+    const loginId=sanitizeLoginPart(loginIdRaw);
+    const password=document.getElementById("registerPassword").value;
+    const password2=document.getElementById("registerPassword2").value;
+
+    if(!displayName){ registerError.textContent="名前を入力してください。"; return; }
+    if(loginIdRaw!==loginId || !/^[a-z0-9._-]{3,30}$/.test(loginId)){
+      registerError.textContent="ログインIDは半角英数字・. _ - で3〜30文字にしてください。";
+      return;
+    }
+    if(password.length<6){ registerError.textContent="パスワードは6文字以上にしてください。"; return; }
+    if(password!==password2){ registerError.textContent="確認用パスワードが一致しません。"; return; }
+
+    const internalEmail=makeInternalEmail(tenantContext.companyId,tenantContext.officeId,loginId);
+    registerButton.disabled=true; registerButton.textContent="登録申請中…";
+    window.registrationInProgress=true;
+    try{
+      const cred=await createUserWithEmailAndPassword(firebaseAuth,internalEmail,password);
+      const uid=cred.user.uid;
+      const reqPath=registrationCollectionPath(tenantContext.companyId,tenantContext.officeId);
+      await setDoc(doc(firestoreDb, reqPath, uid), {
+        displayName,
+        loginId,
+        role:"driver",
+        companyId:tenantContext.companyId,
+        officeId:tenantContext.officeId,
+        status:"pending",
+        createdAt:new Date().toISOString()
+      });
+      await signOut(firebaseAuth);
+      document.getElementById("registerName").value="";
+      document.getElementById("registerLoginId").value="";
+      document.getElementById("registerPassword").value="";
+      document.getElementById("registerPassword2").value="";
+      showLoginPanel("登録申請を送信しました。管理者の承認後、このIDでログインできます。");
+    }catch(e){
+      console.error(e);
+      if(e?.code==="auth/email-already-in-use"){
+        registerError.textContent="このログインIDはすでに使われています。別のIDを入力してください。";
+      }else{
+        registerError.textContent="登録申請に失敗しました。通信状況またはFirebase設定を確認してください。";
+      }
+      try{ if(firebaseAuth.currentUser) await signOut(firebaseAuth); }catch(_e){}
+    }finally{
+      window.registrationInProgress=false;
+      registerButton.disabled=false; registerButton.textContent="登録申請する";
+    }
+  });
+
   document.getElementById("logoutButton").addEventListener("click",()=>{
     clearTenantLocalCache();
     signOut(firebaseAuth);
   });
 
   onAuthStateChanged(firebaseAuth, async user=>{
+    if(window.registrationInProgress) return;
     if(!user){
       window.firebaseUser=null; window.firebaseReady=false;
       authGate.classList.remove("auth-hidden");
@@ -619,7 +840,19 @@ textarea{min-height:80px;resize:vertical}
     }catch(e){
       console.error(e);
       window.firebaseReady=false;
-      authError.textContent=e?.message||"権限を確認できませんでした。";
+      let msg=e?.message||"権限を確認できませんでした。";
+      const ctx=getTenantContext();
+      if(ctx && user){
+        try{
+          const reqSnap=await getDoc(doc(firestoreDb, registrationCollectionPath(ctx.companyId,ctx.officeId), user.uid));
+          if(reqSnap.exists()){
+            const st=reqSnap.data()?.status;
+            if(st==="pending") msg="このアカウントは管理者の承認待ちです。";
+            if(st==="rejected") msg="このアカウント登録申請は承認されていません。管理者へ確認してください。";
+          }
+        }catch(_e){}
+      }
+      authError.textContent=msg;
       cloudStatus("⚠️ Firebase：権限確認エラー", "ng");
       authGate.classList.remove("auth-hidden");
       await signOut(firebaseAuth).catch(()=>{});
@@ -685,8 +918,73 @@ function populateExcelVehicle(){
     arr.map(x=>`<option value="${escapeAttr(x.name||"")}">${escapeHtml(x.name||"")}</option>`).join("");
 }
 
+async function renderRegistrationRequests(){
+  const root=document.getElementById("registrationRequestList");
+  if(!root) return;
+  if(!window.firebaseReady || window.firebaseProfile?.role!=="admin"){
+    root.innerHTML='<div class="small">管理者ログイン時のみ表示します。</div>';
+    return;
+  }
+  root.innerHTML='<div class="small">申請を読み込み中...</div>';
+  try{
+    const requests=await window.firebaseCloud.loadRegistrationRequests();
+    window._registrationRequests=requests;
+    if(!requests.length){
+      root.innerHTML='<div class="small">現在、承認待ちの申請はありません。</div>';
+      return;
+    }
+    root.innerHTML=requests.map((r,i)=>`
+      <div class="registration-request">
+        <b>${escapeHtml(String(r.displayName||"名前未設定"))}</b><br>
+        <span class="small">ログインID：${escapeHtml(String(r.loginId||""))}</span>
+        <div class="req-actions">
+          <button class="approve" onclick="approveRegistrationRequest(${i})">✅ 承認</button>
+          <button class="reject" onclick="rejectRegistrationRequest(${i})">却下</button>
+        </div>
+      </div>`).join("");
+  }catch(e){
+    console.error(e);
+    root.innerHTML='<div class="small" style="color:#a30000">登録申請を読み込めませんでした。Firestoreルールを確認してください。</div>';
+  }
+}
+
+async function approveRegistrationRequest(i){
+  const req=(window._registrationRequests||[])[i];
+  if(!req) return;
+  if(!confirm(`「${req.displayName||req.loginId}」さんの登録を承認しますか？`)) return;
+  try{
+    await window.firebaseCloud.approveRegistration(req);
+    const drivers=getMaster("truck_drivers",defaultDrivers);
+    const name=String(req.displayName||"").trim();
+    if(name && !drivers.includes(name)){
+      drivers.push(name);
+      saveMaster("truck_drivers",drivers);
+      await window.firebaseCloud.saveDrivers(drivers);
+    }
+    renderMasters();
+    alert("登録を承認しました。本人は個人IDでログインできます。");
+  }catch(e){
+    console.error(e);
+    alert("承認に失敗しました。Firestoreルールを確認してください。");
+  }
+}
+
+async function rejectRegistrationRequest(i){
+  const req=(window._registrationRequests||[])[i];
+  if(!req) return;
+  if(!confirm(`「${req.displayName||req.loginId}」さんの申請を却下しますか？`)) return;
+  try{
+    await window.firebaseCloud.rejectRegistration(req);
+    renderRegistrationRequests();
+  }catch(e){
+    console.error(e);
+    alert("却下処理に失敗しました。");
+  }
+}
+
 function renderMasters(){
   renderShakenAlerts();
+  renderRegistrationRequests();
   const vehicles=getMaster("truck_vehicles",defaultVehicles);
   const drivers=getMaster("truck_drivers",defaultDrivers);
 
