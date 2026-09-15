@@ -716,7 +716,7 @@ if (!companyName || !email || !password) {
   authError.textContent = "会社名・メールアドレス・パスワードをすべて入力してください。";
   return;
 }
-uthError.textContent = "";
+authError.textContent = "";
 try {
   const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
   const user = credential.user;
