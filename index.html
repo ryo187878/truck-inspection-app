@@ -139,6 +139,17 @@ textarea{min-height:80px;resize:vertical}
     <label>パスワード</label>
     <input id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード">
     <button type="button" id="loginButton">ログイン</button>
+<button type="button" id="trialRegisterButton" style="margin-top:10px;background:#198754">🚛 お試し登録</button>
+<div id="trialRegisterForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #ddd">
+  <div style="font-weight:800;margin-bottom:10px">🚛 お試しアカウント登録</div>
+<label>会社名</label>
+<input id="trialCompanyName" type="text" placeholder="例：〇〇運輸株式会社">
+<label>メールアドレス</label>
+<input id="trialEmail" type="email" autocomplete="email" placeholder="メールアドレス">  
+<label>パスワード</label>
+<input id="trialPassword" type="password" autocomplete="new-password" placeholder="パスワード">
+<button type="button" id="trialCreateButton" style="margin-top:6px;background:#198754">🚛 お試しを開始</button>
+</div>    
     <div id="authError" class="auth-error"></div>
   </div>
 </div>
@@ -465,7 +476,7 @@ textarea{min-height:80px;resize:vertical}
 </section>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
   import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -675,7 +686,6 @@ textarea{min-height:80px;resize:vertical}
     if(typeof renderSavedRecords === "function") renderSavedRecords();
     cloudStatus(`☁️ Firebase：接続済み（${currentTenantRecords.length}件）`, "ok");
   }
-
   const loginButton=document.getElementById("loginButton");
   const loginEmail=document.getElementById("loginEmail");
   const loginPassword=document.getElementById("loginPassword");
@@ -691,6 +701,44 @@ textarea{min-height:80px;resize:vertical}
     catch(e){ console.error(e); authError.textContent="ログインできません。メールアドレスまたはパスワードを確認してください。"; }
     finally { loginButton.disabled=false; loginButton.textContent="ログイン"; }
   });
+ const trialRegisterButton = document.getElementById("trialRegisterButton");
+const trialRegisterForm = document.getElementById("trialRegisterForm");
+  const trialCreateButton = document.getElementById("trialCreateButton");
+  trialRegisterButton.addEventListener("click", () => {
+  trialRegisterForm.style.display =
+    trialRegisterForm.style.display === "none" ? "block" : "none";
+});
+  trialCreateButton.addEventListener("click", async () => {
+    const companyName = document.getElementById("trialCompanyName").value.trim();
+const email = document.getElementById("trialEmail").value.trim();
+const password = document.getElementById("trialPassword").value;
+if (!companyName || !email || !password) {
+  authError.textContent = "会社名・メールアドレス・パスワードをすべて入力してください。";
+  return;
+}
+uthError.textContent = "";
+try {
+  const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+  const user = credential.user;
+  const trialCompanyId = "trial-" + user.uid;
+  const trialOfficeId = "main";
+  await setDoc(doc(firestoreDb, "companies", trialCompanyId), {
+  name: companyName, 
+  isTrial: true,
+vehicleLimit: 5,
+ });
+  await setDoc(doc(firestoreDb, "users", user.uid), {
+    companyId: trialCompanyId,
+    officeId: trialOfficeId,
+    role: "admin",
+    isTrial: true,
+   }); 
+  authError.textContent = "お試し登録が完了しました。";
+  } catch (e) {
+  console.error(e);
+  authError.textContent = "お試し登録に失敗しました。メールアドレスやパスワードを確認してください。";
+}
+});
   loginPassword.addEventListener("keydown",e=>{ if(e.key==="Enter") loginButton.click(); });
   document.getElementById("logoutButton").addEventListener("click",()=>{
     clearTenantLocalCache();
@@ -2081,7 +2129,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>  
-<script>const INSTALL_APP_URL = "https://ryo187878.github.io/truck-inspection-app/";
+<script>const INSTALL_APP_URL = "https://ryo187878.github.io/truck-inspection-app/demo/";
 
 window.addEventListener("DOMContentLoaded", () => {
   const qrBox = document.getElementById("installQrCode");
