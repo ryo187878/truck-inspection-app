@@ -1,0 +1,12 @@
+{
+  "name": "トラック日常点検アプリ",
+  "short_name": "日常点検",
+  "description": "トラックの日常点検を記録・管理するアプリ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#198754",
+  "orientation": "portrait",
+  "lang": "ja"
+}
