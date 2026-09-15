@@ -89,6 +89,40 @@ textarea{min-height:80px;resize:vertical}
 .auth-card input{margin-bottom:10px}.auth-card button{width:100%;border:0;border-radius:11px;padding:13px;font-size:16px;font-weight:800;background:#6f82a6;color:#fff}
 .auth-error{min-height:22px;color:#a30000;font-size:13px;font-weight:700;margin-top:10px}.auth-hidden{display:none!important}
 .user-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px}.user-bar.show{display:flex}.logout-btn{width:auto;border:1px solid #ffffff88;border-radius:8px;background:#ffffff20;color:#fff;padding:5px 9px;font-weight:700}
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #installPage,
+  #installPage * {
+    visibility: visible;
+  }
+
+  #installPage {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 15mm;
+    background: white;
+  }
+
+  #installPage .card {
+    box-shadow: none;
+    border: none;
+  }
+
+  .actions {
+    display: none !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+}  
 </style>
 </head>
 <body>
@@ -117,6 +151,7 @@ textarea{min-height:80px;resize:vertical}
   <button class="tab" onclick="showPage('records',this)">② 点検履歴</button>
   <button class="tab" onclick="showPage('savedRecords',this)">③ 点検履歴（保存版）</button>
   <button class="tab" onclick="showPage('master',this)">④ 管理画面</button>
+  <button class="tab" onclick="showPage('install',this)">⑤ アプリ導入</button>
 </div>
 <main>
 <div id="inspectionPage" class="page active">
@@ -302,6 +337,63 @@ textarea{min-height:80px;resize:vertical}
 <div class="small" style="margin-top:8px">出力したExcelの「点検記録」シートで、整備管理者・補助者確認者を▽から選択できます。</div>
 </section>
 </div>
+<div id="installPage" class="page">
+  <section class="card">
+    <div class="section-title">📱 ⑤ アプリ導入・QRコード</div>
+    <div class="small">スマートフォン・タブレットへのアプリ導入はこちらから行えます。</div>
+<div style="text-align:center;margin:18px 0">
+  <div style="font-size:22px;font-weight:800">🚛 トラック日常点検アプリ</div>
+  <div id="installCompanyName" style="font-size:16px;font-weight:700;margin-top:6px;color:#53606b">
+    ご利用会社 専用
+  </div>
+</div> 
+<div style="text-align:center;margin:20px 0">
+  <div id="installQrCode" style="display:inline-block;padding:12px;background:#fff;border:1px solid #d5d9dd;border-radius:14px"></div>
+
+  <div style="margin-top:10px;font-size:12px;color:#667">
+    QRコードを読み取るとトラック日常点検アプリが開きます
+  </div>
+
+  <button type="button" class="save" onclick="printInstallQr()" style="width:100%;margin-top:14px">
+    🖨️ QRコードを印刷
+  </button>
+</div> <div style="margin-top:24px">
+  <div style="font-size:18px;font-weight:800;margin-bottom:12px">
+    📱 ホーム画面への追加方法
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+
+    <div style="padding:16px;border:1px solid #dfe3e6;border-radius:12px;background:#f8fafb">
+      <div style="font-size:17px;font-weight:800;margin-bottom:10px">
+        🍎 iPhone
+      </div>
+      <div style="line-height:1.9">
+        ① QRコードを読み取る<br>
+        ② Safariでアプリを開く<br>
+        ③ 共有ボタン「□↑」を押す<br>
+        ④「ホーム画面に追加」を押す<br>
+        ⑤「追加」を押して完了
+      </div>
+    </div>
+
+    <div style="padding:16px;border:1px solid #dfe3e6;border-radius:12px;background:#f8fafb">
+      <div style="font-size:17px;font-weight:800;margin-bottom:10px">
+        🤖 Android
+      </div>
+      <div style="line-height:1.9">
+        ① QRコードを読み取る<br>
+        ② Chromeでアプリを開く<br>
+        ③ 右上の「︙」を押す<br>
+        ④「ホーム画面に追加」または「アプリをインストール」を押す<br>
+        ⑤ 画面の案内に従って追加して完了
+      </div>
+    </div>
+
+  </div>
+</div>   
+  </section>
+</div>  
 </main>
 
 
@@ -1984,7 +2076,33 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 
 </script>
-<script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>  
+<script>const INSTALL_APP_URL = "https://ryo187878.github.io/truck-inspection-app/";
+
+window.addEventListener("DOMContentLoaded", () => {
+  const qrBox = document.getElementById("installQrCode");
+
+  if (qrBox && typeof QRCode !== "undefined") {
+    qrBox.innerHTML = "";
+
+    new QRCode(qrBox, {
+      text: INSTALL_APP_URL,
+      width: 220,
+      height: 220,
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  }
+});
+function printInstallQr() {
+  const qrBox = document.getElementById("installQrCode");
+
+  if (!qrBox || !qrBox.innerHTML) {
+    alert("QRコードを準備しています。少し待ってからもう一度お試しください。");
+    return;
+  }
+
+  window.print();
+}  
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./service-worker.js");
