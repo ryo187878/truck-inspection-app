@@ -1120,7 +1120,7 @@ function renderSavedRecords(){
       }).join("");
 
       return `
-        <details ${monthIndex===0 && dayIndex===0 ? "open" : ""}>
+        <details>
           <summary><b>${escapeHtml(dayLabel)}　${records.length}件</b></summary>
           ${recordsHtml}
         </details>
