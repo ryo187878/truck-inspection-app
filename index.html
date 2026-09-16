@@ -798,9 +798,8 @@ const key = "truck_inspection_records_v1";
 
 
 const defaultVehicles = [
-  {name:"水戸 100 あ 1234", shaken:""},
-  {name:"水戸 100 い 5678", shaken:""}
-];
+   {name:"○○ 100 あ 1234", shaken:""}
+  ];
 const defaultDrivers = ["運転者A","運転者B","運転者C"];
 
 function getMaster(name, defaults){
@@ -819,15 +818,7 @@ function getDaysToShaken(dateStr){
   return Math.ceil((d-t)/86400000);
 }
 function renderShakenAlerts(){
-  const arr=getMaster("truck_vehicles",defaultVehicles);
-  const root=document.getElementById("shakenAlerts");
-  if(!arr.length){root.innerHTML='<div class="small">登録車両がありません。</div>';return;}
-  const alerts=arr.map(v=>({...v,days:getDaysToShaken(v.shaken)}))
-    .filter(v=>v.days!==null && v.days<=30)
-    .sort((a,b)=>a.days-b.days);
-  if(!alerts.length){
-    root.innerHTML='<div class="alert green">✅ 30日以内に車検期限を迎える車両はありません。</div>';
-    return;
+
   }
   root.innerHTML=alerts.map(v=>{
     let cls="yellow", msg="";
