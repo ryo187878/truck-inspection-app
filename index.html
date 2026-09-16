@@ -818,7 +818,15 @@ function getDaysToShaken(dateStr){
   return Math.ceil((d-t)/86400000);
 }
 function renderShakenAlerts(){
-
+  const arr=getMaster("truck_vehicles",defaultVehicles);
+  const root=document.getElementById("shakenAlerts");
+  if(!arr.length){root.innerHTML='<div class="small">登録車両がありません。</div>';return;}
+  const alerts=arr.map(v=>({...v,days:getDaysToShaken(v.shaken)}))
+    .filter(v=>v.days!==null && v.days<=30)
+    .sort((a,b)=>a.days-b.days);
+  if(!alerts.length){
+    root.innerHTML='<div class="alert green">✅ 30日以内に車検期限を迎える車両はありません。</div>';
+    return;
   }
   root.innerHTML=alerts.map(v=>{
     let cls="yellow", msg="";
@@ -829,16 +837,6 @@ function renderShakenAlerts(){
     return `<div class="alert ${cls}">${escapeHtml(v.name)}　${msg}<br><span class="small">満了日：${escapeHtml(v.shaken)}</span></div>`;
   }).join("");
 }
-
-
-function populateExcelVehicle(){
-  const el=document.getElementById("excelVehicle");
-  if(!el) return;
-  const arr=getMaster("truck_vehicles",defaultVehicles);
-  el.innerHTML='<option value="">全車両</option>'+
-    arr.map(x=>`<option value="${escapeAttr(x.name||"")}">${escapeHtml(x.name||"")}</option>`).join("");
-}
-
 function renderMasters(){
   renderShakenAlerts();
   const vehicles=getMaster("truck_vehicles",defaultVehicles);
