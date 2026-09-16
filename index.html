@@ -255,7 +255,16 @@ textarea{min-height:80px;resize:vertical}
 <section class="card">
 <div class="section-title">点検履歴（保存版）</div>
 <div class="small">管理者が「確認・承認する」で保存した正式な点検記録だけを表示します。ここには消去ボタンはありません。②の点検履歴から消去した記録は、この保存版には入りません。</div>
-<div id="savedRecordList"></div>
+<div style="margin:12px 0;">
+  <input
+    id="savedRecordSearch"
+    type="search"
+    placeholder="🔍 車両番号・運転者名で検索"
+    oninput="renderSavedRecords()"
+    style="width:100%;box-sizing:border-box;"
+  >
+</div>
+<div id="savedRecordList"></div>  
 </section>
 </div>
 
@@ -1020,25 +1029,116 @@ async function refreshSavedRecordsFromCloud(){
 }
 
 function renderSavedRecords(){
-  const arr=getSavedRecords().slice().sort((a,b)=>String(b.managerConfirmedAt||b.savedAt||b.date||"").localeCompare(String(a.managerConfirmedAt||a.savedAt||a.date||"")));
   const root=document.getElementById("savedRecordList");
   if(!root) return;
-  if(!arr.length){root.innerHTML='<div class="small">保存済みの点検記録はありません。</div>';return;}
-  root.innerHTML=arr.map(r=>{
-    const ng=Object.values(r.results||{}).filter(v=>v==="×").length;
-    const warn=Object.values(r.results||{}).filter(v=>v==="△").length;
-    const confirmedAt=r.managerConfirmedAt ? new Date(r.managerConfirmedAt).toLocaleString("ja-JP") : "";
-    return `<div class="record" style="border-left:5px solid #5b7f9b">
-      <b>${escapeHtml(r.date||"")}</b>　${escapeHtml(r.vehicle||"")}<br>
-      運転者：${escapeHtml(r.driver||"")}　判定：${escapeHtml(r.overall||"未入力")}<br>
-      ${r.driverChange?`乗り換え：あり　前運転者からの報告事項：${escapeHtml(r.previousDriverReport||"未選択")}<br>`:""}
-      車検満了：${escapeHtml(r.shaken||"未登録")}<br>
-      確認者：${escapeHtml(r.managerConfirmedBy||"")}${r.managerConfirmedRole?`（${escapeHtml(r.managerConfirmedRole)}）`:''}<br>
-      <span class="small">保存日時：${escapeHtml(confirmedAt)}　/　△ ${warn}件 / × ${ng}件</span>
-    </div>`;
+
+  const q=String(document.getElementById("savedRecordSearch")?.value||"")
+    .trim()
+    .toLowerCase();
+
+  const arr=getSavedRecords()
+    .filter(r=>{
+      if(!q) return true;
+      return String(r.vehicle||"").toLowerCase().includes(q) ||
+             String(r.driver||"").toLowerCase().includes(q);
+    })
+    .slice()
+    .sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+
+  if(!arr.length){
+    root.innerHTML=q
+      ? '<div class="small">検索条件に一致する点検記録はありません。</div>'
+      : '<div class="small">保存済みの点検記録はありません。</div>';
+    return;
+  }
+
+  const months=new Map();
+
+  arr.forEach(r=>{
+    const date=String(r.date||"").slice(0,10);
+    const m=date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    const monthKey=m ? `${m[1]}-${m[2]}` : "日付未登録";
+    const dayKey=m ? date : "日付未登録";
+
+    if(!months.has(monthKey)){
+      months.set(monthKey,new Map());
+    }
+
+    const days=months.get(monthKey);
+
+    if(!days.has(dayKey)){
+      days.set(dayKey,[]);
+    }
+
+    days.get(dayKey).push(r);
+  });
+
+  root.innerHTML=[...months.entries()].map(([monthKey,days],monthIndex)=>{
+
+    let monthLabel="日付未登録";
+
+    if(monthKey!=="日付未登録"){
+      const [year,month]=monthKey.split("-");
+      monthLabel=`${Number(year)}年${Number(month)}月`;
+    }
+
+    const monthCount=[...days.values()]
+      .reduce((total,records)=>total+records.length,0);
+
+    const dayHtml=[...days.entries()].map(([dayKey,records],dayIndex)=>{
+
+      let dayLabel="日付未登録";
+
+      if(dayKey!=="日付未登録"){
+        const [,month,day]=dayKey.split("-");
+        dayLabel=`${Number(month)}月${Number(day)}日`;
+      }
+
+      const recordsHtml=records.map(r=>{
+        const ng=Object.values(r.results||{})
+          .filter(v=>v==="×").length;
+
+        const warn=Object.values(r.results||{})
+          .filter(v=>v==="△").length;
+
+        return `<div class="record" style="border-left:5px solid #5b7f9b">
+          <b>${escapeHtml(String(r.vehicle||""))}</b><br>
+          運転者：${escapeHtml(String(r.driver||""))}　
+          判定：${escapeHtml(String(r.overall||"未入力"))}<br>
+          ${r.driverChange
+            ? `乗り換え：あり　前運転者からの報告事項：${escapeHtml(String(r.previousDriverReport||"未選択"))}<br>`
+            : ""}
+          車検満了：${escapeHtml(String(r.shaken||"未登録"))}<br>
+          確認者：${escapeHtml(String(r.managerConfirmedBy||""))}
+          ${r.managerConfirmedRole
+            ? `（${escapeHtml(String(r.managerConfirmedRole))}）`
+            : ""}
+          <br>
+          <span class="small">△ ${warn}件 / × ${ng}件</span>
+        </div>`;
+      }).join("");
+
+      return `
+        <details ${monthIndex===0 && dayIndex===0 ? "open" : ""}>
+          <summary><b>${escapeHtml(dayLabel)}　${records.length}件</b></summary>
+          ${recordsHtml}
+        </details>
+      `;
+    }).join("");
+
+    return `
+      <details ${monthIndex===0 ? "open" : ""} style="margin-top:12px;">
+        <summary style="cursor:pointer;font-size:17px;padding:10px;background:#eef5fb;border-radius:8px;">
+          <b>${escapeHtml(monthLabel)}　${monthCount}件</b>
+        </summary>
+        <div style="padding:8px;">
+          ${dayHtml}
+         </div>
+      </details>
+    `;
   }).join("");
 }
-
 async function deleteHistoryRecord(index){
   const records=getRecords();
   if(!Number.isInteger(index) || index<0 || index>=records.length){
