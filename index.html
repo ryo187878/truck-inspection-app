@@ -736,7 +736,16 @@ vehicleLimit: 5,
    }); 
   authGate.classList.add("auth-hidden");
   authError.textContent = "お試し登録が完了しました。";
- window.trialRegistrationInProgress = false;
+const profile = await loadUserProfile(user);
+     setCloudTenant(profile);
+     window.firebaseUser = user;
+window.firebaseReady = true;
+window.firebaseProfile = profile;
+     window.firebaseCloud.status = "接続済み"; 
+     applyRole(profile, user); 
+      await syncAfterLogin(profile);
+     authGate.classList.add("auth-hidden");
+      window.trialRegistrationInProgress = false;
     } catch (e) {
  window.trialRegistrationInProgress = false;
       console.error(e);
