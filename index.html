@@ -717,7 +717,8 @@ if (!companyName || !email || !password) {
   return;
 }
 uthError.textContent = "";
-try {
+window.trialRegistrationInProgress = true;
+    try {
   const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
   const user = credential.user;
   const trialCompanyId = "trial-" + user.uid;
@@ -733,8 +734,10 @@ vehicleLimit: 5,
     role: "admin",
     isTrial: true,
    }); 
-  authError.textContent = "お試し登録が完了しました。";
+  window.trialRegistrationInProgress = false;
+      authError.textContent = "お試し登録が完了しました。";
   } catch (e) {
+      window.trialRegistrationInProgress = false;
   console.error(e);
   authError.textContent = "お試し登録に失敗しました。メールアドレスやパスワードを確認してください。";
 }
@@ -746,6 +749,9 @@ vehicleLimit: 5,
   });
 
   onAuthStateChanged(firebaseAuth, async user=>{
+    if (window.trialRegistrationInProgress) {
+  return;
+}
     if(!user){
       window.firebaseUser=null; window.firebaseReady=false;
       authGate.classList.remove("auth-hidden");
