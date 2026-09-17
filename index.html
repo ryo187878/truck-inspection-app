@@ -324,7 +324,10 @@ textarea{min-height:80px;resize:vertical}
 
 <section class="card">
 <details>
-  <summary class="section-title" style="cursor:pointer;">🚛 車両マスター</summary>
+ <summary class="section-title" style="cursor:pointer;">
+  🚛 車両マスター
+  <span id="vehicleMasterCount"></span>
+</summary>  
 <div class="small">車両番号・車検満了日・自賠責保険満了日・任意保険満了日を登録します。点検入力時には車検満了日が自動表示されます。</div>
 <div style="margin:10px 0;">
   <input
@@ -680,7 +683,15 @@ textarea{min-height:80px;resize:vertical}
     const el=document.getElementById("cloudStatus");
     if(el){ el.textContent=message; el.className="cloud-status "+cls; }
   }
+async function loadCompanyProfile(companyId){
+  const snap=await getDoc(doc(firestoreDb, "companies", companyId));
 
+  if(!snap.exists()){
+    throw new Error("会社情報が登録されていません。");
+  }
+
+  return snap.data()||{};
+}
   async function loadUserProfile(user){
     const snap=await getDoc(doc(firestoreDb, CLOUD_USERS, user.uid));
     if(!snap.exists()) throw new Error("このユーザーには利用権限が登録されていません。");
@@ -708,7 +719,7 @@ textarea{min-height:80px;resize:vertical}
     if(bar) bar.classList.add("show");
   }
 
-  function clearTenantLocalCache(){
+  function clearTenantLocalCache(){ 
     [
       "truck_inspection_records_v1",
       "truck_inspection_saved_v1",
@@ -720,7 +731,12 @@ textarea{min-height:80px;resize:vertical}
     ].forEach(k=>localStorage.removeItem(k));
   }
 
-  async function syncAfterLogin(profile){
+async function syncAfterLogin(profile){
+  const companyProfile=await loadCompanyProfile(profile.companyId);
+  const vehicleLimit=Number(companyProfile.vehicleLimit);
+
+  window.vehicleLimit=
+    Number.isFinite(vehicleLimit) && vehicleLimit>0 ? vehicleLimit : 200; 
     // 会社・営業所をまたいで端末内データが混ざらないよう、
     // ログイン直後に前利用者のローカルキャッシュを破棄し、
     // 現在の companyId / officeId のクラウドデータだけを読み込む。
@@ -918,6 +934,12 @@ function renderMasters(){
   renderShakenAlerts();
   const vehicles=getMaster("truck_vehicles",defaultVehicles);
   const drivers=getMaster("truck_drivers",defaultDrivers);
+  const vehicleMasterCount=document.getElementById("vehicleMasterCount");
+  const vehicleLimit=Number(window.vehicleLimit)||200;
+
+  if(vehicleMasterCount){
+    vehicleMasterCount.textContent=`　${vehicles.length} / ${vehicleLimit}台`;
+  }
   // 本日の点検済み車両 / 本日点検記録のない車両
   const today=new Date();
   const todayStr=
