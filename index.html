@@ -270,7 +270,7 @@ textarea{min-height:80px;resize:vertical}
 
 <div id="masterPage" class="page">
 <section class="card">
-  <details open>
+  <details>
     <summary class="section-title" style="cursor:pointer;">
       🟢 本日点検済み車両
       <span id="todayInspectedCount"></span>
@@ -908,6 +908,11 @@ function renderMasters(){
   const noInspectionRoot=document.getElementById("todayNoInspectionVehicles");
   document.getElementById("todayInspectedCount").textContent=`　${inspectedVehicles.length} / ${vehicles.length}台`;
   document.getElementById("todayNoInspectionCount").textContent=`　${noInspectionVehicles.length} / ${vehicles.length}台`;
+    const noInspectionDetails=noInspectionRoot?.closest("details");
+
+  if(noInspectionDetails){
+    noInspectionDetails.open=noInspectionVehicles.length > 0;
+  }
   if(inspectedRoot){
     inspectedRoot.innerHTML=inspectedVehicles.length
       ? inspectedVehicles.map(v=>
