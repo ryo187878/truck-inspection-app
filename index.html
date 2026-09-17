@@ -323,7 +323,8 @@ textarea{min-height:80px;resize:vertical}
 </section>
 
 <section class="card">
-<div class="section-title">🚛 車両マスター</div>
+<details>
+  <summary class="section-title" style="cursor:pointer;">🚛 車両マスター</summary>
 <div class="small">車両番号・車検満了日・自賠責保険満了日・任意保険満了日を登録します。点検入力時には車検満了日が自動表示されます。</div>
 <div style="margin:10px 0;">
   <input
@@ -354,6 +355,7 @@ textarea{min-height:80px;resize:vertical}
   </label>
   <button class="save" onclick="addVehicle()">追加</button>
 </div>
+</details>
 </section>
 <section class="card">
 <div class="section-title">🔔 車検期限アラート</div>
