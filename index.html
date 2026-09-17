@@ -2149,15 +2149,52 @@ function exportExcel(){
   ]));
 
   // ② 点検記録：1行＝1回の点検の表形式
-  const detailHeaders=["点検日","車両番号","運転者","車検満了日","車検確認","総合判定","異常内容","前回点検からの異常","当日の異常箇所、処置状況の報告","運転者乗り換え","前運転者からの報告事項","整備管理者・補助者確認者","確認者区分"];
-  for(let i=1;i<=27;i++) detailHeaders.push(`${i}.${items[i-1]}`);
-  const detail=[detailHeaders];
-  filtered.forEach(r=>{
-    const row=[
-      r.date||"",r.vehicle||"",r.driver||"",r.shaken||"",r.shaken ? (r.shakenConfirmed?"確認済み":"未確認"):"対象外",
-      r.overall||"",r.abnormal||"",r.previous||"",r.today||"",r.driverChange?"あり":"",r.driverChange?(r.previousDriverReport||""):"",r.managerConfirmedBy||"",r.managerConfirmedRole||""
-    ];
-    for(let i=1;i<=27;i++) row.push(getResultValue(r,i));
+ const detailHeaders=[
+  "点検日",
+  "車両番号",
+  "運転者",
+  "車検満了日",
+  "車検確認",
+  "総合判定",
+  "異常内容"
+];
+
+for(let i=1;i<=27;i++){
+  detailHeaders.push(`${i}.${items[i-1]}`);
+}
+
+detailHeaders.push(
+  "前回点検からの異常",
+  "当日の異常箇所、処置状況の報告",
+  "運転者乗り換え",
+  "前運転者からの報告事項",
+  "整備管理者・補助者確認者"
+);
+
+const detail=[detailHeaders];
+
+filtered.forEach(r=>{
+  const row=[
+    r.date||"",
+    r.vehicle||"",
+    r.driver||"",
+    r.shaken||"",
+    r.shaken ? (r.shakenConfirmed?"確認済み":"未確認"):"対象外",
+    r.overall||"",
+    r.abnormal||""
+  ];
+
+  for(let i=1;i<=27;i++){
+    row.push(getResultValue(r,i));
+  }
+
+  row.push(
+    r.previous||"",
+    r.today||"",
+    r.driverChange?"あり":"",
+    r.driverChange?(r.previousDriverReport||""):"",
+    r.managerConfirmedBy||""
+  );
     detail.push(row);
   });
   if(!filtered.length){
@@ -2175,44 +2212,76 @@ function exportExcel(){
   managers.forEach(v=>managerRows.push(typeof v==="string"?[v,"","","",""]:[v.name||"",v.role||"",v.appointed||"",v.active===false?"無効":"有効",v.note||""]));
   const infoRows=[["トラック日常点検アプリ Excel出力"],["出力期間",`${from||"指定なし"} ～ ${to||"指定なし"}`],["車両条件",vehicle||"全車両"],["構成","月間一覧＋1台1枠の点検記録"]];
 
-  function styledSheet(data, opts){
-    opts=opts||{};
-    let rows="";
-    data.forEach((row,ri)=>{
-      const rr=ri+1; rows+=`<row r="${rr}"${opts.rowHeightFn?` ht="${opts.rowHeightFn(rr,row)}" customHeight="1"`:""}>`;
-      row.forEach((v,ci)=>{
-        let sid=opts.styleFn?opts.styleFn(rr,ci+1,v,row):0;
-        rows+=cellXml(rr,ci+1,v,sid);
-      }); rows+="</row>";
+ function styledSheet(data, opts){
+  opts=opts||{};
+  let rows="";
+
+  data.forEach((row,ri)=>{
+    const rr=ri+1;
+    rows+=`<row r="${rr}"${opts.rowHeightFn?` ht="${opts.rowHeightFn(rr,row)}" customHeight="1"`:""}>`;
+
+    row.forEach((v,ci)=>{
+      let sid=opts.styleFn?opts.styleFn(rr,ci+1,v,row):0;
+      rows+=cellXml(rr,ci+1,v,sid);
     });
-    const maxCol=Math.max(1,...data.map(r=>r.length)); const maxRow=Math.max(1,data.length);
-    const dvs=(opts.validations||[]).length?`<dataValidations count="${opts.validations.length}">`+opts.validations.map(v=>`<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="${v.sqref}"><formula1>${v.formula1}</formula1></dataValidation>`).join("")+`</dataValidations>`:"";
-    const cols=opts.cols?`<cols>${opts.cols.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")}</cols>`:"";
-    const pane=opts.freeze?`<sheetViews><sheetView workbookViewId="0"><pane ySplit="${opts.freeze}" topLeftCell="A${opts.freeze+1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`:`<sheetViews><sheetView workbookViewId="0"/></sheetViews>`;
-    const autof=opts.autoFilter?`<autoFilter ref="${opts.autoFilter}"/>`:"";
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${colName(maxCol)}${maxRow}"/>${pane}${cols}<sheetData>${rows}</sheetData>${autof}${dvs}</worksheet>`;
-  }
+
+    rows+="</row>";
+  });
+
+  const maxCol=Math.max(1,...data.map(r=>r.length));
+  const maxRow=Math.max(1,data.length);
+
+  const dvs=(opts.validations||[]).length
+    ? `<dataValidations count="${opts.validations.length}">`
+      +opts.validations.map(v=>
+        `<dataValidation type="list" allowBlank="1" showErrorMessage="1" sqref="${v.sqref}"><formula1>${v.formula1}</formula1></dataValidation>`
+      ).join("")
+      +`</dataValidations>`
+    : "";
+
+  const cols=opts.cols
+    ? `<cols>${opts.cols.map((w,i)=>
+        `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`
+      ).join("")}</cols>`
+    : "";
+
+  const pane=opts.freeze
+    ? `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${opts.freeze}" topLeftCell="A${opts.freeze+1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`
+    : `<sheetViews><sheetView workbookViewId="0"/></sheetViews>`;
+
+  const autof=opts.autoFilter
+    ? `<autoFilter ref="${opts.autoFilter}"/>`
+    : "";
+
+  const printSetup=opts.landscape
+    ? `<pageMargins left="0.15" right="0.15" top="0.25" bottom="0.25" header="0.1" footer="0.1"/>
+       <pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="1" horizontalDpi="600" verticalDpi="600"/>`
+    : "";
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1" autoPageBreaks="0"/></sheetPr><dimension ref="A1:${colName(maxCol)}${maxRow}"/>${pane}${cols}<sheetData>${rows}</sheetData>${autof}${dvs}${printSetup}</worksheet>`;
+} 
 
   const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="0"/><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="12"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D1BE"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE2F0D9"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="4" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs></styleSheet>`;
 
   const monthlyXml=styledSheet(monthly,{cols:[15,18,16,15,12,28,28,28,24,14],freeze:1,autoFilter:`A1:J${Math.max(1,monthly.length)}`,validations:[{sqref:"B2:B10000",formula1:"TruckList"},{sqref:"C2:C10000",formula1:"DriverList"},{sqref:"E2:E10000",formula1:'"良好,要注意,異常"'},{sqref:"I2:I10000",formula1:"ManagerList"}],styleFn:(r,c)=>r===1?3:0});
   const detailXml=styledSheet(detail,{
-    cols:[15,18,16,15,12,12,28,28,28,24,14].concat(Array(27).fill(28)),
+    landscape:true,
+    cols:[12,16,14,12,10,11,20].concat(Array(27).fill(10),[18,22,12,18,20]),
     freeze:1,
-    autoFilter:`A1:AL${Math.max(1,detail.length)}`,
-    validations:[
-      {sqref:"B2:B10000",formula1:"TruckList"},
-      {sqref:"C2:C10000",formula1:"DriverList"},
-      {sqref:"F2:F10000",formula1:'"良好,要注意,異常"'},
-      {sqref:"J2:J10000",formula1:"ManagerList"}
-    ],
+    autoFilter:`A1:AM${Math.max(1,detail.length)}`,
+validations:[
+  {sqref:"B2:B10000",formula1:"TruckList"},
+  {sqref:"C2:C10000",formula1:"DriverList"},
+  {sqref:"F2:F10000",formula1:'"良好,要注意,異常"'},
+  {sqref:"AM2:AM10000",formula1:"ManagerList"}
+],
     rowHeightFn:(r)=>r===1?60:38,
     styleFn:(r,c)=>{
-      if(r===1){
-        if(c>=12) return brownSet.has(c-11)?1:2;
-        return 3;
-      }
-      if(c>=12) return brownSet.has(c-11)?1:5;
+  if(r===1){
+    if(c>=8 && c<=34) return brownSet.has(c-7)?1:2;
+    return 3;
+  }
+      if(c>=8 && c<=34) return brownSet.has(c-7)?1:5;
       return 0;
     }
   });
