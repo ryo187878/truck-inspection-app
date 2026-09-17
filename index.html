@@ -335,6 +335,10 @@ textarea{min-height:80px;resize:vertical}
   >
 </div>
 <div id="vehicleMasterList"></div>
+<div
+  id="vehicleMasterPagination"
+  style="margin-top:10px;text-align:center;">
+</div>
 <div class="master-row vehicle-master-form">
   <label>車両番号
     <input id="newVehicle" placeholder="例：水戸 100 あ 1234">
@@ -1053,11 +1057,57 @@ function renderMasters(){
       String(v.name||"").toLowerCase().includes(vehicleMasterSearch)
     );
 
-  document.getElementById("vehicleMasterList").innerHTML=filteredVehicles.length
-    ? filteredVehicles.map(({v,i})=>
-        `<div class="list-item"><span><b>${escapeHtml(v.name)}</b><br><span class="small">車検満了：${v.shaken ? escapeHtml(v.shaken) : "未登録"}</span></span><button class="delete" onclick="removeVehicle(${i})">削除</button></div>`
-      ).join("")
-    : '<div class="small">該当する車両はありません。</div>'; 
+  const vehicleMasterPageSize=20;
+
+  if(!window.vehicleMasterPage){
+    window.vehicleMasterPage=1;
+  }
+
+  const vehicleMasterTotalPages=Math.max(
+    1,
+    Math.ceil(filteredVehicles.length/vehicleMasterPageSize)
+  );
+
+  if(window.vehicleMasterPage>vehicleMasterTotalPages){
+    window.vehicleMasterPage=vehicleMasterTotalPages;
+  }
+
+  const vehicleMasterStart=
+    (window.vehicleMasterPage-1)*vehicleMasterPageSize;
+
+  const vehicleMasterPageVehicles=filteredVehicles.slice(
+    vehicleMasterStart,
+    vehicleMasterStart+vehicleMasterPageSize
+  );
+
+  document.getElementById("vehicleMasterList").innerHTML=
+    vehicleMasterPageVehicles.length
+      ? vehicleMasterPageVehicles.map(({v,i})=>
+          `<div class="list-item"><span><b>${escapeHtml(v.name)}</b><br><span class="small">車検満了：${v.shaken ? escapeHtml(v.shaken) : "未登録"}</span></span><button class="delete" onclick="removeVehicle(${i})">削除</button></div>`
+        ).join("")
+      : '<div class="small">該当する車両はありません。</div>';
+
+  const vehicleMasterPagination=
+    document.getElementById("vehicleMasterPagination");
+
+  if(vehicleMasterPagination){
+    vehicleMasterPagination.innerHTML=filteredVehicles.length>20
+      ? `<button type="button"
+           onclick="window.vehicleMasterPage=Math.max(1,(window.vehicleMasterPage||1)-1);renderMasters();"
+           ${window.vehicleMasterPage<=1 ? "disabled" : ""}>
+           ＜ 前へ
+         </button>
+         <span style="margin:0 12px;">
+           ${window.vehicleMasterPage} / ${vehicleMasterTotalPages}
+         </span>
+         <button type="button"
+           onclick="window.vehicleMasterPage=Math.min(${vehicleMasterTotalPages},(window.vehicleMasterPage||1)+1);renderMasters();"
+           ${window.vehicleMasterPage>=vehicleMasterTotalPages ? "disabled" : ""}>
+           次へ ＞
+         </button>`
+      : "";
+  }
+   
 
   document.getElementById("driverMasterList").innerHTML=drivers.map((v,i)=>
     `<div class="list-item"><span>${escapeHtml(v)}</span><button class="delete" onclick="removeDriver(${i})">削除</button></div>`).join("");
