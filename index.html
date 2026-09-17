@@ -2473,7 +2473,7 @@ function exportMonthlyPrintExcel(){
   const drivers=getMaster("truck_drivers",defaultDrivers);
   const managers=getManagers();
   const brownSet=new Set([1,8,9,10,11,12,13,17,18,21]);
-  const headers=["点検日","車両番号","運転者","総合判定",...items.map(x=>x.text),"整備管理者・補助者確認者","運転者乗り換え","前運転者からの報告事項","当日の異常箇所、処置状況の報告"];
+  const headers=["点検日","車両番号","運転者","総合判定",...items.map(x=>x.text),"運転者乗り換え","前運転者からの報告事項","当日の異常箇所、処置状況の報告","整備管理者・補助者確認者"];
 
   const [yy,mm]=month.split("-").map(Number);
   const lastDay=new Date(yy,mm,0).getDate();
@@ -2502,18 +2502,16 @@ function exportMonthlyPrintExcel(){
     const date=getInspectionDateKey(r.date);
     const [ry,rm,rd]=date.split("-").map(Number);
     rows.push([
-      `${rm}月${rd}日`,
-      r.vehicle||"",
-      r.driver||"",
-      r.overall||"",
-      ...items.map(x=>getResultValue(r,x.no)),
-      r.managerConfirmedBy||"",
-      r.driverChange ? "あり" : "",
-      r.driverChange ? (r.previousDriverReport||"") : "",
-      r.today||""
-    ]);
-  });
-
+  `${rm}月${rd}日`,
+  r.vehicle||"",
+  r.driver||"",
+  r.overall||"",
+  ...items.map(x=>getResultValue(r,x.no)),
+  r.driverChange ? "あり" : "",
+  r.driverChange ? (r.previousDriverReport||"") : "",
+  r.today||"",
+  r.managerConfirmedBy||""
+]);
   const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="0"/><fonts count="2"><font><sz val="8"/><name val="Calibri"/></font><font><b/><sz val="6"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9D1BE"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE2F0D9"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"><alignment horizontal="right" vertical="center" wrapText="1"/></xf></cellXfs></styleSheet>`;
 
   let sheetData="";
@@ -2523,19 +2521,19 @@ function exportMonthlyPrintExcel(){
     row.forEach((v,ci)=>{
       let sid=0;
       if(rr===1) sid=(ci>=4 && ci<=30 && brownSet.has(ci-3))?1:2;
-      else sid=(ci>=4 && ci<=30 && brownSet.has(ci-3))?3:4;
+else sid=(ci>=4 && ci<=30 && brownSet.has(ci-3))?3:4;
       sheetData+=`<c r="${colName(ci+1)}${rr}" s="${sid}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`;
     });
     sheetData+="</row>";
   });
-  const widths=[12,14,12,10,...Array(27).fill(9),18,12,16];
+  const widths=[12,14,12,10,...Array(27).fill(9),12,18,22,20];
   const cols=widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
   const endRow=rows.length, endCol=colName(headers.length);
   const validations=[
     `<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="B2:B${endRow}"><formula1>TruckList</formula1></dataValidation>`,
     `<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="C2:C${endRow}"><formula1>DriverList</formula1></dataValidation>`,
     `<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="D2:D${endRow}"><formula1>"良好,要注意,異常,未点検"</formula1></dataValidation>`,
-    `<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="AF2:AF${endRow}"><formula1>ManagerList</formula1></dataValidation>`
+    `<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="AI2:AI${endRow}" ><formula1>ManagerList</formula1></dataValidation>`
   ].join("");
   // 注意事項を表の右下に配置（AA:AF、1行目見出しは6pt）
   const noteRow=Math.max(12,endRow+1);
@@ -2544,7 +2542,7 @@ function exportMonthlyPrintExcel(){
   sheetData+=noteXml;
   const noteMerge=`<mergeCells count="1"><mergeCell ref="AA${noteRow}:AF${noteRow}"/></mergeCells>`;
   const finalEndRow=Math.max(endRow,noteRow);
-  const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:AH${finalEndRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${sheetData}</sheetData><autoFilter ref="A1:${endCol}${endRow}"/>${noteMerge}<dataValidations count="4">${validations}</dataValidations><printOptions horizontalCentered="1"/><pageMargins left="0.15" right="0.15" top="0.2" bottom="0.2" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
+  const sheetXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:AI${finalEndRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${sheetData}</sheetData><autoFilter ref="A1:${endCol}${endRow}"/>${noteMerge}<dataValidations count="4">${validations}</dataValidations><printOptions horizontalCentered="1"/><pageMargins left="0.15" right="0.15" top="0.2" bottom="0.2" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
 
   const exportVehicleNames=[]; monthRecords.forEach(r=>{const v=String(r.vehicle||"").trim(); if(v&&!exportVehicleNames.includes(v)) exportVehicleNames.push(v);});
   const truckRows=[["車両番号"],...exportVehicleNames.map(v=>[v])];
