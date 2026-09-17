@@ -365,10 +365,12 @@ textarea{min-height:80px;resize:vertical}
 <div id="shakenAlerts"></div>
 </section>
 <section class="card">
-<div class="section-title">👤 運転者マスター</div>
-<div class="small">ここで登録した運転者が点検入力画面の選択肢に表示されます。</div>
-<div id="driverMasterList"></div>
-<div class="master-row"><input id="newDriver" placeholder="例：田中 太郎"><button class="save" onclick="addDriver()">追加</button></div>
+<details>
+  <summary class="section-title" style="cursor:pointer;">👤 運転者マスター</summary>
+  <div class="small">ここで登録した運転者が点検入力画面の選択肢に表示されます。</div>
+  <div id="driverMasterList"></div>
+  <div class="master-row"><input id="newDriver" placeholder="例：田中 太郎"><button class="save" onclick="addDriver()">追加</button></div>
+</details>
 </section>
 <section class="card">
 <div class="section-title">🔧 整備管理者・補助者 選任マスター</div>
