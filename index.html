@@ -1121,7 +1121,7 @@ function renderMasters(){
   if(drivers.includes(dcur)) ds.value=dcur; else if(dcur==="その他") ds.value="その他";
   updateShakenInfo();
 }
-  populateExcelVehicle();
+
 async function addVehicle(){
   const name=document.getElementById("newVehicle").value.trim();
   const shaken=document.getElementById("newShaken").value;
