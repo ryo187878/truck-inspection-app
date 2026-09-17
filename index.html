@@ -270,6 +270,19 @@ textarea{min-height:80px;resize:vertical}
 
 <div id="masterPage" class="page">
 <section class="card">
+  <div class="section-title">🟢 本日点検済み車両</div>
+  <div id="todayInspectedVehicles">
+    <div class="small">本日の点検記録を確認しています。</div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="section-title">🔴 本日点検記録のない車両</div>
+  <div class="small">本日の点検記録がない登録車両を表示します。</div>
+  <div id="todayNoInspectionVehicles"></div> 
+  </section>
+
+<section class="card">
 <div class="section-title">🚛 車両マスター</div>
 <div class="small">車両番号・車検満了日・自賠責保険満了日・任意保険満了日を登録します。点検入力時には車検満了日が自動表示されます。</div>
 <div id="vehicleMasterList"></div>
@@ -850,7 +863,51 @@ function renderMasters(){
   renderShakenAlerts();
   const vehicles=getMaster("truck_vehicles",defaultVehicles);
   const drivers=getMaster("truck_drivers",defaultDrivers);
+  // 本日の点検済み車両 / 本日点検記録のない車両
+  const today=new Date();
+  const todayStr=
+    today.getFullYear()+"-"+
+    String(today.getMonth()+1).padStart(2,"0")+"-"+
+    String(today.getDate()).padStart(2,"0");
 
+  const todayRecords=getRecords().filter(r=>
+    r &&
+    !r.deletedAt &&
+    String(r.date||"").slice(0,10)===todayStr
+  );
+
+  const inspectedNames=new Set(
+    todayRecords
+      .map(r=>String(r.vehicle||"").trim())
+      .filter(Boolean)
+  );
+
+  const inspectedVehicles=vehicles.filter(v=>
+    inspectedNames.has(String(v.name||"").trim())
+  );
+
+  const noInspectionVehicles=vehicles.filter(v=>
+    !inspectedNames.has(String(v.name||"").trim())
+  );
+
+  const inspectedRoot=document.getElementById("todayInspectedVehicles");
+  const noInspectionRoot=document.getElementById("todayNoInspectionVehicles");
+
+  if(inspectedRoot){
+    inspectedRoot.innerHTML=inspectedVehicles.length
+      ? inspectedVehicles.map(v=>
+          `<div class="list-item"><span>✅ ${escapeHtml(String(v.name||""))}</span></div>`
+        ).join("")
+      : '<div class="small">本日の点検済み車両はありません。</div>';
+  }
+
+  if(noInspectionRoot){
+    noInspectionRoot.innerHTML=noInspectionVehicles.length
+      ? noInspectionVehicles.map(v=>
+          `<div class="list-item"><span>${escapeHtml(String(v.name||""))}</span></div>`
+        ).join("")
+      : '<div class="small">本日は全登録車両の点検記録があります。</div>';
+  }
   document.getElementById("vehicleMasterList").innerHTML=vehicles.map((v,i)=>
     `<div class="list-item"><span><b>${escapeHtml(v.name)}</b><br><span class="small">車検満了：${v.shaken ? escapeHtml(v.shaken) : "未登録"}</span></span><button class="delete" onclick="removeVehicle(${i})">削除</button></div>`).join("");
 
