@@ -1153,6 +1153,12 @@ async function addVehicle(){
   const optional=document.getElementById("newOptional").value;
   if(!name){alert("車両番号を入力してください。");return}
   const arr=getMaster("truck_vehicles",defaultVehicles);
+  const vehicleLimit=Number(window.vehicleLimit)||200;
+
+  if(arr.length>=vehicleLimit){
+    alert(`この契約では車両は最大${vehicleLimit}台まで登録できます。`);
+    return;
+  }
   if(arr.some(v=>v.name===name)){alert("同じ車両番号が既に登録されています。");return}
   const vehicle={name,shaken,jibaiseki,optional,_cloudId:""};
   arr.push(vehicle);
