@@ -1063,10 +1063,10 @@ async function addVehicle(){
   saveMaster("truck_vehicles",arr);
   try{
     if(window.firebaseReady && window.firebaseCloud){
-      vehicle._cloudId=await window.firebaseCloud.saveVehicle(vehicle);
-      saveMaster("truck_vehicles",arr);
-    }
-  }catch(e){
+     vehicle._cloudId=await window.firebaseCloud.saveVehicle(vehicle);
+     saveMaster("truck_vehicles",arr);
+  }
+ }catch(e){
     console.error(e);
     alert("車両はこの端末に保存しましたが、Firebaseへの保存に失敗しました。");
   }
