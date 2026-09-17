@@ -1034,8 +1034,21 @@ function renderMasters(){
         : "";
     }
   }
-  document.getElementById("vehicleMasterList").innerHTML=vehicles.map((v,i)=>
-    `<div class="list-item"><span><b>${escapeHtml(v.name)}</b><br><span class="small">車検満了：${v.shaken ? escapeHtml(v.shaken) : "未登録"}</span></span><button class="delete" onclick="removeVehicle(${i})">削除</button></div>`).join("");
+    const vehicleMasterSearch=String(
+    document.getElementById("vehicleMasterSearch")?.value||""
+  ).trim().toLowerCase();
+
+  const filteredVehicles=vehicles
+    .map((v,i)=>({v,i}))
+    .filter(({v})=>
+      String(v.name||"").toLowerCase().includes(vehicleMasterSearch)
+    );
+
+  document.getElementById("vehicleMasterList").innerHTML=filteredVehicles.length
+    ? filteredVehicles.map(({v,i})=>
+        `<div class="list-item"><span><b>${escapeHtml(v.name)}</b><br><span class="small">車検満了：${v.shaken ? escapeHtml(v.shaken) : "未登録"}</span></span><button class="delete" onclick="removeVehicle(${i})">削除</button></div>`
+      ).join("")
+    : '<div class="small">該当する車両はありません。</div>'; 
 
   document.getElementById("driverMasterList").innerHTML=drivers.map((v,i)=>
     `<div class="list-item"><span>${escapeHtml(v)}</span><button class="delete" onclick="removeDriver(${i})">削除</button></div>`).join("");
