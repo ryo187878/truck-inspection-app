@@ -325,6 +325,15 @@ textarea{min-height:80px;resize:vertical}
 <section class="card">
 <div class="section-title">🚛 車両マスター</div>
 <div class="small">車両番号・車検満了日・自賠責保険満了日・任意保険満了日を登録します。点検入力時には車検満了日が自動表示されます。</div>
+<div style="margin:10px 0;">
+  <input
+    id="vehicleMasterSearch"
+    type="search"
+    placeholder="🔍 車両番号を検索"
+    oninput="renderMasters()"
+    style="width:100%;box-sizing:border-box;"
+  >
+</div>
 <div id="vehicleMasterList"></div>
 <div class="master-row vehicle-master-form">
   <label>車両番号
