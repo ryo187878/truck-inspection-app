@@ -272,7 +272,7 @@ textarea{min-height:80px;resize:vertical}
 <section class="card">
   <details>
     <summary class="section-title" style="cursor:pointer;">
-      🟢 本日点検済み車両
+      🟢 本日 点検済み車両
       <span id="todayInspectedCount"></span>
     </summary>
     <div style="margin-top:10px;">
@@ -298,13 +298,27 @@ textarea{min-height:80px;resize:vertical}
 <section class="card">
   <details>
     <summary class="section-title" style="cursor:pointer;">
-      🔴 本日点検記録のない車両
+      🔴 本日 点検記録のない車両
       <span id="todayNoInspectionCount"></span>
     </summary>
     <div style="margin-top:10px;">
-      <div class="small">本日の点検記録がない登録車両を表示します。</div>
-      <div id="todayNoInspectionVehicles"></div>
-    </div>
+  <input
+    id="todayNoInspectionSearch"
+    type="search"
+    placeholder="🔍 車両番号を検索"
+    oninput="renderMasters()"
+    style="width:100%;box-sizing:border-box;margin-bottom:10px;"
+  >
+
+  <div id="todayNoInspectionVehicles">
+    <div class="small">本日の点検記録がない登録車両を表示します。</div>
+  </div>
+
+  <div
+    id="todayNoInspectionPagination"
+    style="margin-top:10px;text-align:center;">
+  </div>
+</div>
   </details>
 </section>
 
@@ -971,12 +985,54 @@ function renderMasters(){
     }
   }
 
-  if(noInspectionRoot){
-    noInspectionRoot.innerHTML=noInspectionVehicles.length
-      ? noInspectionVehicles.map(v=>
+   if(noInspectionRoot){
+    const searchInput=document.getElementById("todayNoInspectionSearch");
+    const paginationRoot=document.getElementById("todayNoInspectionPagination");
+
+    const searchText=String(searchInput?.value||"").trim().toLowerCase();
+
+    const filteredNoInspection=noInspectionVehicles.filter(v=>
+      String(v.name||"").toLowerCase().includes(searchText)
+    );
+
+    const pageSize=20;
+
+    if(!window.todayNoInspectionPage){
+      window.todayNoInspectionPage=1;
+    }
+
+    const totalPages=Math.max(1,Math.ceil(filteredNoInspection.length/pageSize));
+
+    if(window.todayNoInspectionPage>totalPages){
+      window.todayNoInspectionPage=totalPages;
+    }
+
+    const start=(window.todayNoInspectionPage-1)*pageSize;
+    const pageVehicles=filteredNoInspection.slice(start,start+pageSize);
+
+    noInspectionRoot.innerHTML=pageVehicles.length
+      ? pageVehicles.map(v=>
           `<div class="list-item"><span>${escapeHtml(String(v.name||""))}</span></div>`
         ).join("")
-      : '<div class="small">本日は全登録車両の点検記録があります。</div>';
+      : '<div class="small">該当する車両はありません。</div>';
+
+    if(paginationRoot){
+      paginationRoot.innerHTML=filteredNoInspection.length>20
+        ? `<button type="button"
+             onclick="window.todayNoInspectionPage=Math.max(1,(window.todayNoInspectionPage||1)-1);renderMasters();"
+             ${window.todayNoInspectionPage<=1 ? "disabled" : ""}>
+             ＜ 前へ
+           </button>
+           <span style="margin:0 12px;">
+             ${window.todayNoInspectionPage} / ${totalPages}
+           </span>
+           <button type="button"
+             onclick="window.todayNoInspectionPage=Math.min(${totalPages},(window.todayNoInspectionPage||1)+1);renderMasters();"
+             ${window.todayNoInspectionPage>=totalPages ? "disabled" : ""}>
+             次へ ＞
+           </button>`
+        : "";
+    }
   }
   document.getElementById("vehicleMasterList").innerHTML=vehicles.map((v,i)=>
     `<div class="list-item"><span><b>${escapeHtml(v.name)}</b><br><span class="small">車検満了：${v.shaken ? escapeHtml(v.shaken) : "未登録"}</span></span><button class="delete" onclick="removeVehicle(${i})">削除</button></div>`).join("");
