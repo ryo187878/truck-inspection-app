@@ -908,11 +908,7 @@ function renderMasters(){
   const noInspectionRoot=document.getElementById("todayNoInspectionVehicles");
   document.getElementById("todayInspectedCount").textContent=`　${inspectedVehicles.length} / ${vehicles.length}台`;
   document.getElementById("todayNoInspectionCount").textContent=`　${noInspectionVehicles.length} / ${vehicles.length}台`;
-    const noInspectionDetails=noInspectionRoot?.closest("details");
-
-  if(noInspectionDetails){
-    noInspectionDetails.open=noInspectionVehicles.length > 0;
-  }
+   
   if(inspectedRoot){
     inspectedRoot.innerHTML=inspectedVehicles.length
       ? inspectedVehicles.map(v=>
