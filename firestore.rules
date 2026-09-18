@@ -32,6 +32,31 @@ service cloud.firestore {
         && profile().role == "driver";
     }
 
+    function hasDriverProfileFields() {
+      return request.resource.data.keys().hasAll([
+               "role",
+               "companyId",
+               "officeId",
+               "displayName",
+               "loginId",
+               "approvedAt"
+             ])
+             && request.resource.data.keys().hasOnly([
+               "role",
+               "companyId",
+               "officeId",
+               "displayName",
+               "loginId",
+               "approvedAt"
+             ])
+             && request.resource.data.role == "driver";
+    }
+
+    function hasPendingRegistration(companyId, officeId, userId) {
+      return exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(userId))
+             && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(userId)).data.status == "pending";
+    }
+
     // ========================================
     // 会社
     // ========================================
@@ -62,13 +87,32 @@ service cloud.firestore {
                   && request.auth.uid == userId;
 
       // お試し登録時の最初の管理者プロフィール作成
-      allow create: if loggedIn()
-                    && request.auth.uid == userId
-                    && request.resource.data.companyId
-                       == "trial-" + request.auth.uid
-                    && request.resource.data.officeId == "main"
-                    && request.resource.data.role == "admin"
-                    && request.resource.data.isTrial == true;
+      allow create: if (
+                 loggedIn()
+                 && request.auth.uid == userId
+                 && request.resource.data.companyId
+                   == "trial-" + request.auth.uid
+                 && request.resource.data.officeId == "main"
+                 && request.resource.data.role == "admin"
+                 && request.resource.data.isTrial == true
+                ) || (
+                 loggedIn()
+                 && request.auth.uid != userId
+                 && isAdmin(request.resource.data.companyId,
+                        request.resource.data.officeId)
+                 && hasDriverProfileFields()
+                 && hasPendingRegistration(request.resource.data.companyId,
+                                  request.resource.data.officeId,
+                                  userId)
+                 && get(/databases/$(database)/documents/companies/$(request.resource.data.companyId)/offices/$(request.resource.data.officeId)/registrationRequests/$(userId)).data.role
+                   == "driver"
+                 && get(/databases/$(database)/documents/companies/$(request.resource.data.companyId)/offices/$(request.resource.data.officeId)/registrationRequests/$(userId)).data.companyId
+                   == request.resource.data.companyId
+                 && get(/databases/$(database)/documents/companies/$(request.resource.data.companyId)/offices/$(request.resource.data.officeId)/registrationRequests/$(userId)).data.officeId
+                   == request.resource.data.officeId
+                 && getAfter(/databases/$(database)/documents/companies/$(request.resource.data.companyId)/offices/$(request.resource.data.officeId)/registrationRequests/$(userId)).data.status
+                   == "approved"
+                );
 
       // 現時点ではプロフィール変更・削除は禁止
       allow update, delete: if false;
@@ -89,7 +133,28 @@ service cloud.firestore {
       allow read: if (loggedIn() && request.auth.uid == userId)
                   || isAdmin(companyId, officeId);
 
-      allow update: if isAdmin(companyId, officeId);
+      allow update: if isAdmin(companyId, officeId)
+                    && resource.data.status == "pending"
+                    && (
+                      (
+                        request.resource.data.status == "approved"
+                        && request.resource.data.keys().hasAll(["status", "approvedAt", "approvedBy"])
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "approvedAt", "approvedBy"])
+                        && request.resource.data.approvedBy == request.auth.uid
+                        && !exists(/databases/$(database)/documents/users/$(userId))
+                        && existsAfter(/databases/$(database)/documents/users/$(userId))
+                        && getAfter(/databases/$(database)/documents/users/$(userId)).data.role == "driver"
+                        && getAfter(/databases/$(database)/documents/users/$(userId)).data.companyId == companyId
+                        && getAfter(/databases/$(database)/documents/users/$(userId)).data.officeId == officeId
+                      )
+                      ||
+                      (
+                        request.resource.data.status == "rejected"
+                        && request.resource.data.keys().hasAll(["status", "rejectedAt", "rejectedBy"])
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "rejectedAt", "rejectedBy"])
+                        && request.resource.data.rejectedBy == request.auth.uid
+                      )
+                    );
 
       allow delete: if false;
     }
