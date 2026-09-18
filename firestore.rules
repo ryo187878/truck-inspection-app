@@ -1,0 +1,128 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function loggedIn() {
+      return request.auth != null;
+    }
+
+    function hasProfile() {
+      return loggedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function belongsTo(companyId, officeId) {
+      return hasProfile()
+        && profile().companyId == companyId
+        && profile().officeId == officeId;
+    }
+
+    function isAdmin(companyId, officeId) {
+      return belongsTo(companyId, officeId)
+        && profile().role == "admin";
+    }
+
+    function isDriver(companyId, officeId) {
+      return belongsTo(companyId, officeId)
+        && profile().role == "driver";
+    }
+
+    // ========================================
+    // 会社
+    // ========================================
+    match /companies/{companyId} {
+
+      // お試し登録した本人だけ、
+      // trial-自分のUID の会社を新規作成できる
+      allow create: if loggedIn()
+                    && companyId == "trial-" + request.auth.uid
+                    && request.resource.data.isTrial == true
+                    && request.resource.data.vehicleLimit == 5;
+
+      // 自分が所属する会社の基本情報を読む
+      allow read: if hasProfile()
+                  && profile().companyId == companyId;
+
+      // 会社情報の変更・削除は現時点では禁止
+      allow update, delete: if false;
+    }
+
+    // ========================================
+    // ユーザー
+    // ========================================
+    match /users/{userId} {
+
+      // 自分自身のプロフィールを読む
+      allow read: if loggedIn()
+                  && request.auth.uid == userId;
+
+      // お試し登録時の最初の管理者プロフィール作成
+      allow create: if loggedIn()
+                    && request.auth.uid == userId
+                    && request.resource.data.companyId
+                       == "trial-" + request.auth.uid
+                    && request.resource.data.officeId == "main"
+                    && request.resource.data.role == "admin"
+                    && request.resource.data.isTrial == true;
+
+      // 現時点ではプロフィール変更・削除は禁止
+      allow update, delete: if false;
+    }
+
+    // ========================================
+    // QRからの運転者登録申請
+    // ========================================
+    match /companies/{companyId}/offices/{officeId}/registrationRequests/{userId} {
+
+      allow create: if loggedIn()
+                    && request.auth.uid == userId
+                    && request.resource.data.companyId == companyId
+                    && request.resource.data.officeId == officeId
+                    && request.resource.data.role == "driver"
+                    && request.resource.data.status == "pending";
+
+      allow read: if (loggedIn() && request.auth.uid == userId)
+                  || isAdmin(companyId, officeId);
+
+      allow update: if isAdmin(companyId, officeId);
+
+      allow delete: if false;
+    }
+
+    // ========================================
+    // 点検記録
+    // ========================================
+    match /companies/{companyId}/offices/{officeId}/inspections/{inspectionId} {
+
+      allow create: if isAdmin(companyId, officeId)
+                    || isDriver(companyId, officeId);
+
+      allow read, update, delete: if isAdmin(companyId, officeId);
+    }
+
+    // ========================================
+    // 車両
+    // ========================================
+    match /companies/{companyId}/offices/{officeId}/vehicles/{vehicleId} {
+
+      allow read: if belongsTo(companyId, officeId);
+
+      allow create, update, delete: if isAdmin(companyId, officeId);
+    }
+
+    // ========================================
+    // 設定
+    // ========================================
+    match /companies/{companyId}/offices/{officeId}/settings/{settingId} {
+
+      allow read: if belongsTo(companyId, officeId);
+
+      allow create, update, delete: if isAdmin(companyId, officeId);
+    }
+  }
+}
