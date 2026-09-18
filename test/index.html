@@ -403,7 +403,7 @@ textarea{min-height:80px;resize:vertical}
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCnnljHeudw5t_US6v5nkZ4555NGfH-vF8",
@@ -550,19 +550,30 @@ textarea{min-height:80px;resize:vertical}
     async approveRegistration(req){
       if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
       if(!req || !req.id) throw new Error("登録申請が見つかりません。");
-      await setDoc(doc(firestoreDb, CLOUD_USERS, req.id), {
+      if(req.status !== "pending"
+        || String(req.companyId||"") !== String(CLOUD_COMPANY)
+        || String(req.officeId||"") !== String(CLOUD_OFFICE)
+        || req.role !== "driver"){
+        throw new Error("承認対象の登録申請が正しくありません。");
+      }
+      const approvedAt=new Date().toISOString();
+      const approvedBy=window.firebaseUser?.uid||"";
+      if(!approvedBy) throw new Error("承認者が確認できません。");
+      const batch=writeBatch(firestoreDb);
+      batch.set(doc(firestoreDb, CLOUD_USERS, req.id), {
         role:"driver",
         companyId:CLOUD_COMPANY,
         officeId:CLOUD_OFFICE,
         displayName:String(req.displayName||"").trim(),
         loginId:String(req.loginId||"").trim(),
-        approvedAt:new Date().toISOString()
+        approvedAt
       });
-      await setDoc(doc(firestoreDb, CLOUD_REGISTRATION_REQUESTS, req.id), {
+      batch.update(doc(firestoreDb, CLOUD_REGISTRATION_REQUESTS, req.id), {
         status:"approved",
-        approvedAt:new Date().toISOString(),
-        approvedBy:window.firebaseUser?.uid||""
-      }, {merge:true});
+        approvedAt,
+        approvedBy
+      });
+      await batch.commit();
     },
     async rejectRegistration(req){
       if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
