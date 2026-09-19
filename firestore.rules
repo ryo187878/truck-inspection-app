@@ -175,8 +175,31 @@ service cloud.firestore {
     // ========================================
     match /companies/{companyId}/offices/{officeId}/inspections/{inspectionId} {
 
-      allow create: if isAdmin(companyId, officeId)
-                    || isDriver(companyId, officeId);
+      allow create: if (
+                      isAdmin(companyId, officeId)
+                      || isDriver(companyId, officeId)
+                    )
+                    && request.resource.data.keys().hasOnly([
+                      "id",
+                      "date",
+                      "vehicle",
+                      "driver",
+                      "shaken",
+                      "shakenConfirmed",
+                      "managerConfirmedBy",
+                      "managerConfirmedRole",
+                      "results",
+                      "overall",
+                      "abnormal",
+                      "previous",
+                      "today",
+                      "driverChange",
+                      "previousDriverReport",
+                      "savedAt",
+                      "companyId",
+                      "officeId",
+                      "cloudUpdatedAt"
+                    ]);
 
       allow read, update, delete: if isAdmin(companyId, officeId);
     }
