@@ -482,3 +482,47 @@ test("24. driverはinspectionに余計なフィールドを追加して新規作
     }
   ));
 });
+
+test("25. 正しい所属のdriverは正常なinspectionを新規作成できる", async () => {
+  const driverUid = "company-a-inspection-valid-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inspectionId = "inspection-valid-1";
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `users/${driverUid}`), {
+      role: "driver",
+      companyId,
+      officeId,
+      displayName: "Company A Valid Inspection Driver",
+      loginId: "company-a-inspection-valid-driver"
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertSucceeds(setDoc(
+    doc(driverDb, `companies/${companyId}/offices/${officeId}/inspections/${inspectionId}`),
+    {
+      id: inspectionId,
+      date: "2026-09-19",
+      vehicle: "A社車両",
+      driver: "Driver A",
+      shaken: "確認済み",
+      shakenConfirmed: true,
+      managerConfirmedBy: "",
+      managerConfirmedRole: "",
+      results: {},
+      overall: "良好",
+      abnormal: "",
+      previous: "",
+      today: "",
+      driverChange: false,
+      previousDriverReport: "",
+      savedAt: "2026-09-19T00:00:00.000Z",
+      companyId,
+      officeId,
+      cloudUpdatedAt: "2026-09-19T00:00:00.000Z"
+    }
+  ));
+});
