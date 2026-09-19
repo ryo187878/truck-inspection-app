@@ -608,3 +608,64 @@ test("27. 同じ会社・営業所のadminは自社のactive inviteを作成で�
     }
   ));
 });
+
+test("28. 未承認driverは自社のactive inviteを使って申請と消費を同一Batchで実行できる", async () => {
+  const driverUid = "company-a-invite-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inviteId = "invite-1c7e9a4b2d6f8e0a3c5b7d9f1e4a6c8b";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+  const usedAt = Timestamp.fromMillis(Date.now());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`), {
+      companyId,
+      officeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: "company-a-invite-admin",
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  const batch = writeBatch(driverDb);
+  batch.set(doc(
+    driverDb,
+    `companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`
+  ), {
+    displayName: "Invited Driver",
+    loginId: "invited-driver",
+    role: "driver",
+    companyId,
+    officeId,
+    status: "pending",
+    createdAt: "2026-09-19T00:00:00.000Z",
+    inviteId
+  });
+  batch.update(doc(
+    driverDb,
+    `companies/${companyId}/offices/${officeId}/invites/${inviteId}`
+  ), {
+    companyId,
+    officeId,
+    status: "used",
+    expiresAt,
+    createdAt,
+    createdBy: "company-a-invite-admin",
+    usedAt,
+    usedBy: driverUid,
+    revokedAt: null,
+    revokedBy: null
+  });
+
+  await assertSucceeds(batch.commit());
+});

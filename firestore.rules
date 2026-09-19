@@ -96,6 +96,31 @@ service cloud.firestore {
                     && request.resource.data.usedBy == null
                     && request.resource.data.revokedAt == null
                     && request.resource.data.revokedBy == null;
+
+      allow update: if loggedIn()
+                    && resource.data.status == "active"
+                    && resource.data.companyId == companyId
+                    && resource.data.officeId == officeId
+                    && resource.data.expiresAt > request.time
+                    && request.resource.data.status == "used"
+                    && request.resource.data.companyId == companyId
+                    && request.resource.data.officeId == officeId
+                    && request.resource.data.expiresAt == resource.data.expiresAt
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.usedAt != null
+                    && request.resource.data.usedBy == request.auth.uid
+                    && request.resource.data.revokedAt == null
+                    && request.resource.data.revokedBy == null
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      "status",
+                      "usedAt",
+                      "usedBy"
+                    ])
+                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.status == "pending"
+                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.inviteId == inviteId
+                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.companyId == companyId
+                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.officeId == officeId;
     }
 
     // ========================================
@@ -172,15 +197,24 @@ service cloud.firestore {
                     && request.resource.data.officeId == officeId
                     && request.resource.data.role == "driver"
                     && request.resource.data.status == "pending"
-                    && request.resource.data.keys().hasOnly([
-                      "displayName",
-                      "loginId",
-                      "role",
-                      "companyId",
-                      "officeId",
-                      "status",
-                      "createdAt"
-                    ]);
+                      && request.resource.data.keys().hasAll(["inviteId"])
+                      && exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId))
+                      && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.companyId == companyId
+                      && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.officeId == officeId
+                      && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "active"
+                      && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.expiresAt > request.time
+                      && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "used"
+                      && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.usedBy == request.auth.uid
+                      && request.resource.data.keys().hasOnly([
+                        "displayName",
+                        "loginId",
+                        "role",
+                        "companyId",
+                        "officeId",
+                        "status",
+                        "createdAt",
+                        "inviteId"
+                      ]);
 
       allow read: if (loggedIn() && request.auth.uid == userId)
                   || isAdmin(companyId, officeId);
@@ -207,7 +241,6 @@ service cloud.firestore {
                         && request.resource.data.rejectedBy == request.auth.uid
                       )
                     );
-
       allow delete: if false;
     }
 
