@@ -813,3 +813,64 @@ test("31. 使用済みinviteの再利用によるregistrationRequest作成は拒
     }
   ));
 });
+
+test("32. 期限切れinviteのregistrationRequest作成と消費は拒否される", async () => {
+  const driverUid = "company-a-expired-invite-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inviteId = "invite-2a6e9c4b1d8f3a7e5c0b6d9f4e1a8c7b";
+  const expiresAt = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now() - 2 * 60 * 60 * 1000);
+  const usedAt = Timestamp.fromMillis(Date.now());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`), {
+      companyId,
+      officeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: "company-a-invite-admin",
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  const batch = writeBatch(driverDb);
+  batch.set(doc(
+    driverDb,
+    `companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`
+  ), {
+    displayName: "Expired Invite Driver",
+    loginId: "expired-invite-driver",
+    role: "driver",
+    companyId,
+    officeId,
+    status: "pending",
+    createdAt: "2026-09-19T00:00:00.000Z",
+    inviteId
+  });
+  batch.update(doc(
+    driverDb,
+    `companies/${companyId}/offices/${officeId}/invites/${inviteId}`
+  ), {
+    companyId,
+    officeId,
+    status: "used",
+    expiresAt,
+    createdAt,
+    createdBy: "company-a-invite-admin",
+    usedAt,
+    usedBy: driverUid,
+    revokedAt: null,
+    revokedBy: null
+  });
+
+  await assertFails(batch.commit());
+});
