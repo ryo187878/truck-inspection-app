@@ -298,3 +298,33 @@ test("18. A社のdriverはB社のinspectionを読み取れない", async () => {
     `companies/${inspectionCompanyId}/offices/${inspectionOfficeId}/inspections/${inspectionId}`
   )));
 });
+
+test("19. A社のadminはB社のinspectionを更新できない", async () => {
+  const adminUid = "company-a-admin";
+  const adminCompanyId = "company-a";
+  const adminOfficeId = "office-main";
+  const inspectionCompanyId = "company-b";
+  const inspectionOfficeId = "office-main";
+  const inspectionId = "inspection-b-update-1";
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `users/${adminUid}`), {
+      role: "admin",
+      companyId: adminCompanyId,
+      officeId: adminOfficeId,
+      displayName: "Company A Admin",
+      loginId: "company-a-admin"
+    });
+    await setDoc(doc(db, `companies/${inspectionCompanyId}/offices/${inspectionOfficeId}/inspections/${inspectionId}`), {
+      vehicle: "B社車両",
+      overall: "良好"
+    });
+  });
+
+  const adminDb = testEnv.authenticatedContext(adminUid).firestore();
+  await assertFails(updateDoc(
+    doc(adminDb, `companies/${inspectionCompanyId}/offices/${inspectionOfficeId}/inspections/${inspectionId}`),
+    { overall: "異常" }
+  ));
+});
