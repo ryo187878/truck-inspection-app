@@ -408,3 +408,32 @@ test("22. 同じ会社のdriverは別営業所のvehicleを読み取れない", 
     `companies/${companyId}/offices/${vehicleOfficeId}/vehicles/${vehicleId}`
   )));
 });
+
+test("23. A社のdriverはB社のsettingsを読み取れない", async () => {
+  const driverUid = "company-a-settings-driver";
+  const driverCompanyId = "company-a";
+  const driverOfficeId = "office-main";
+  const settingsCompanyId = "company-b";
+  const settingsOfficeId = "office-main";
+  const settingId = "settings-b-1";
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `users/${driverUid}`), {
+      role: "driver",
+      companyId: driverCompanyId,
+      officeId: driverOfficeId,
+      displayName: "Company A Settings Driver",
+      loginId: "company-a-settings-driver"
+    });
+    await setDoc(doc(db, `companies/${settingsCompanyId}/offices/${settingsOfficeId}/settings/${settingId}`), {
+      enabled: true
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(getDoc(doc(
+    driverDb,
+    `companies/${settingsCompanyId}/offices/${settingsOfficeId}/settings/${settingId}`
+  )));
+});
