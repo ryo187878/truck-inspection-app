@@ -759,3 +759,57 @@ test("30. registrationRequestなしのinvite単独消費は拒否される", asy
     }
   ));
 });
+
+test("31. 使用済みinviteの再利用によるregistrationRequest作成は拒否される", async () => {
+  const firstDriverUid = "company-a-first-invite-driver";
+  const secondDriverUid = "company-a-second-invite-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inviteId = "invite-9c4e1a7b2d6f8e0a5c3b7d1f6a8e2c9b";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+  const usedAt = Timestamp.fromMillis(Date.now() - 60 * 1000);
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `users/company-a-invite-admin`), {
+      role: "admin",
+      companyId,
+      officeId,
+      displayName: "Company A Invite Admin",
+      loginId: "company-a-invite-admin"
+    });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`), {
+      companyId,
+      officeId,
+      status: "used",
+      expiresAt,
+      createdAt,
+      createdBy: "company-a-invite-admin",
+      usedAt,
+      usedBy: firstDriverUid,
+      revokedAt: null,
+      revokedBy: null
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(secondDriverUid).firestore();
+  await assertFails(setDoc(
+    doc(
+      driverDb,
+      `companies/${companyId}/offices/${officeId}/registrationRequests/${secondDriverUid}`
+    ),
+    {
+      displayName: "Second Invited Driver",
+      loginId: "second-invited-driver",
+      role: "driver",
+      companyId,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId
+    }
+  ));
+});
