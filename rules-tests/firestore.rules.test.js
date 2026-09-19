@@ -669,3 +669,48 @@ test("28. 未承認driverは自社のactive inviteを使って申請と消費を
 
   await assertSucceeds(batch.commit());
 });
+
+test("29. inviteを消費しないregistrationRequest単独作成は拒否される", async () => {
+  const driverUid = "company-a-invite-only-request-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inviteId = "invite-7b3e1a9c5d2f8e6a4c0b7d1f9e3a5c8b";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`), {
+      companyId,
+      officeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: "company-a-invite-admin",
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(setDoc(
+    doc(
+      driverDb,
+      `companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`
+    ),
+    {
+      displayName: "Invite Only Driver",
+      loginId: "invite-only-driver",
+      role: "driver",
+      companyId,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId
+    }
+  ));
+});
