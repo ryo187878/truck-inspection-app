@@ -874,3 +874,57 @@ test("32. 期限切れinviteのregistrationRequest作成と消費は拒否され
 
   await assertFails(batch.commit());
 });
+
+test("33. revoked inviteによるregistrationRequest作成は拒否される", async () => {
+  const driverUid = "company-a-revoked-invite-driver";
+  const adminUid = "company-a-revoked-invite-admin";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inviteId = "invite-6b1e9c4a7d2f8e0c5a3b9d6f1e4c7a8b";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now() - 60 * 60 * 1000);
+  const revokedAt = Timestamp.fromMillis(Date.now() - 30 * 60 * 1000);
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `users/${adminUid}`), {
+      role: "admin",
+      companyId,
+      officeId,
+      displayName: "Company A Revoked Invite Admin",
+      loginId: "company-a-revoked-invite-admin"
+    });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`), {
+      companyId,
+      officeId,
+      status: "revoked",
+      expiresAt,
+      createdAt,
+      createdBy: adminUid,
+      usedAt: null,
+      usedBy: null,
+      revokedAt,
+      revokedBy: adminUid
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(setDoc(
+    doc(
+      driverDb,
+      `companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`
+    ),
+    {
+      displayName: "Revoked Invite Driver",
+      loginId: "revoked-invite-driver",
+      role: "driver",
+      companyId,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId
+    }
+  ));
+});
