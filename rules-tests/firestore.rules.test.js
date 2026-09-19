@@ -357,3 +357,26 @@ test("20. A社のdriverはB社のinspectionを新規作成できない", async (
     }
   ));
 });
+
+test("21. 運転者本人による余計なフィールド付き登録申請は拒否される", async () => {
+  const driverUid = "registration-extra-field-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const requestPath = `companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`;
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), {
+      name: "Company A"
+    });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), {
+      name: "Main Office"
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(setDoc(doc(driverDb, requestPath), {
+    ...registrationRequest({ companyId, officeId }),
+    isAdmin: true
+  }));
+});
