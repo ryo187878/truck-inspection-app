@@ -9,6 +9,7 @@ const {
 } = require("@firebase/rules-unit-testing");
 const {
   doc,
+  getDoc,
   setDoc,
   updateDoc,
   writeBatch
@@ -237,4 +238,33 @@ test("16. 存在しない会社・営業所への運転者登録申請は拒否�
     companyId,
     officeId
   }));
+});
+
+test("17. A社のdriverはB社のvehicleを読み取れない", async () => {
+  const driverUid = "company-a-driver";
+  const driverCompanyId = "company-a";
+  const driverOfficeId = "office-main";
+  const vehicleCompanyId = "company-b";
+  const vehicleOfficeId = "office-main";
+  const vehicleId = "vehicle-b-1";
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `users/${driverUid}`), {
+      role: "driver",
+      companyId: driverCompanyId,
+      officeId: driverOfficeId,
+      displayName: "Company A Driver",
+      loginId: "company-a-driver"
+    });
+    await setDoc(doc(db, `companies/${vehicleCompanyId}/offices/${vehicleOfficeId}/vehicles/${vehicleId}`), {
+      name: "B社車両"
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(getDoc(doc(
+    driverDb,
+    `companies/${vehicleCompanyId}/offices/${vehicleOfficeId}/vehicles/${vehicleId}`
+  )));
 });
