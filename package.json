@@ -1,0 +1,27 @@
+{
+  "name": "truck-inspection-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "service-worker.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryo187878/truck-inspection-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ryo187878/truck-inspection-app/issues"
+  },
+  "homepage": "https://github.com/ryo187878/truck-inspection-app#readme",
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2"
+  }
+}

@@ -125,6 +125,8 @@ service cloud.firestore {
 
       allow create: if loggedIn()
                     && request.auth.uid == userId
+                    && exists(/databases/$(database)/documents/companies/$(companyId))
+                    && exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId))
                     && request.resource.data.companyId == companyId
                     && request.resource.data.officeId == officeId
                     && request.resource.data.role == "driver"
