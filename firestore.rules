@@ -58,6 +58,47 @@ service cloud.firestore {
     }
 
     // ========================================
+    // 招待
+    // ========================================
+    match /companies/{companyId}/offices/{officeId}/invites/{inviteId} {
+
+      allow create: if isAdmin(companyId, officeId)
+                    && request.resource.data.keys().hasAll([
+                      "companyId",
+                      "officeId",
+                      "status",
+                      "expiresAt",
+                      "createdAt",
+                      "createdBy",
+                      "usedAt",
+                      "usedBy",
+                      "revokedAt",
+                      "revokedBy"
+                    ])
+                    && request.resource.data.keys().hasOnly([
+                      "companyId",
+                      "officeId",
+                      "status",
+                      "expiresAt",
+                      "createdAt",
+                      "createdBy",
+                      "usedAt",
+                      "usedBy",
+                      "revokedAt",
+                      "revokedBy"
+                    ])
+                    && request.resource.data.companyId == companyId
+                    && request.resource.data.officeId == officeId
+                    && request.resource.data.status == "active"
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.expiresAt > request.time
+                    && request.resource.data.usedAt == null
+                    && request.resource.data.usedBy == null
+                    && request.resource.data.revokedAt == null
+                    && request.resource.data.revokedBy == null;
+    }
+
+    // ========================================
     // 会社
     // ========================================
     match /companies/{companyId} {

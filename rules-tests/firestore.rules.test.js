@@ -11,6 +11,7 @@ const {
   doc,
   getDoc,
   setDoc,
+  Timestamp,
   updateDoc,
   writeBatch
 } = require("firebase/firestore");
@@ -567,6 +568,43 @@ test("26. driverはinspectionのcompanyIdを保存先と異なる値に偽装で
       companyId: "company-b",
       officeId,
       cloudUpdatedAt: "2026-09-19T00:00:00.000Z"
+    }
+  ));
+});
+
+test("27. 同じ会社・営業所のadminは自社のactive inviteを作成できる", async () => {
+  const adminUid = "company-a-invite-admin";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inviteId = "invite-8f4e2a7c9d1b6e3f5a0c4d8e7b2f6a1c";
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `users/${adminUid}`), {
+      role: "admin",
+      companyId,
+      officeId,
+      displayName: "Company A Invite Admin",
+      loginId: "company-a-invite-admin"
+    });
+  });
+
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+  const adminDbInstance = testEnv.authenticatedContext(adminUid).firestore();
+  await assertSucceeds(setDoc(
+    doc(adminDbInstance, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`),
+    {
+      companyId,
+      officeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: adminUid,
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
     }
   ));
 });
