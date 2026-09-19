@@ -328,3 +328,32 @@ test("19. A社のadminはB社のinspectionを更新できない", async () => {
     { overall: "異常" }
   ));
 });
+
+test("20. A社のdriverはB社のinspectionを新規作成できない", async () => {
+  const driverUid = "company-a-inspection-create-driver";
+  const driverCompanyId = "company-a";
+  const driverOfficeId = "office-main";
+  const inspectionCompanyId = "company-b";
+  const inspectionOfficeId = "office-main";
+  const inspectionId = "inspection-b-create-1";
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `users/${driverUid}`), {
+      role: "driver",
+      companyId: driverCompanyId,
+      officeId: driverOfficeId,
+      displayName: "Company A Inspection Create Driver",
+      loginId: "company-a-inspection-create-driver"
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(setDoc(
+    doc(driverDb, `companies/${inspectionCompanyId}/offices/${inspectionOfficeId}/inspections/${inspectionId}`),
+    {
+      vehicle: "B社車両",
+      overall: "良好"
+    }
+  ));
+});
