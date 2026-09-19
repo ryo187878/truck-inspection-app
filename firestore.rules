@@ -179,6 +179,8 @@ service cloud.firestore {
                       isAdmin(companyId, officeId)
                       || isDriver(companyId, officeId)
                     )
+                    && request.resource.data.companyId == companyId
+                    && request.resource.data.officeId == officeId
                     && request.resource.data.keys().hasOnly([
                       "id",
                       "date",
