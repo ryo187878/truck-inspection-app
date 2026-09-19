@@ -380,3 +380,31 @@ test("21. 運転者本人による余計なフィールド付き登録申請は�
     isAdmin: true
   }));
 });
+
+test("22. 同じ会社のdriverは別営業所のvehicleを読み取れない", async () => {
+  const driverUid = "company-a-office-main-driver";
+  const companyId = "company-a";
+  const driverOfficeId = "office-main";
+  const vehicleOfficeId = "office-sub";
+  const vehicleId = "vehicle-office-sub-1";
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `users/${driverUid}`), {
+      role: "driver",
+      companyId,
+      officeId: driverOfficeId,
+      displayName: "Company A Main Office Driver",
+      loginId: "company-a-office-main-driver"
+    });
+    await setDoc(doc(db, `companies/${companyId}/offices/${vehicleOfficeId}/vehicles/${vehicleId}`), {
+      name: "Company A Sub Office Vehicle"
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(getDoc(doc(
+    driverDb,
+    `companies/${companyId}/offices/${vehicleOfficeId}/vehicles/${vehicleId}`
+  )));
+});
