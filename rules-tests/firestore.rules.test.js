@@ -9,6 +9,7 @@ const {
 } = require("@firebase/rules-unit-testing");
 const {
   doc,
+  deleteDoc,
   getDoc,
   setDoc,
   Timestamp,
@@ -1316,4 +1317,415 @@ test("40. 正しいadminはinviteId付き申請の承認とdriver作成を同じ
   });
 
   await assertSucceeds(batch.commit());
+});
+
+test("41. A社とB社のデータ分離を実運用に近い流れで確認できる", async () => {
+  const companyA = "company-a";
+  const companyB = "company-b";
+  const officeId = "office-main";
+  const adminA = "company-a-total-admin";
+  const adminB = "company-b-total-admin";
+  const accessDriverA = "company-a-access-driver";
+  const accessDriverB = "company-b-access-driver";
+  const approvalDriverA = "company-a-approval-driver";
+  const approvalDriverB = "company-b-approval-driver";
+  const pendingDriverA = approvalDriverA;
+  const pendingDriverB = approvalDriverB;
+  const crossDriverA = "company-a-cross-registration-driver";
+  const crossDriverB = "company-b-cross-registration-driver";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+
+  function inviteData(companyId, createdBy, status = "active") {
+    return {
+      companyId,
+      officeId,
+      status,
+      expiresAt,
+      createdAt,
+      createdBy,
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    };
+  }
+
+  function inspectionData(id, companyId, inspectionOfficeId = officeId) {
+    return {
+      id,
+      date: "2026-09-19",
+      vehicle: `${companyId} vehicle`,
+      driver: `${companyId} driver`,
+      shaken: "確認済み",
+      shakenConfirmed: true,
+      managerConfirmedBy: "",
+      managerConfirmedRole: "",
+      results: {},
+      overall: "良好",
+      abnormal: "",
+      previous: "",
+      today: "",
+      driverChange: false,
+      previousDriverReport: "",
+      savedAt: "2026-09-19T00:00:00.000Z",
+      companyId,
+      officeId: inspectionOfficeId,
+      cloudUpdatedAt: "2026-09-19T00:00:00.000Z"
+    };
+  }
+
+  const companyData = [
+    [companyA, adminA, accessDriverA, pendingDriverA],
+    [companyB, adminB, accessDriverB, pendingDriverB]
+  ];
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    for (const [companyId, adminUid, driverUid, pendingUid] of companyData) {
+      await setDoc(doc(db, `companies/${companyId}`), { name: companyId });
+      await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+      await setDoc(doc(db, `users/${adminUid}`), {
+        role: "admin",
+        companyId,
+        officeId,
+        displayName: `${companyId} Admin`,
+        loginId: `${companyId}-admin`
+      });
+      await setDoc(doc(db, `users/${driverUid}`), {
+        role: "driver",
+        companyId,
+        officeId,
+        displayName: `${companyId} Driver`,
+        loginId: `${companyId}-driver`
+      });
+      await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/vehicles/${companyId}-admin-vehicle`), {
+        name: `${companyId} admin vehicle`
+      });
+      await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/vehicles/${companyId}-driver-vehicle`), {
+        name: `${companyId} driver vehicle`
+      });
+      await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/inspections/${companyId}-admin-inspection`),
+        inspectionData(`${companyId}-admin-inspection`, companyId));
+      await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/settings/${companyId}-admin-settings`), {
+        enabled: true
+      });
+      await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/settings/${companyId}-driver-settings`), {
+        enabled: true
+      });
+    }
+
+    await setDoc(doc(db, `companies/${companyA}/offices/${officeId}/invites/invite-a-approval`),
+      inviteData(companyA, adminA));
+    await setDoc(doc(db, `companies/${companyB}/offices/${officeId}/invites/invite-b-approval`),
+      inviteData(companyB, adminB));
+    await setDoc(doc(db, `companies/${companyA}/offices/${officeId}/registrationRequests/${pendingDriverA}`), {
+      displayName: "Company A Pending Driver",
+      loginId: "company-a-pending-driver",
+      role: "driver",
+      companyId: companyA,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId: "invite-a-approval"
+    });
+    await setDoc(doc(db, `companies/${companyB}/offices/${officeId}/registrationRequests/${pendingDriverB}`), {
+      displayName: "Company B Pending Driver",
+      loginId: "company-b-pending-driver",
+      role: "driver",
+      companyId: companyB,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId: "invite-b-approval"
+    });
+    await setDoc(doc(db, `companies/${companyA}/offices/${officeId}/invites/invite-a-cross-target`),
+      inviteData(companyA, adminA));
+    await setDoc(doc(db, `companies/${companyB}/offices/${officeId}/invites/invite-b-cross-target`),
+      inviteData(companyB, adminB));
+    await setDoc(doc(db, `companies/${companyA}/offices/${officeId}/invites/invite-a-cross-request`),
+      inviteData(companyA, adminA));
+    await setDoc(doc(db, `companies/${companyB}/offices/${officeId}/invites/invite-b-cross-request`),
+      inviteData(companyB, adminB));
+    await setDoc(doc(db, `companies/${companyA}/offices/${officeId}/registrationRequests/${crossDriverA}`), {
+      displayName: "Company A Cross Driver",
+      loginId: "company-a-cross-registration-driver",
+      role: "driver",
+      companyId: companyA,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId: "invite-a-cross-request"
+    });
+    await setDoc(doc(db, `companies/${companyB}/offices/${officeId}/registrationRequests/${crossDriverB}`), {
+      displayName: "Company B Cross Driver",
+      loginId: "company-b-cross-registration-driver",
+      role: "driver",
+      companyId: companyB,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId: "invite-b-cross-request"
+    });
+  });
+
+  const adminADb = testEnv.authenticatedContext(adminA).firestore();
+  const adminBDb = testEnv.authenticatedContext(adminB).firestore();
+  const driverADb = testEnv.authenticatedContext(accessDriverA).firestore();
+  const driverBDb = testEnv.authenticatedContext(accessDriverB).firestore();
+
+  await assertSucceeds(getDoc(doc(adminADb, `companies/${companyA}`)));
+  await assertSucceeds(getDoc(doc(adminBDb, `companies/${companyB}`)));
+  await assertSucceeds(updateDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/vehicles/${companyA}-admin-vehicle`),
+    { name: "Company A updated vehicle" }
+  ));
+  await assertSucceeds(updateDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/vehicles/${companyB}-admin-vehicle`),
+    { name: "Company B updated vehicle" }
+  ));
+  await assertSucceeds(deleteDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/vehicles/${companyA}-admin-vehicle`)
+  ));
+  await assertSucceeds(deleteDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/vehicles/${companyB}-admin-vehicle`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/inspections/${companyA}-admin-inspection`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/inspections/${companyB}-admin-inspection`)
+  ));
+  await assertSucceeds(updateDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/inspections/${companyA}-admin-inspection`),
+    { overall: "要注意" }
+  ));
+  await assertSucceeds(updateDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/inspections/${companyB}-admin-inspection`),
+    { overall: "要注意" }
+  ));
+  await assertSucceeds(deleteDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/inspections/${companyA}-admin-inspection`)
+  ));
+  await assertSucceeds(deleteDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/inspections/${companyB}-admin-inspection`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/settings/${companyA}-admin-settings`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/settings/${companyB}-admin-settings`)
+  ));
+  await assertSucceeds(updateDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/settings/${companyA}-admin-settings`),
+    { enabled: false }
+  ));
+  await assertSucceeds(updateDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/settings/${companyB}-admin-settings`),
+    { enabled: false }
+  ));
+  await assertSucceeds(deleteDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/settings/${companyA}-admin-settings`)
+  ));
+  await assertSucceeds(deleteDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/settings/${companyB}-admin-settings`)
+  ));
+
+  await assertSucceeds(setDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/invites/invite-a-admin-created`),
+    inviteData(companyA, adminA)
+  ));
+  await assertSucceeds(setDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/invites/invite-b-admin-created`),
+    inviteData(companyB, adminB)
+  ));
+  await assertSucceeds(updateDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/invites/invite-a-admin-created`),
+    {
+      ...inviteData(companyA, adminA, "revoked"),
+      revokedAt: Timestamp.fromMillis(Date.now()),
+      revokedBy: adminA
+    }
+  ));
+  await assertSucceeds(updateDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/invites/invite-b-admin-created`),
+    {
+      ...inviteData(companyB, adminB, "revoked"),
+      revokedAt: Timestamp.fromMillis(Date.now()),
+      revokedBy: adminB
+    }
+  ));
+
+  for (const [adminDb, adminUid, companyId, pendingUid, driverUid] of [
+    [adminADb, adminA, companyA, pendingDriverA, approvalDriverA],
+    [adminBDb, adminB, companyB, pendingDriverB, approvalDriverB]
+  ]) {
+    const batch = writeBatch(adminDb);
+    batch.set(doc(adminDb, `users/${driverUid}`), {
+      role: "driver",
+      companyId,
+      officeId,
+      displayName: `${companyId} Approved Driver`,
+      loginId: `${companyId}-approved-driver`,
+      approvedAt: "2026-09-19T01:00:00.000Z"
+    });
+    batch.update(doc(
+      adminDb,
+      `companies/${companyId}/offices/${officeId}/registrationRequests/${pendingUid}`
+    ), {
+      status: "approved",
+      approvedAt: "2026-09-19T01:00:00.000Z",
+      approvedBy: adminUid
+    });
+    await assertSucceeds(batch.commit());
+  }
+
+  await assertSucceeds(getDoc(doc(driverADb, `companies/${companyA}`)));
+  await assertSucceeds(getDoc(doc(driverBDb, `companies/${companyB}`)));
+  await assertSucceeds(getDoc(
+    doc(driverADb, `companies/${companyA}/offices/${officeId}/vehicles/${companyA}-driver-vehicle`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(driverBDb, `companies/${companyB}/offices/${officeId}/vehicles/${companyB}-driver-vehicle`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(driverADb, `companies/${companyA}/offices/${officeId}/settings/${companyA}-driver-settings`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(driverBDb, `companies/${companyB}/offices/${officeId}/settings/${companyB}-driver-settings`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/registrationRequests/${pendingDriverA}`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/registrationRequests/${pendingDriverB}`)
+  ));
+  await assertSucceeds(setDoc(
+    doc(driverADb, `companies/${companyA}/offices/${officeId}/inspections/${companyA}-driver-inspection`),
+    inspectionData(`${companyA}-driver-inspection`, companyA)
+  ));
+  await assertSucceeds(setDoc(
+    doc(driverBDb, `companies/${companyB}/offices/${officeId}/inspections/${companyB}-driver-inspection`),
+    inspectionData(`${companyB}-driver-inspection`, companyB)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/inspections/${companyA}-driver-inspection`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/inspections/${companyB}-driver-inspection`)
+  ));
+
+  await assertFails(getDoc(doc(adminADb, `companies/${companyB}`)));
+  await assertFails(getDoc(doc(adminBDb, `companies/${companyA}`)));
+  for (const [adminDb, otherCompany] of [[adminADb, companyB], [adminBDb, companyA]]) {
+    await assertFails(getDoc(
+      doc(adminDb, `companies/${otherCompany}/offices/${officeId}/vehicles/${otherCompany}-driver-vehicle`)
+    ));
+    await assertFails(setDoc(
+      doc(adminDb, `companies/${otherCompany}/offices/${officeId}/vehicles/cross-create`),
+      { name: "cross-company vehicle" }
+    ));
+    await assertFails(updateDoc(
+      doc(adminDb, `companies/${otherCompany}/offices/${officeId}/vehicles/${otherCompany}-driver-vehicle`),
+      { name: "cross-company update" }
+    ));
+    await assertFails(deleteDoc(
+      doc(adminDb, `companies/${otherCompany}/offices/${officeId}/vehicles/${otherCompany}-driver-vehicle`)
+    ));
+    await assertFails(getDoc(
+      doc(adminDb, `companies/${otherCompany}/offices/${officeId}/inspections/${otherCompany}-driver-inspection`)
+    ));
+    await assertFails(updateDoc(
+      doc(adminDb, `companies/${otherCompany}/offices/${officeId}/inspections/${otherCompany}-driver-inspection`),
+      { overall: "cross-company update" }
+    ));
+    await assertFails(deleteDoc(
+      doc(adminDb, `companies/${otherCompany}/offices/${officeId}/inspections/${otherCompany}-driver-inspection`)
+    ));
+    await assertFails(getDoc(
+      doc(adminDb, `companies/${otherCompany}/offices/${officeId}/settings/${otherCompany}-driver-settings`)
+    ));
+    await assertFails(updateDoc(
+      doc(adminDb, `companies/${otherCompany}/offices/${officeId}/settings/${otherCompany}-driver-settings`),
+      { enabled: false }
+    ));
+    await assertFails(deleteDoc(
+      doc(adminDb, `companies/${otherCompany}/offices/${officeId}/settings/${otherCompany}-driver-settings`)
+    ));
+  }
+
+  await assertFails(setDoc(
+    doc(adminADb, `companies/${companyB}/offices/${officeId}/invites/invite-a-forbidden-create`),
+    inviteData(companyB, adminA)
+  ));
+  await assertFails(setDoc(
+    doc(adminBDb, `companies/${companyA}/offices/${officeId}/invites/invite-b-forbidden-create`),
+    inviteData(companyA, adminB)
+  ));
+  await assertFails(updateDoc(
+    doc(adminADb, `companies/${companyB}/offices/${officeId}/invites/invite-b-cross-target`),
+    {
+      ...inviteData(companyB, adminB, "revoked"),
+      revokedAt: Timestamp.fromMillis(Date.now()),
+      revokedBy: adminA
+    }
+  ));
+  await assertFails(updateDoc(
+    doc(adminBDb, `companies/${companyA}/offices/${officeId}/invites/invite-a-cross-target`),
+    {
+      ...inviteData(companyA, adminA, "revoked"),
+      revokedAt: Timestamp.fromMillis(Date.now()),
+      revokedBy: adminB
+    }
+  ));
+
+  for (const [driverDb, otherCompany, otherDriver] of [
+    [driverADb, companyB, accessDriverB],
+    [driverBDb, companyA, accessDriverA]
+  ]) {
+    await assertFails(getDoc(doc(driverDb, `companies/${otherCompany}`)));
+    await assertFails(getDoc(
+      doc(driverDb, `companies/${otherCompany}/offices/${officeId}/vehicles/${otherCompany}-driver-vehicle`)
+    ));
+    await assertFails(getDoc(
+      doc(driverDb, `companies/${otherCompany}/offices/${officeId}/settings/${otherCompany}-driver-settings`)
+    ));
+    await assertFails(getDoc(
+      doc(driverDb, `companies/${otherCompany}/offices/${officeId}/registrationRequests/${otherDriver}`)
+    ));
+    await assertFails(setDoc(
+      doc(driverDb, `companies/${otherCompany}/offices/${officeId}/inspections/cross-driver-create`),
+      inspectionData("cross-driver-create", otherCompany)
+    ));
+  }
+
+  await assertFails(setDoc(
+    doc(driverADb, `companies/${companyA}/offices/${officeId}/inspections/forged-company-id`),
+    inspectionData("forged-company-id", companyB)
+  ));
+  await assertFails(setDoc(
+    doc(driverBDb, `companies/${companyB}/offices/${officeId}/inspections/forged-company-id`),
+    inspectionData("forged-company-id", companyA)
+  ));
+  await assertFails(setDoc(
+    doc(driverADb, `companies/${companyA}/offices/${officeId}/inspections/forged-office-id`),
+    inspectionData("forged-office-id", companyA, "office-sub")
+  ));
+  await assertFails(setDoc(
+    doc(driverBDb, `companies/${companyB}/offices/${officeId}/inspections/forged-office-id`),
+    inspectionData("forged-office-id", companyB, "office-sub")
+  ));
+
+  await assertSucceeds(getDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/vehicles/${companyA}-driver-vehicle`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/vehicles/${companyB}-driver-vehicle`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminADb, `companies/${companyA}/offices/${officeId}/inspections/${companyA}-driver-inspection`)
+  ));
+  await assertSucceeds(getDoc(
+    doc(adminBDb, `companies/${companyB}/offices/${officeId}/inspections/${companyB}-driver-inspection`)
+  ));
 });
