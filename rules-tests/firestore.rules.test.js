@@ -1045,3 +1045,53 @@ test("35. 別officeのinviteによるregistrationRequest作成は拒否される
     }
   ));
 });
+
+test("36. inviteIdを改ざんしたregistrationRequest作成は拒否される", async () => {
+  const driverUid = "company-a-tampered-invite-id-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const validInviteId = "invite-valid-9c4e1a7b2d6f8e0a";
+  const tamperedInviteId = "invite-tampered-5c3b7d1f6a8e2c9b";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, "users/company-a-main-admin"), {
+      role: "admin",
+      companyId,
+      officeId,
+      displayName: "Company A Main Admin",
+      loginId: "company-a-main-admin"
+    });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/invites/${validInviteId}`), {
+      companyId,
+      officeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: "company-a-main-admin",
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(setDoc(
+    doc(driverDb, `companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`),
+    {
+      displayName: "Tampered Invite ID Driver",
+      loginId: "tampered-invite-id-driver",
+      role: "driver",
+      companyId,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId: tamperedInviteId
+    }
+  ));
+});
