@@ -987,3 +987,61 @@ test("34. 他社inviteによるregistrationRequest作成は拒否される", asy
     }
   ));
 });
+
+test("35. 別officeのinviteによるregistrationRequest作成は拒否される", async () => {
+  const driverUid = "company-a-cross-office-invite-driver";
+  const companyId = "company-a";
+  const mainOfficeId = "office-main";
+  const subOfficeId = "office-sub";
+  const inviteId = "invite-cross-office-7b3e1a9c5d2f8e6a";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${mainOfficeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${subOfficeId}`), { name: "Sub Office" });
+    await setDoc(doc(db, "users/company-a-main-admin"), {
+      role: "admin",
+      companyId,
+      officeId: mainOfficeId,
+      displayName: "Company A Main Admin",
+      loginId: "company-a-main-admin"
+    });
+    await setDoc(doc(db, "users/company-a-sub-admin"), {
+      role: "admin",
+      companyId,
+      officeId: subOfficeId,
+      displayName: "Company A Sub Admin",
+      loginId: "company-a-sub-admin"
+    });
+    await setDoc(doc(db, `companies/${companyId}/offices/${subOfficeId}/invites/${inviteId}`), {
+      companyId,
+      officeId: subOfficeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: "company-a-sub-admin",
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(setDoc(
+    doc(driverDb, `companies/${companyId}/offices/${mainOfficeId}/registrationRequests/${driverUid}`),
+    {
+      displayName: "Cross Office Invite Driver",
+      loginId: "cross-office-invite-driver",
+      role: "driver",
+      companyId,
+      officeId: mainOfficeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId
+    }
+  ));
+});
