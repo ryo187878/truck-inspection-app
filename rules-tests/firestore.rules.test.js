@@ -928,3 +928,62 @@ test("33. revoked inviteによるregistrationRequest作成は拒否される", a
     }
   ));
 });
+
+test("34. 他社inviteによるregistrationRequest作成は拒否される", async () => {
+  const driverUid = "company-a-cross-company-invite-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const otherCompanyId = "company-b";
+  const inviteId = "invite-cross-company-4e8a2c6f1b9d3a7e";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `companies/${otherCompanyId}`), { name: "Company B" });
+    await setDoc(doc(db, `companies/${otherCompanyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, "users/company-a-admin"), {
+      role: "admin",
+      companyId,
+      officeId,
+      displayName: "Company A Admin",
+      loginId: "company-a-admin"
+    });
+    await setDoc(doc(db, "users/company-b-admin"), {
+      role: "admin",
+      companyId: otherCompanyId,
+      officeId,
+      displayName: "Company B Admin",
+      loginId: "company-b-admin"
+    });
+    await setDoc(doc(db, `companies/${otherCompanyId}/offices/${officeId}/invites/${inviteId}`), {
+      companyId: otherCompanyId,
+      officeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: "company-b-admin",
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(setDoc(
+    doc(driverDb, `companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`),
+    {
+      displayName: "Cross Company Invite Driver",
+      loginId: "cross-company-invite-driver",
+      role: "driver",
+      companyId,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId
+    }
+  ));
+});
