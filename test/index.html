@@ -403,21 +403,35 @@ textarea{min-height:80px;resize:vertical}
 </section>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+  import { getAuth, connectAuthEmulator, signInWithEmailAndPassword, createUserWithEmailAndPassword, deleteUser, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+  import { getFirestore, connectFirestoreEmulator, collection, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+  const emulatorMode = new URLSearchParams(location.search).get("emulator") === "1";
+  const localHost = location.hostname === "127.0.0.1" || location.hostname === "localhost";
+  const emulatorError = "Emulator mode is required on localhost or 127.0.0.1. Open this page with ?emulator=1.";
+  if(!emulatorMode || !localHost){
+    const errorElement = document.getElementById("authError");
+    if(errorElement){
+      errorElement.textContent = emulatorError;
+      errorElement.classList.add("show");
+    }else{
+      document.body.textContent = emulatorError;
+    }
+    throw new Error(emulatorError);
+  }
 
   const firebaseConfig = {
-    apiKey: "AIzaSyCnnljHeudw5t_US6v5nkZ4555NGfH-vF8",
-    authDomain: "truck-inspection-app-6a0c8.firebaseapp.com",
-    projectId: "truck-inspection-app-6a0c8",
-    storageBucket: "truck-inspection-app-6a0c8.firebasestorage.app",
-    messagingSenderId: "597073700511",
-    appId: "1:597073700511:web:59e8ee8d9112e6c659a4aa"
+    apiKey: "demo-local",
+    authDomain: "localhost",
+    projectId: "tramo-browser-test",
+    appId: "demo-local"
   };
 
   const firebaseApp = initializeApp(firebaseConfig);
   const firebaseAuth = getAuth(firebaseApp);
+  connectAuthEmulator(firebaseAuth, "http://127.0.0.1:9099", { disableWarnings: true });
   const firestoreDb = getFirestore(firebaseApp);
+  connectFirestoreEmulator(firestoreDb, "127.0.0.1", 8080);
   const CLOUD_USERS = `users`;
   let CLOUD_COMPANY = "";
   let CLOUD_OFFICE = "";
@@ -443,14 +457,18 @@ textarea{min-height:80px;resize:vertical}
     const params=new URLSearchParams(location.search);
     const companyId=String(params.get("company")||"").trim();
     const officeId=String(params.get("office")||"").trim();
-    if(companyId && officeId){
-      const ctx={companyId,officeId};
+    const inviteId=String(params.get("invite")||"").trim();
+    if(companyId && officeId && inviteId
+      && !companyId.includes("/")
+      && !officeId.includes("/")
+      && !inviteId.includes("/")){
+      const ctx={companyId,officeId,inviteId};
       localStorage.setItem(TENANT_CONTEXT_KEY, JSON.stringify(ctx));
       return ctx;
     }
     try{
       const saved=JSON.parse(localStorage.getItem(TENANT_CONTEXT_KEY)||"null");
-      if(saved && saved.companyId && saved.officeId) return saved;
+      if(saved && saved.companyId && saved.officeId && saved.inviteId) return saved;
     }catch(e){}
     return null;
   }
@@ -795,19 +813,35 @@ textarea{min-height:80px;resize:vertical}
     const internalEmail=makeInternalEmail(tenantContext.companyId,tenantContext.officeId,loginId);
     registerButton.disabled=true; registerButton.textContent="登録申請中…";
     window.registrationInProgress=true;
+    let createdUser=null;
+    let batchCommitted=false;
     try{
       const cred=await createUserWithEmailAndPassword(firebaseAuth,internalEmail,password);
+      createdUser=cred.user;
       const uid=cred.user.uid;
-      const reqPath=registrationCollectionPath(tenantContext.companyId,tenantContext.officeId);
-      await setDoc(doc(firestoreDb, reqPath, uid), {
+      const { companyId, officeId, inviteId } = tenantContext;
+      const reqPath=registrationCollectionPath(companyId,officeId);
+      const batch=writeBatch(firestoreDb);
+      batch.set(doc(firestoreDb, reqPath, uid), {
         displayName,
         loginId,
         role:"driver",
-        companyId:tenantContext.companyId,
-        officeId:tenantContext.officeId,
+        companyId,
+        officeId,
         status:"pending",
-        createdAt:new Date().toISOString()
+        createdAt:new Date().toISOString(),
+        inviteId
       });
+      batch.update(doc(
+        firestoreDb,
+        `companies/${companyId}/offices/${officeId}/invites/${inviteId}`
+      ), {
+        status:"used",
+        usedAt:serverTimestamp(),
+        usedBy:uid
+      });
+      await batch.commit();
+      batchCommitted=true;
       await signOut(firebaseAuth);
       document.getElementById("registerName").value="";
       document.getElementById("registerLoginId").value="";
@@ -816,6 +850,9 @@ textarea{min-height:80px;resize:vertical}
       showLoginPanel("登録申請を送信しました。管理者の承認後、このIDでログインできます。");
     }catch(e){
       console.error(e);
+      if(createdUser && !batchCommitted && firebaseAuth.currentUser?.uid===createdUser.uid){
+        try{ await deleteUser(createdUser); }catch(deleteError){ console.error(deleteError); }
+      }
       if(e?.code==="auth/email-already-in-use"){
         registerError.textContent="このログインIDはすでに使われています。別のIDを入力してください。";
       }else{
