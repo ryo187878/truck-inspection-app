@@ -1196,3 +1196,55 @@ test("38. 正しいadminは自社・自事業所のactive inviteをrevokedに変
     }
   ));
 });
+
+test("39. driverによるactive inviteのrevoked変更は拒否される", async () => {
+  const driverUid = "company-a-revoke-invite-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inviteId = "invite-driver-revoke-1c7e9a4b2d6f8e0a";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+  const revokedAt = Timestamp.fromMillis(Date.now());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `users/${driverUid}`), {
+      role: "driver",
+      companyId,
+      officeId,
+      displayName: "Company A Revoke Invite Driver",
+      loginId: "company-a-revoke-invite-driver"
+    });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`), {
+      companyId,
+      officeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: "company-a-revoke-invite-admin",
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(updateDoc(
+    doc(driverDb, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`),
+    {
+      companyId,
+      officeId,
+      status: "revoked",
+      expiresAt,
+      createdAt,
+      createdBy: "company-a-revoke-invite-admin",
+      usedAt: null,
+      usedBy: null,
+      revokedAt,
+      revokedBy: driverUid
+    }
+  ));
+});
