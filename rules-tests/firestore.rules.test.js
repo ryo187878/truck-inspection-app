@@ -1729,3 +1729,162 @@ test("41. A社とB社のデータ分離を実運用に近い流れで確認で�
     doc(adminBDb, `companies/${companyB}/offices/${officeId}/inspections/${companyB}-driver-inspection`)
   ));
 });
+
+test("42. 日常点検の保存・tenant分離・管理者確認を総合確認できる", async () => {
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const otherCompanyId = "company-b";
+  const otherOfficeId = "office-main";
+  const driverUid = "daily-inspection-driver";
+  const otherCompanyAdminUid = "daily-inspection-company-b-admin";
+  const adminUid = "daily-inspection-admin";
+  const vehicleName = "○○ 100 あ 1234";
+  const inspectionId = "daily-inspection-42";
+  const createdAt = "2026-09-21T00:00:00.000Z";
+  const results = Object.fromEntries(
+    Array.from({ length: 27 }, (_, index) => [index + 1, index === 17 ? "☆" : "○"])
+  );
+  const inspectionData = {
+    id: inspectionId,
+    date: "2026-09-21",
+    vehicle: vehicleName,
+    driver: "テスト運転者",
+    shaken: "2027-09-21",
+    shakenConfirmed: true,
+    managerConfirmedBy: "",
+    managerConfirmedRole: "",
+    results,
+    overall: "良好",
+    abnormal: "",
+    previous: "",
+    today: "",
+    driverChange: false,
+    previousDriverReport: "",
+    savedAt: createdAt,
+    companyId,
+    officeId,
+    cloudUpdatedAt: createdAt
+  };
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `companies/${otherCompanyId}`), { name: "Company B" });
+    await setDoc(doc(db, `companies/${otherCompanyId}/offices/${otherOfficeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `users/${adminUid}`), {
+      role: "admin",
+      companyId,
+      officeId,
+      displayName: "日常点検管理者",
+      loginId: "daily-inspection-admin"
+    });
+    await setDoc(doc(db, `users/${driverUid}`), {
+      role: "driver",
+      companyId,
+      officeId,
+      displayName: "テスト運転者",
+      loginId: "test-driver"
+    });
+    await setDoc(doc(db, `users/${otherCompanyAdminUid}`), {
+      role: "admin",
+      companyId: otherCompanyId,
+      officeId: otherOfficeId,
+      displayName: "Company B 管理者",
+      loginId: "company-b-daily-admin"
+    });
+    await setDoc(doc(
+      db,
+      `companies/${companyId}/offices/${officeId}/vehicles/daily-vehicle-42`
+    ), {
+      name: vehicleName,
+      vehicleNumber: vehicleName,
+      shaken: "2027-09-21",
+      jibaiseki: "2027-10-21",
+      optional: "2027-11-21",
+      companyId,
+      officeId,
+      cloudUpdatedAt: createdAt
+    });
+    await setDoc(doc(
+      db,
+      `companies/${companyId}/offices/${officeId}/settings/masterData`
+    ), {
+      drivers: ["テスト運転者"],
+      managers: [{
+        name: "テスト整備管理者",
+        role: "整備管理者",
+        appointed: "2026-09-21",
+        active: true,
+        note: ""
+      }],
+      cloudUpdatedAt: createdAt
+    });
+    await setDoc(doc(
+      db,
+      `companies/${otherCompanyId}/offices/${otherOfficeId}/inspections/company-b-inspection`
+    ), {
+      ...inspectionData,
+      id: "company-b-inspection",
+      companyId: otherCompanyId,
+      officeId: otherOfficeId
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  const adminDb = testEnv.authenticatedContext(adminUid).firestore();
+  const otherCompanyAdminDb = testEnv.authenticatedContext(otherCompanyAdminUid).firestore();
+  const ownInspectionRef = doc(
+    driverDb,
+    `companies/${companyId}/offices/${officeId}/inspections/${inspectionId}`
+  );
+
+  await assertSucceeds(setDoc(ownInspectionRef, inspectionData));
+  const savedInspection = await getDoc(doc(
+    adminDb,
+    `companies/${companyId}/offices/${officeId}/inspections/${inspectionId}`
+  ));
+  assert.deepEqual(savedInspection.data(), inspectionData);
+  assert.equal(Object.keys(savedInspection.data().results).length, 27);
+  assert.equal(savedInspection.data().results[18], "☆");
+
+  await assertFails(setDoc(
+    doc(driverDb, `companies/${otherCompanyId}/offices/${otherOfficeId}/inspections/cross-company`),
+    { ...inspectionData, id: "cross-company", companyId: otherCompanyId, officeId: otherOfficeId }
+  ));
+  await assertFails(setDoc(
+    doc(driverDb, `companies/${companyId}/offices/office-sub/inspections/cross-office`),
+    { ...inspectionData, id: "cross-office", officeId: "office-sub" }
+  ));
+  await assertFails(setDoc(
+    doc(driverDb, `companies/${companyId}/offices/${officeId}/inspections/forged-company`),
+    { ...inspectionData, id: "forged-company", companyId: otherCompanyId }
+  ));
+  await assertFails(setDoc(
+    doc(driverDb, `companies/${companyId}/offices/${officeId}/inspections/forged-office`),
+    { ...inspectionData, id: "forged-office", officeId: "office-sub" }
+  ));
+  await assertFails(setDoc(
+    doc(driverDb, `companies/${companyId}/offices/${officeId}/inspections/extra-field`),
+    { ...inspectionData, id: "extra-field", unexpected: true }
+  ));
+
+  await assertFails(getDoc(ownInspectionRef));
+  await assertFails(getDoc(
+    doc(otherCompanyAdminDb, `companies/${companyId}/offices/${officeId}/inspections/${inspectionId}`)
+  ));
+  await assertFails(updateDoc(ownInspectionRef, { overall: "要注意" }));
+  await assertFails(deleteDoc(ownInspectionRef));
+  await assertSucceeds(updateDoc(
+    doc(adminDb, `companies/${companyId}/offices/${officeId}/inspections/${inspectionId}`),
+    {
+      overall: "要注意",
+      managerConfirmedBy: "テスト整備管理者",
+      managerConfirmedRole: "整備管理者"
+    }
+  ));
+  await assertSucceeds(getDoc(doc(
+    adminDb,
+    `companies/${companyId}/offices/${officeId}/inspections/${inspectionId}`
+  )));
+});
