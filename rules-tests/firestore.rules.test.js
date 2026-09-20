@@ -1248,3 +1248,72 @@ test("39. driverによるactive inviteのrevoked変更は拒否される", async
     }
   ));
 });
+
+test("40. 正しいadminはinviteId付き申請の承認とdriver作成を同じwriteBatchで実行できる", async () => {
+  const adminUid = "company-a-approval-admin";
+  const driverUid = "company-a-invite-approval-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inviteId = "invite-approval-4e8a2c6f1b9d3a7e";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `users/${adminUid}`), {
+      role: "admin",
+      companyId,
+      officeId,
+      displayName: "Company A Approval Admin",
+      loginId: "company-a-approval-admin"
+    });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`), {
+      companyId,
+      officeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: adminUid,
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    });
+    await setDoc(doc(
+      db,
+      `companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`
+    ), {
+      displayName: "Invited Approval Driver",
+      loginId: "invited-approval-driver",
+      role: "driver",
+      companyId,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId
+    });
+  });
+
+  const adminDbInstance = testEnv.authenticatedContext(adminUid).firestore();
+  const batch = writeBatch(adminDbInstance);
+  batch.set(doc(adminDbInstance, `users/${driverUid}`), {
+    role: "driver",
+    companyId,
+    officeId,
+    displayName: "Invited Approval Driver",
+    loginId: "invited-approval-driver",
+    approvedAt: "2026-09-19T01:00:00.000Z"
+  });
+  batch.update(doc(
+    adminDbInstance,
+    `companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`
+  ), {
+    status: "approved",
+    approvedAt: "2026-09-19T01:00:00.000Z",
+    approvedBy: adminUid
+  });
+
+  await assertSucceeds(batch.commit());
+});
