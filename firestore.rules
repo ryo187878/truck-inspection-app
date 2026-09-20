@@ -97,30 +97,64 @@ service cloud.firestore {
                     && request.resource.data.revokedAt == null
                     && request.resource.data.revokedBy == null;
 
-      allow update: if loggedIn()
-                    && resource.data.status == "active"
-                    && resource.data.companyId == companyId
-                    && resource.data.officeId == officeId
-                    && resource.data.expiresAt > request.time
-                    && request.resource.data.status == "used"
-                    && request.resource.data.companyId == companyId
-                    && request.resource.data.officeId == officeId
-                    && request.resource.data.expiresAt == resource.data.expiresAt
-                    && request.resource.data.createdAt == resource.data.createdAt
-                    && request.resource.data.createdBy == resource.data.createdBy
-                    && request.resource.data.usedAt != null
-                    && request.resource.data.usedBy == request.auth.uid
-                    && request.resource.data.revokedAt == null
-                    && request.resource.data.revokedBy == null
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                      "status",
-                      "usedAt",
-                      "usedBy"
-                    ])
-                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.status == "pending"
-                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.inviteId == inviteId
-                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.companyId == companyId
-                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.officeId == officeId;
+      allow update: if (
+                      loggedIn()
+                      && resource.data.status == "active"
+                      && resource.data.companyId == companyId
+                      && resource.data.officeId == officeId
+                      && resource.data.expiresAt > request.time
+                      && request.resource.data.status == "used"
+                      && request.resource.data.companyId == companyId
+                      && request.resource.data.officeId == officeId
+                      && request.resource.data.expiresAt == resource.data.expiresAt
+                      && request.resource.data.createdAt == resource.data.createdAt
+                      && request.resource.data.createdBy == resource.data.createdBy
+                      && request.resource.data.usedAt != null
+                      && request.resource.data.usedBy == request.auth.uid
+                      && request.resource.data.revokedAt == null
+                      && request.resource.data.revokedBy == null
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "status",
+                        "usedAt",
+                        "usedBy"
+                      ])
+                      && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.status == "pending"
+                      && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.inviteId == inviteId
+                      && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.companyId == companyId
+                      && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(request.auth.uid)).data.officeId == officeId
+                    ) || (
+                      isAdmin(companyId, officeId)
+                      && resource.data.status == "active"
+                      && resource.data.companyId == companyId
+                      && resource.data.officeId == officeId
+                      && request.resource.data.status == "revoked"
+                      && request.resource.data.companyId == resource.data.companyId
+                      && request.resource.data.officeId == resource.data.officeId
+                      && request.resource.data.expiresAt == resource.data.expiresAt
+                      && request.resource.data.createdAt == resource.data.createdAt
+                      && request.resource.data.createdBy == resource.data.createdBy
+                      && request.resource.data.usedAt == null
+                      && request.resource.data.usedBy == null
+                      && request.resource.data.revokedAt != null
+                      && request.resource.data.revokedBy == request.auth.uid
+                      && request.resource.data.keys().hasOnly([
+                        "companyId",
+                        "officeId",
+                        "status",
+                        "expiresAt",
+                        "createdAt",
+                        "createdBy",
+                        "usedAt",
+                        "usedBy",
+                        "revokedAt",
+                        "revokedBy"
+                      ])
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "status",
+                        "revokedAt",
+                        "revokedBy"
+                      ])
+                    );
     }
 
     // ========================================

@@ -1144,3 +1144,55 @@ test("37. tenant情報が不正なinviteによるregistrationRequest作成は拒
     }
   ));
 });
+
+test("38. 正しいadminは自社・自事業所のactive inviteをrevokedに変更できる", async () => {
+  const adminUid = "company-a-revoke-invite-admin";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inviteId = "invite-revoke-8f4e2a7c9d1b6e3f";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+  const revokedAt = Timestamp.fromMillis(Date.now());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, `users/${adminUid}`), {
+      role: "admin",
+      companyId,
+      officeId,
+      displayName: "Company A Revoke Invite Admin",
+      loginId: "company-a-revoke-invite-admin"
+    });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`), {
+      companyId,
+      officeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: adminUid,
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    });
+  });
+
+  const adminDbInstance = testEnv.authenticatedContext(adminUid).firestore();
+  await assertSucceeds(updateDoc(
+    doc(adminDbInstance, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`),
+    {
+      companyId,
+      officeId,
+      status: "revoked",
+      expiresAt,
+      createdAt,
+      createdBy: adminUid,
+      usedAt: null,
+      usedBy: null,
+      revokedAt,
+      revokedBy: adminUid
+    }
+  ));
+});
