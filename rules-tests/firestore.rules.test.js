@@ -1095,3 +1095,52 @@ test("36. inviteIdを改ざんしたregistrationRequest作成は拒否される"
     }
   ));
 });
+
+test("37. tenant情報が不正なinviteによるregistrationRequest作成は拒否される", async () => {
+  const driverUid = "company-a-invalid-invite-tenant-driver";
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const inviteId = "invite-invalid-tenant-6b1e9c4a7d2f8e0c";
+  const expiresAt = Timestamp.fromMillis(Date.now() + 60 * 60 * 1000);
+  const createdAt = Timestamp.fromMillis(Date.now());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, `companies/${companyId}`), { name: "Company A" });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}`), { name: "Main Office" });
+    await setDoc(doc(db, "users/company-a-main-admin"), {
+      role: "admin",
+      companyId,
+      officeId,
+      displayName: "Company A Main Admin",
+      loginId: "company-a-main-admin"
+    });
+    await setDoc(doc(db, `companies/${companyId}/offices/${officeId}/invites/${inviteId}`), {
+      companyId: "company-b",
+      officeId,
+      status: "active",
+      expiresAt,
+      createdAt,
+      createdBy: "company-a-main-admin",
+      usedAt: null,
+      usedBy: null,
+      revokedAt: null,
+      revokedBy: null
+    });
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(setDoc(
+    doc(driverDb, `companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`),
+    {
+      displayName: "Invalid Invite Tenant Driver",
+      loginId: "invalid-invite-tenant-driver",
+      role: "driver",
+      companyId,
+      officeId,
+      status: "pending",
+      createdAt: "2026-09-19T00:00:00.000Z",
+      inviteId
+    }
+  ));
+});
