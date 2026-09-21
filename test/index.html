@@ -39,8 +39,10 @@ textarea{min-height:80px;resize:vertical}
 @media(min-width:650px){.grid{grid-template-columns:1fr 1fr}}
 
 .tabs{max-width:760px;margin:10px auto 0;display:flex;gap:5px;padding:0 12px}
-.tab{flex:1;border:0;border-radius:10px 10px 0 0;padding:10px 4px;font-size:13px;font-weight:800;background:#dfe5ec;color:#334}
+.tab{flex:1;border:0;border-radius:10px 10px 0 0;padding:10px 4px;font-size:13px;font-weight:800;background:#dfe5ec;color:#334;display:flex;align-items:center;justify-content:center;text-align:center;min-height:48px}
 .tab.active{background:#6f82a6;color:white}
+.tab-2line{flex-direction:column;line-height:1.25}
+.tab-2line span{display:block}
 .page{display:none}
 .page.active{display:block}
 /* 整備管理者の確認欄は①点検入力だけに表示 */
@@ -104,7 +106,7 @@ textarea{min-height:80px;resize:vertical}
 .dispatch-toolbar button{border:0;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:800;background:#eef2f6;color:#17365d;box-shadow:0 1px 3px #0002}
 .dispatch-toolbar button.dispatch-today{background:#dcecff}
 .dispatch-toolbar button.dispatch-add{background:#17365d;color:#fff}
-.dispatch-toolbar input[type="date"]{width:auto;padding:9px 10px;font-size:14px;border:1px solid #ccd2d8;border-radius:10px;background:#fff}
+.dispatch-toolbar input[type="date"],.dispatch-toolbar input[type="month"]{width:auto;padding:9px 10px;font-size:14px;border:1px solid #ccd2d8;border-radius:10px;background:#fff}
 .dispatch-table-scroll{width:100%;overflow-x:auto;border-radius:12px;box-shadow:0 1px 4px #0001;background:#fff}
 .dispatch-table{width:100%;border-collapse:collapse;min-width:760px}
 .dispatch-table th,.dispatch-table td{border:1px solid #d5dce6;padding:8px 6px;font-size:13px;text-align:center;white-space:nowrap}
@@ -113,13 +115,118 @@ textarea{min-height:80px;resize:vertical}
 .dispatch-table td.dispatch-wide{white-space:normal;text-align:left;min-width:120px}
 .dispatch-table th.dispatch-col-date,.dispatch-table td.dispatch-col-date,
 .dispatch-table th.dispatch-col-time,.dispatch-table td.dispatch-col-time,
-.dispatch-table th.dispatch-col-count,.dispatch-table td.dispatch-col-count{min-width:56px}
+.dispatch-table th.dispatch-col-count,.dispatch-table td.dispatch-col-count,
+.dispatch-table th.dispatch-col-action,.dispatch-table td.dispatch-col-action{min-width:56px}
+.dispatch-edit-btn{border:0;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:800;background:#eef2f6;color:#17365d;box-shadow:0 1px 3px #0002}
 .dispatch-empty{padding:16px;text-align:center;color:#667;font-size:13px}
+
+.dispatch-form-overlay{position:fixed;inset:0;z-index:50;background:#17365d55;display:flex;align-items:center;justify-content:center;padding:16px}
+.dispatch-form-card{width:min(640px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 8px 30px #0003}
+.dispatch-form-card .grid{margin-top:8px}
+.dispatch-form-actions{display:flex;gap:8px;margin-top:14px}
+.dispatch-form-actions button{flex:1;border:0;border-radius:12px;padding:13px;font-size:16px;font-weight:800}
+.dispatch-assign-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.dispatch-assign-row{display:grid;grid-template-columns:56px 1fr 1fr;gap:8px;align-items:center;background:#f5f8fb;border:1px solid #d5dce3;border-radius:10px;padding:8px}
+.dispatch-assign-label{font-size:13px;font-weight:800;color:#17365d}
+.dispatch-assign-row input{width:100%;font-size:14px;border:1px solid #ccd2d8;border-radius:8px;padding:9px}
+.dispatch-assign-row select{width:100%;font-size:14px;border:1px solid #ccd2d8;border-radius:8px;padding:9px;background:#fff}
+
+/* PC：横スクロールなしで10項目を一画面に収め、カード幅も広く使う */
+@media(min-width:900px){
+  main:has(#dispatchPage.active){max-width:1600px}
+  .dispatch-wrap{max-width:100%}
+  .dispatch-table{table-layout:fixed;min-width:0}
+  .dispatch-table th,.dispatch-table td{white-space:normal;padding:12px 10px;font-size:15px;line-height:1.4}
+  .dispatch-table td.dispatch-wide{min-width:0}
+  .dispatch-table th:nth-child(1),.dispatch-table td:nth-child(1){width:6%}
+  .dispatch-table th:nth-child(2),.dispatch-table td:nth-child(2){width:9%}
+  .dispatch-table th:nth-child(3),.dispatch-table td:nth-child(3){width:11%}
+  .dispatch-table th:nth-child(4),.dispatch-table td:nth-child(4){width:11%}
+  .dispatch-table th:nth-child(5),.dispatch-table td:nth-child(5){width:6%}
+  .dispatch-table th:nth-child(6),.dispatch-table td:nth-child(6){width:6%}
+  .dispatch-table th:nth-child(7),.dispatch-table td:nth-child(7){width:11%}
+  .dispatch-table th:nth-child(8),.dispatch-table td:nth-child(8){width:9%}
+  .dispatch-table th:nth-child(9),.dispatch-table td:nth-child(9){width:6%}
+  .dispatch-table th:nth-child(10),.dispatch-table td:nth-child(10){width:9%}
+  .dispatch-table th:nth-child(11),.dispatch-table td:nth-child(11){width:9%}
+  .dispatch-table th:nth-child(12),.dispatch-table td:nth-child(12){width:7%}
+}
 
 @media(max-width:760px) and (orientation:landscape){
   .dispatch-toolbar button{padding:8px 10px;font-size:12px}
   .dispatch-table th,.dispatch-table td{padding:5px 4px;font-size:11px}
   .dispatch-table{min-width:0}
+}
+
+/* ===== 海上コンテナ配車管理（②とは独立した専用スタイル） ===== */
+.container-wrap{max-width:1100px}
+.container-title{font-size:19px;font-weight:800;color:#17365d;margin-bottom:10px}
+.container-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.container-toolbar button{border:0;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:800;background:#eef2f6;color:#17365d;box-shadow:0 1px 3px #0002}
+.container-toolbar button.container-today{background:#dcecff}
+.container-toolbar button.container-add{background:#17365d;color:#fff}
+.container-toolbar input[type="month"]{width:auto;padding:9px 10px;font-size:14px;border:1px solid #ccd2d8;border-radius:10px;background:#fff}
+.container-table-scroll{width:100%;overflow-x:auto;border-radius:12px;box-shadow:0 1px 4px #0001;background:#fff}
+.container-table{width:100%;border-collapse:collapse;min-width:900px}
+.container-table th,.container-table td{border:1px solid #d5dce6;padding:8px 6px;font-size:13px;text-align:center;white-space:nowrap}
+.container-table thead th{background:#17365d;color:#fff;font-weight:800;position:sticky;top:0}
+.container-table tbody tr:nth-child(even){background:#f4f7fb}
+.container-table th.container-col-date,.container-table td.container-col-date,
+.container-table th.container-col-ft,.container-table td.container-col-ft,
+.container-table th.container-col-time,.container-table td.container-col-time,
+.container-table th.container-col-action,.container-table td.container-col-action{min-width:56px}
+
+@media(min-width:900px){
+  main:has(#containerPage.active){max-width:1600px}
+  .container-wrap{max-width:100%}
+  .container-table{table-layout:fixed;min-width:0}
+  .container-table th,.container-table td{white-space:normal;padding:11px 8px;font-size:14px;line-height:1.4}
+  .container-table th:nth-child(1),.container-table td:nth-child(1){width:6%}
+  .container-table th:nth-child(2),.container-table td:nth-child(2){width:9%}
+  .container-table th:nth-child(3),.container-table td:nth-child(3){width:9%}
+  .container-table th:nth-child(4),.container-table td:nth-child(4){width:8%}
+  .container-table th:nth-child(5),.container-table td:nth-child(5){width:9%}
+  .container-table th:nth-child(6),.container-table td:nth-child(6){width:10%}
+  .container-table th:nth-child(7),.container-table td:nth-child(7){width:6%}
+  .container-table th:nth-child(8),.container-table td:nth-child(8){width:9%}
+  .container-table th:nth-child(9),.container-table td:nth-child(9){width:8%}
+  .container-table th:nth-child(10),.container-table td:nth-child(10){width:6%}
+  .container-table th:nth-child(11),.container-table td:nth-child(11){width:6%}
+  .container-table th:nth-child(12),.container-table td:nth-child(12){width:8%}
+  .container-table th:nth-child(13),.container-table td:nth-child(13){width:6%}
+}
+
+@media(max-width:760px) and (orientation:landscape){
+  .container-toolbar button{padding:8px 10px;font-size:12px}
+  .container-table th,.container-table td{padding:5px 4px;font-size:11px}
+  .container-table{min-width:0}
+}
+
+/* ===== ④コンテナ履歴・追跡（③のcontainerDispatchRecordsを参照する検索専用画面） ===== */
+.container-history-search{background:#f5f8fb;border:1px solid #d5dce3;border-radius:12px;padding:12px;margin-bottom:6px}
+.container-history-search-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.container-history-search-grid label{font-size:13px;font-weight:700;display:block;margin-bottom:5px}
+.container-history-search-grid input,.container-history-search-grid select{width:100%;font-size:15px;border:1px solid #ccd2d8;border-radius:10px;padding:11px;background:#fff}
+.container-history-search-actions{display:flex;gap:8px;margin-top:12px}
+.container-history-search-actions button{flex:1;border:0;border-radius:12px;padding:12px;font-size:15px;font-weight:800}
+@media(min-width:650px){
+  .container-history-search-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(min-width:900px){
+  main:has(#containerHistoryPage.active){max-width:1600px}
+  /* ③の一覧とは列の並びが異なるため、幅配分だけ④専用に上書きする（ID指定で優先度を確保）。 */
+  #containerHistoryPage .container-table th:nth-child(1),#containerHistoryPage .container-table td:nth-child(1){width:6%}
+  #containerHistoryPage .container-table th:nth-child(2),#containerHistoryPage .container-table td:nth-child(2){width:9%}
+  #containerHistoryPage .container-table th:nth-child(3),#containerHistoryPage .container-table td:nth-child(3){width:9%}
+  #containerHistoryPage .container-table th:nth-child(4),#containerHistoryPage .container-table td:nth-child(4){width:9%}
+  #containerHistoryPage .container-table th:nth-child(5),#containerHistoryPage .container-table td:nth-child(5){width:6%}
+  #containerHistoryPage .container-table th:nth-child(6),#containerHistoryPage .container-table td:nth-child(6){width:6%}
+  #containerHistoryPage .container-table th:nth-child(7),#containerHistoryPage .container-table td:nth-child(7){width:15%}
+  #containerHistoryPage .container-table th:nth-child(8),#containerHistoryPage .container-table td:nth-child(8){width:6%}
+  #containerHistoryPage .container-table th:nth-child(9),#containerHistoryPage .container-table td:nth-child(9){width:9%}
+  #containerHistoryPage .container-table th:nth-child(10),#containerHistoryPage .container-table td:nth-child(10){width:9%}
+  #containerHistoryPage .container-table th:nth-child(11),#containerHistoryPage .container-table td:nth-child(11){width:8%}
+  #containerHistoryPage .container-table th:nth-child(12),#containerHistoryPage .container-table td:nth-child(12){width:8%}
 }
 </style>
 </head>
@@ -169,8 +276,10 @@ textarea{min-height:80px;resize:vertical}
 <div class="tabs">
   <button class="tab active" onclick="showPage('inspection',this)">① 点検入力</button>
   <button class="tab" onclick="showPage('dispatch',this)">② 先行配車表</button>
+  <button class="tab tab-2line" onclick="showPage('container',this)"><span>③ 海コン</span><span>配車管理</span></button>
+  <button class="tab tab-2line" onclick="showPage('containerHistory',this)"><span>④ コンテナ</span><span>履歴・追跡</span></button>
   <button class="tab" onclick="showPage('records',this)">② 点検履歴</button>
-  <button class="tab" onclick="showPage('savedRecords',this)">③ 点検履歴（保存版）</button>
+  <button class="tab tab-2line" onclick="showPage('savedRecords',this)"><span>③ 点検履歴</span><span>（保存版）</span></button>
   <button class="tab" onclick="showPage('master',this)">④ 管理画面</button>
 </div>
 <main>
@@ -367,10 +476,10 @@ textarea{min-height:80px;resize:vertical}
 <section class="card dispatch-wrap">
   <div class="dispatch-title">先行配車表</div>
   <div class="dispatch-toolbar">
-    <button type="button" onclick="dispatchGoPrevDay()">◀ 前日</button>
-    <input id="dispatchDate" type="date" onchange="dispatchGoToDate(this.value)">
-    <button type="button" onclick="dispatchGoNextDay()">翌日 ▶</button>
-    <button type="button" class="dispatch-today" onclick="dispatchGoToday()">今日</button>
+    <button type="button" onclick="dispatchGoPrevMonth()">◀ 前月</button>
+    <input id="dispatchMonth" type="month" onchange="dispatchGoToMonth(this.value)">
+    <button type="button" onclick="dispatchGoNextMonth()">翌月 ▶</button>
+    <button type="button" class="dispatch-today" onclick="dispatchGoThisMonth()">今月</button>
     <button type="button" class="dispatch-add" onclick="dispatchAddNew()">＋ 新規追加</button>
   </div>
   <div class="dispatch-table-scroll">
@@ -381,18 +490,263 @@ textarea{min-height:80px;resize:vertical}
           <th>荷主</th>
           <th>積み地</th>
           <th>荷下ろし地</th>
+          <th class="dispatch-col-date">着日</th>
           <th class="dispatch-col-time">着時間</th>
           <th>品名</th>
           <th>車種</th>
           <th class="dispatch-col-count">台数</th>
           <th>車番</th>
           <th>乗務員</th>
+          <th class="dispatch-col-action">操作</th>
         </tr>
       </thead>
       <tbody id="dispatchTableBody"></tbody>
     </table>
   </div>
-  <div id="dispatchEmpty" class="dispatch-empty" style="display:none">この日の先行配車予定はありません。</div>
+  <div id="dispatchEmpty" class="dispatch-empty" style="display:none">この月の先行配車予定はありません。</div>
+</section>
+
+<div id="dispatchFormOverlay" class="dispatch-form-overlay" style="display:none">
+  <section class="card dispatch-form-card">
+    <div class="dispatch-title" id="dispatchFormTitle">先行配車の新規登録</div>
+    <div class="grid">
+      <div>
+        <label>日付</label>
+        <input id="dispatchFormDate" type="date" oninput="dispatchOnDateChanged()">
+      </div>
+      <div>
+        <label>着日</label>
+        <input id="dispatchFormArrivalDate" type="date" oninput="dispatchOnArrivalDateChanged()">
+      </div>
+      <div>
+        <label>着時間</label>
+        <input id="dispatchFormArrivalTime" type="time">
+      </div>
+      <div>
+        <label>荷主</label>
+        <input id="dispatchFormShipper" type="text" placeholder="例：A社">
+      </div>
+      <div>
+        <label>品名</label>
+        <input id="dispatchFormItem" type="text" placeholder="例：石材">
+      </div>
+      <div>
+        <label>積み地</label>
+        <input id="dispatchFormLoadPlace" type="text" placeholder="例：笠間">
+      </div>
+      <div>
+        <label>荷下ろし地</label>
+        <input id="dispatchFormUnloadPlace" type="text" placeholder="例：青森">
+      </div>
+      <div>
+        <label>車種</label>
+        <select id="dispatchFormVehicleType"></select>
+      </div>
+      <div>
+        <label>台数</label>
+        <input id="dispatchFormCount" type="number" min="1" step="1" value="1" oninput="dispatchOnCountChanged()">
+      </div>
+      <div style="grid-column:1/-1">
+        <label>車両・乗務員割当</label>
+        <div id="dispatchAssignmentsList" class="dispatch-assign-list"></div>
+      </div>
+    </div>
+    <div class="dispatch-form-actions">
+      <button type="button" id="dispatchFormSubmitBtn" class="save" onclick="dispatchSubmitForm()">登録</button>
+      <button type="button" class="clear" onclick="dispatchCloseForm()">キャンセル</button>
+    </div>
+  </section>
+</div>
+</div>
+
+<div id="containerPage" class="page">
+<section class="card container-wrap">
+  <div class="container-title">海上コンテナ配車管理</div>
+  <div class="container-toolbar">
+    <button type="button" onclick="containerGoPrevMonth()">◀ 前月</button>
+    <input id="containerMonth" type="month" onchange="containerGoToMonth(this.value)">
+    <button type="button" onclick="containerGoNextMonth()">翌月 ▶</button>
+    <button type="button" class="container-today" onclick="containerGoThisMonth()">今月</button>
+    <button type="button" class="container-add" onclick="containerAddNew()">＋ 新規追加</button>
+  </div>
+  <div class="container-table-scroll">
+    <table class="container-table">
+      <thead>
+        <tr>
+          <th class="container-col-date">日付</th>
+          <th>荷主</th>
+          <th>発地</th>
+          <th>車番</th>
+          <th>シャーシ車番</th>
+          <th>コンテナ番号</th>
+          <th class="container-col-ft">FT</th>
+          <th>内容</th>
+          <th>着地</th>
+          <th class="container-col-date">着日</th>
+          <th class="container-col-time">時間</th>
+          <th>乗務員</th>
+          <th class="container-col-action">操作</th>
+        </tr>
+      </thead>
+      <tbody id="containerTableBody"></tbody>
+    </table>
+  </div>
+  <div id="containerEmpty" class="dispatch-empty" style="display:none">この月の海上コンテナ配車予定はありません。</div>
+</section>
+
+<div id="containerFormOverlay" class="dispatch-form-overlay" style="display:none">
+  <section class="card dispatch-form-card">
+    <div class="dispatch-title" id="containerFormTitle">海上コンテナ配車の新規登録</div>
+    <div class="grid">
+      <div>
+        <label>日付</label>
+        <input id="containerFormDate" type="date" oninput="containerOnDateChanged()">
+      </div>
+      <div>
+        <label>荷主</label>
+        <input id="containerFormShipper" type="text" placeholder="例：A社">
+      </div>
+      <div>
+        <label>発地</label>
+        <input id="containerFormOrigin" type="text" placeholder="例：本牧">
+      </div>
+      <div>
+        <label>車番</label>
+        <select id="containerFormVehicleNumber"></select>
+      </div>
+      <div>
+        <label>シャーシ車番</label>
+        <input id="containerFormChassisNumber" type="text" placeholder="例：5678">
+      </div>
+      <div>
+        <label>コンテナ番号</label>
+        <input id="containerFormContainerNumber" type="text" placeholder="例：ABCD1234567" oninput="containerOnContainerNumberInput(this)">
+      </div>
+      <div>
+        <label>FT</label>
+        <select id="containerFormFt">
+          <option value="20">20</option>
+          <option value="40">40</option>
+        </select>
+      </div>
+      <div>
+        <label>内容</label>
+        <select id="containerFormContent">
+          <option value="実入り搬出">実入り搬出</option>
+          <option value="空バン搬出">空バン搬出</option>
+          <option value="空バン返却">空バン返却</option>
+          <option value="実入り搬入">実入り搬入</option>
+          <option value="デバン">デバン</option>
+          <option value="バン積め">バン積め</option>
+        </select>
+      </div>
+      <div>
+        <label>着地</label>
+        <input id="containerFormDestination" type="text" placeholder="例：笠間">
+      </div>
+      <div>
+        <label>着日</label>
+        <input id="containerFormArrivalDate" type="date" oninput="containerOnArrivalDateChanged()">
+      </div>
+      <div>
+        <label>乗務員</label>
+        <select id="containerFormDriverName"></select>
+      </div>
+      <div>
+        <label>時間</label>
+        <input id="containerFormTime" type="time">
+      </div>
+    </div>
+    <div class="dispatch-form-actions">
+      <button type="button" id="containerFormSubmitBtn" class="save" onclick="containerSubmitForm()">登録</button>
+      <button type="button" class="clear" onclick="containerCloseForm()">キャンセル</button>
+    </div>
+  </section>
+</div>
+</div>
+
+<div id="containerHistoryPage" class="page">
+<section class="card container-wrap">
+  <div class="container-title">コンテナ履歴・追跡</div>
+  <div class="container-history-search">
+    <div class="container-history-search-grid">
+      <div>
+        <label>期間（開始日）</label>
+        <input id="containerHistoryFrom" type="date">
+      </div>
+      <div>
+        <label>期間（終了日）</label>
+        <input id="containerHistoryTo" type="date">
+      </div>
+      <div>
+        <label>コンテナ番号</label>
+        <input id="containerHistoryContainerNumber" type="text" placeholder="部分一致（大小文字区別なし）" oninput="containerOnContainerNumberInput(this)">
+      </div>
+      <div>
+        <label>荷主</label>
+        <input id="containerHistoryShipper" type="text" placeholder="部分一致">
+      </div>
+      <div>
+        <label>車番</label>
+        <select id="containerHistoryVehicleNumber"></select>
+      </div>
+      <div>
+        <label>シャーシ車番</label>
+        <input id="containerHistoryChassisNumber" type="text" placeholder="部分一致">
+      </div>
+      <div>
+        <label>乗務員</label>
+        <select id="containerHistoryDriverName"></select>
+      </div>
+      <div>
+        <label>FT</label>
+        <select id="containerHistoryFt">
+          <option value="">すべて</option>
+          <option value="20">20</option>
+          <option value="40">40</option>
+        </select>
+      </div>
+      <div>
+        <label>内容</label>
+        <select id="containerHistoryContent">
+          <option value="">すべて</option>
+          <option value="実入り搬出">実入り搬出</option>
+          <option value="空バン搬出">空バン搬出</option>
+          <option value="空バン返却">空バン返却</option>
+          <option value="実入り搬入">実入り搬入</option>
+          <option value="デバン">デバン</option>
+          <option value="バン積め">バン積め</option>
+        </select>
+      </div>
+    </div>
+    <div class="container-history-search-actions">
+      <button type="button" class="save" onclick="containerHistorySearch()">検索</button>
+      <button type="button" class="clear" onclick="containerHistoryClearFilters()">条件クリア</button>
+    </div>
+  </div>
+  <div id="containerHistoryCount" class="small" style="margin:10px 0 6px;font-weight:700"></div>
+  <div class="container-table-scroll">
+    <table class="container-table">
+      <thead>
+        <tr>
+          <th class="container-col-date">日付</th>
+          <th>荷主</th>
+          <th>発地</th>
+          <th>着地</th>
+          <th class="container-col-date">着日</th>
+          <th class="container-col-time">時間</th>
+          <th>コンテナ番号</th>
+          <th class="container-col-ft">FT</th>
+          <th>内容</th>
+          <th>シャーシ車番</th>
+          <th>車番</th>
+          <th>乗務員</th>
+        </tr>
+      </thead>
+      <tbody id="containerHistoryTableBody"></tbody>
+    </table>
+  </div>
+  <div id="containerHistoryEmpty" class="dispatch-empty" style="display:none">海上コンテナ配車の履歴はありません。</div>
 </section>
 </div>
 </main>
@@ -1193,6 +1547,8 @@ function showPage(page,btn){
   }
   if(page==="master") renderMasters();
   if(page==="dispatch") renderDispatch();
+  if(page==="container") renderContainerDispatch();
+  if(page==="containerHistory") renderContainerHistory();
 }
 
 // ===== 先行配車表（表示専用モックアップ／Firestore未接続） =====
@@ -1202,30 +1558,244 @@ const DISPATCH_SAMPLE_DATA=[
   {date:"2026-09-28",shipper:"B社",loadPlace:"市川",unloadPlace:"水戸",arrivalTime:"10:00",item:"鋼材",vehicleType:"10t平",count:"1台",vehicleNo:"1234",driver:"田中"},
   {date:"2026-09-29",shipper:"C社",loadPlace:"横浜",unloadPlace:"土浦",arrivalTime:"13:00",item:"機械",vehicleType:"7tユニック",count:"2台",vehicleNo:"未定",driver:"未定"}
 ];
-let dispatchCurrentDate=DISPATCH_SAMPLE_DATA[0].date;
+// 表示・追加用のローカル作業データ。サンプルデータ本体（DISPATCH_SAMPLE_DATA）は変更しない。
+let dispatchRecords=DISPATCH_SAMPLE_DATA.slice();
+let dispatchCurrentMonth=DISPATCH_SAMPLE_DATA[0].date.slice(0,7);
+// 将来、管理画面から追加・編集できるようにするための仮の車種マスター（固定設計にしない）。
+let DISPATCH_VEHICLE_TYPES=["4t平","4tユニック","7t平","7tユニック","10t平","10tW","トレーラー"];
+let dispatchEditingIndex=-1; // -1: 新規登録 / 0以上: 編集対象のdispatchRecords内インデックス
+let dispatchLastRenderedRows=[]; // 直近描画した行（月内・日付昇順）。編集ボタンの参照解決に使う。
+let dispatchAssignmentDraft=[{vehicleNumber:"",driverName:""}]; // フォーム編集中の車両・乗務員割当（台数と連動）
+let dispatchArrivalDateTouched=false; // trueになったら「日付」変更時の着日自動追従を止める
 
 function dispatchFormatDate(dateStr){
   const [y,m,d]=String(dateStr||"").split("-");
   return (m&&d)?`${Number(m)}/${Number(d)}`:(dateStr||"");
 }
-function dispatchShiftDate(dateStr,days){
-  const d=new Date(`${dateStr}T00:00:00`);
-  d.setDate(d.getDate()+days);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function dispatchOnDateChanged(){
+  if(dispatchArrivalDateTouched) return;
+  const dateEl=document.getElementById("dispatchFormDate");
+  const arrivalEl=document.getElementById("dispatchFormArrivalDate");
+  if(dateEl && arrivalEl) arrivalEl.value=dateEl.value;
 }
-function dispatchGoPrevDay(){ dispatchCurrentDate=dispatchShiftDate(dispatchCurrentDate,-1); renderDispatch(); }
-function dispatchGoNextDay(){ dispatchCurrentDate=dispatchShiftDate(dispatchCurrentDate,1); renderDispatch(); }
-function dispatchGoToday(){ dispatchCurrentDate=localDateKey(); renderDispatch(); }
-function dispatchGoToDate(value){ if(value){ dispatchCurrentDate=value; renderDispatch(); } }
-function dispatchAddNew(){
-  // 表示専用モックアップのため、今回は新規追加の保存処理は未実装。
-  alert("先行配車表の新規追加は次の工程（Firestore連携）で実装予定です。");
+function dispatchOnArrivalDateChanged(){
+  dispatchArrivalDateTouched=true;
 }
-function renderDispatch(){
-  const dateInput=document.getElementById("dispatchDate");
-  if(dateInput) dateInput.value=dispatchCurrentDate;
+function dispatchShiftMonth(monthStr,months){
+  const [y,m]=String(monthStr||"").split("-").map(Number);
+  const d=new Date(y,(m-1)+months,1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+}
+function dispatchGoPrevMonth(){ dispatchCurrentMonth=dispatchShiftMonth(dispatchCurrentMonth,-1); renderDispatch(); }
+function dispatchGoNextMonth(){ dispatchCurrentMonth=dispatchShiftMonth(dispatchCurrentMonth,1); renderDispatch(); }
+function dispatchGoThisMonth(){ dispatchCurrentMonth=localDateKey().slice(0,7); renderDispatch(); }
+function dispatchGoToMonth(value){ if(value){ dispatchCurrentMonth=value; renderDispatch(); } }
 
-  const rows=DISPATCH_SAMPLE_DATA.filter(r=>r.date===dispatchCurrentDate);
+function dispatchPopulateVehicleTypeSelect(selected){
+  const sel=document.getElementById("dispatchFormVehicleType");
+  if(!sel) return;
+  sel.innerHTML=DISPATCH_VEHICLE_TYPES.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
+  if(selected && DISPATCH_VEHICLE_TYPES.includes(selected)) sel.value=selected;
+}
+
+// 旧データの文字列「未定」は内部的には空文字として扱う（未定はデータではなく一覧表示上の見た目のため）。
+function dispatchToBlankIfPending(v){
+  const s=String(v||"").trim();
+  return s==="未定" ? "" : s;
+}
+// assignmentsを持たない旧データ（車番/乗務員が単一値）を、台数分のassignments配列へ変換する互換処理。
+// 戻り値の未入力欄は空文字("")のまま返す（フォーム復元用）。一覧表示では別途「未定」表記に変換する。
+function dispatchNormalizeAssignments(record){
+  const countNum=Math.max(1, parseInt(String((record&&record.count)||"1").replace(/[^0-9]/g,""),10)||1);
+  let arr;
+  if(record && Array.isArray(record.assignments) && record.assignments.length){
+    arr=record.assignments.map(a=>({
+      vehicleNumber:dispatchToBlankIfPending(a&&a.vehicleNumber),
+      driverName:dispatchToBlankIfPending(a&&a.driverName)
+    }));
+  }else{
+    arr=[{
+      vehicleNumber:dispatchToBlankIfPending(record&&record.vehicleNo),
+      driverName:dispatchToBlankIfPending(record&&record.driver)
+    }];
+  }
+  while(arr.length<countNum) arr.push({vehicleNumber:"",driverName:""});
+  return arr.slice(0,countNum);
+}
+// 一覧表示専用：空文字の欄だけ「未定」表記に変換する。
+function dispatchDisplayAssignments(record){
+  return dispatchNormalizeAssignments(record).map(a=>({
+    vehicleNumber:a.vehicleNumber||"未定",
+    driverName:a.driverName||"未定"
+  }));
+}
+
+function dispatchResizeAssignmentDraft(countNum){
+  while(dispatchAssignmentDraft.length<countNum) dispatchAssignmentDraft.push({vehicleNumber:"",driverName:""});
+  if(dispatchAssignmentDraft.length>countNum) dispatchAssignmentDraft.length=countNum;
+}
+function dispatchUpdateAssignmentDraft(i,field,value){
+  if(!dispatchAssignmentDraft[i]) dispatchAssignmentDraft[i]={vehicleNumber:"",driverName:""};
+  dispatchAssignmentDraft[i][field]=value;
+  dispatchRenderAssignmentRows(); // 他行の使用済み値をdisabledへ反映するため全体を再描画（各行の現在値はdraftから復元される）
+}
+// 未定("")を除いて、リスト内に重複した値があれば最初に見つかった値を返す（無ければnull）。
+function dispatchFindDuplicateValue(list){
+  const seen=new Set();
+  for(const v of list){
+    if(!v) continue;
+    if(seen.has(v)) return v;
+    seen.add(v);
+  }
+  return null;
+}
+function dispatchOnCountChanged(){
+  const raw=parseInt(document.getElementById("dispatchFormCount").value,10);
+  const countNum=(!raw || raw<1) ? 1 : raw;
+  dispatchResizeAssignmentDraft(countNum);
+  dispatchRenderAssignmentRows();
+}
+// 既存マスター（車両・乗務員）＋現在値（マスターに無い旧データも保持）で<option>群を組み立てる。
+// 先頭は必ず「未定」(value="")。currentValueがマスターに無い場合だけ一時optionとして追加する。
+// usedElsewhereに含まれる値は、自分自身の現在値を除いてdisabledにする（同一配車内の重複選択防止）。
+function dispatchBuildSelectOptions(masterList,currentValue,usedElsewhere){
+  const cur=String(currentValue||"");
+  const used=usedElsewhere||new Set();
+  const disabledFor=(v)=> v!=="" && v!==cur && used.has(v);
+  let html=`<option value=""${cur===""?" selected":""}>未定</option>`;
+  if(cur && !masterList.includes(cur)){
+    html+=`<option value="${escapeAttr(cur)}" selected>${escapeHtml(cur)}</option>`;
+  }
+  html+=masterList.map(v=>`<option value="${escapeAttr(v)}"${v===cur?" selected":""}${disabledFor(v)?" disabled":""}>${escapeHtml(v)}</option>`).join("");
+  return html;
+}
+function dispatchVehicleOptionsHtml(currentValue,usedElsewhere){
+  const names=getMaster("truck_vehicles",defaultVehicles).map(v=>v.name).filter(Boolean);
+  return dispatchBuildSelectOptions(names,currentValue,usedElsewhere);
+}
+function dispatchDriverOptionsHtml(currentValue,usedElsewhere){
+  const names=getMaster("truck_drivers",defaultDrivers).filter(Boolean);
+  return dispatchBuildSelectOptions(names,currentValue,usedElsewhere);
+}
+function dispatchRenderAssignmentRows(){
+  const wrap=document.getElementById("dispatchAssignmentsList");
+  if(!wrap) return;
+  wrap.innerHTML=dispatchAssignmentDraft.map((a,i)=>{
+    // 「未定」("")は重複判定の対象外。自分自身の行の値は除外して他行の使用済み値だけを集める。
+    const usedVehicles=new Set(dispatchAssignmentDraft.filter((x,xi)=>xi!==i && x.vehicleNumber).map(x=>x.vehicleNumber));
+    const usedDrivers=new Set(dispatchAssignmentDraft.filter((x,xi)=>xi!==i && x.driverName).map(x=>x.driverName));
+    return `
+    <div class="dispatch-assign-row">
+      <span class="dispatch-assign-label">${i+1}台目</span>
+      <select onchange="dispatchUpdateAssignmentDraft(${i},'vehicleNumber',this.value)">${dispatchVehicleOptionsHtml(a.vehicleNumber,usedVehicles)}</select>
+      <select onchange="dispatchUpdateAssignmentDraft(${i},'driverName',this.value)">${dispatchDriverOptionsHtml(a.driverName,usedDrivers)}</select>
+    </div>
+  `;
+  }).join("");
+}
+
+// mode:"create" は新規登録、mode:"edit" は登録済みの行をフォームへ読み込んで再利用する。
+function dispatchOpenForm(mode,record){
+  dispatchEditingIndex=(mode==="edit" && record) ? dispatchRecords.indexOf(record) : -1;
+  const title=document.getElementById("dispatchFormTitle");
+  if(title) title.textContent=(mode==="edit") ? "先行配車の編集" : "先行配車の新規登録";
+  const submitBtn=document.getElementById("dispatchFormSubmitBtn");
+  if(submitBtn) submitBtn.textContent=(mode==="edit") ? "更新" : "登録";
+
+  const formDate=record?record.date:`${dispatchCurrentMonth}-01`;
+  document.getElementById("dispatchFormDate").value=formDate;
+  // 既存データにarrivalDateが無い場合は date と同じ扱いにする互換処理。新規登録時は日付と同じ値を初期値にする。
+  document.getElementById("dispatchFormArrivalDate").value=record?(record.arrivalDate||record.date):formDate;
+  dispatchArrivalDateTouched=(mode==="edit"); // 編集時は既存値を保持するため自動追従を止める
+  document.getElementById("dispatchFormShipper").value=record?record.shipper:"";
+  document.getElementById("dispatchFormLoadPlace").value=record?record.loadPlace:"";
+  document.getElementById("dispatchFormUnloadPlace").value=record?record.unloadPlace:"";
+  document.getElementById("dispatchFormArrivalTime").value=record?record.arrivalTime:"";
+  document.getElementById("dispatchFormItem").value=record?record.item:"";
+  document.getElementById("dispatchFormCount").value=record?String(record.count).replace(/[^0-9]/g,"")||"1":"1";
+  dispatchPopulateVehicleTypeSelect(record?record.vehicleType:DISPATCH_VEHICLE_TYPES[0]);
+
+  dispatchAssignmentDraft=(mode==="edit" && record)
+    ? dispatchNormalizeAssignments(record).map(a=>({vehicleNumber:a.vehicleNumber,driverName:a.driverName}))
+    : [{vehicleNumber:"",driverName:""}];
+  dispatchRenderAssignmentRows();
+
+  const overlay=document.getElementById("dispatchFormOverlay");
+  if(overlay) overlay.style.display="flex";
+}
+function dispatchCloseForm(){
+  const overlay=document.getElementById("dispatchFormOverlay");
+  if(overlay) overlay.style.display="none";
+  dispatchEditingIndex=-1;
+}
+function dispatchAddNew(){
+  dispatchOpenForm("create",null);
+}
+function dispatchEditRow(i){
+  const record=dispatchLastRenderedRows[i];
+  if(record) dispatchOpenForm("edit",record);
+}
+function dispatchSubmitForm(){
+  const date=document.getElementById("dispatchFormDate").value;
+  if(!date){ alert("日付を選択してください。"); return; }
+  dispatchOnCountChanged(); // 台数と割当行数を最終同期
+  const countNum=dispatchAssignmentDraft.length;
+  if(!countNum || countNum<1){ alert("台数は1台以上で入力してください。"); return; }
+
+  // 未定（空欄）はデータ上は空文字のまま保持する。「未定」表記は一覧表示側だけで行う。
+  const assignments=dispatchAssignmentDraft.map(a=>({
+    vehicleNumber:(a.vehicleNumber||"").trim(),
+    driverName:(a.driverName||"").trim()
+  }));
+
+  // UIのdisabledだけに依存せず、登録・更新の最終防止として重複チェックする（未定=""は対象外）。
+  if(dispatchFindDuplicateValue(assignments.map(a=>a.vehicleNumber))){
+    alert("同じ車両が複数の割当に選択されています。");
+    return;
+  }
+  if(dispatchFindDuplicateValue(assignments.map(a=>a.driverName))){
+    alert("同じ乗務員が複数の割当に選択されています。");
+    return;
+  }
+
+  const record={
+    date,
+    arrivalDate:document.getElementById("dispatchFormArrivalDate").value||date,
+    shipper:document.getElementById("dispatchFormShipper").value.trim(),
+    loadPlace:document.getElementById("dispatchFormLoadPlace").value.trim(),
+    unloadPlace:document.getElementById("dispatchFormUnloadPlace").value.trim(),
+    arrivalTime:document.getElementById("dispatchFormArrivalTime").value,
+    item:document.getElementById("dispatchFormItem").value.trim(),
+    vehicleType:document.getElementById("dispatchFormVehicleType").value,
+    count:`${countNum}台`,
+    vehicleNo:assignments[0].vehicleNumber,
+    driver:assignments[0].driverName,
+    assignments
+  };
+
+  if(dispatchEditingIndex>=0){
+    dispatchRecords[dispatchEditingIndex]=record;
+  }else{
+    dispatchRecords.push(record);
+  }
+
+  dispatchCloseForm();
+  dispatchCurrentMonth=date.slice(0,7);
+  renderDispatch();
+}
+
+function renderDispatch(){
+  const monthInput=document.getElementById("dispatchMonth");
+  if(monthInput) monthInput.value=dispatchCurrentMonth;
+
+  // 通常表示では「今日より前」の予定を除外する（データは dispatchRecords に残したまま）。
+  const today=localDateKey();
+  const rows=dispatchRecords
+    .filter(r=>String(r.date||"").slice(0,7)===dispatchCurrentMonth && String(r.date||"")>=today)
+    .slice()
+    .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  dispatchLastRenderedRows=rows;
+
   const body=document.getElementById("dispatchTableBody");
   const empty=document.getElementById("dispatchEmpty");
   if(!body) return;
@@ -1237,18 +1807,294 @@ function renderDispatch(){
   }
   if(empty) empty.style.display="none";
 
-  body.innerHTML=rows.map(r=>`
+  body.innerHTML=rows.map((r,i)=>{
+    const assignments=dispatchDisplayAssignments(r);
+    const vehicleNoCell=assignments.map(a=>escapeHtml(a.vehicleNumber)).join("<br>");
+    const driverCell=assignments.map(a=>escapeHtml(a.driverName)).join("<br>");
+    return `
     <tr>
       <td class="dispatch-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td>
       <td>${escapeHtml(r.shipper)}</td>
       <td class="dispatch-wide">${escapeHtml(r.loadPlace)}</td>
       <td class="dispatch-wide">${escapeHtml(r.unloadPlace)}</td>
+      <td class="dispatch-col-date">${escapeHtml(dispatchFormatDate(r.arrivalDate||r.date))}</td>
       <td class="dispatch-col-time">${escapeHtml(r.arrivalTime)}</td>
       <td class="dispatch-wide">${escapeHtml(r.item)}</td>
       <td>${escapeHtml(r.vehicleType)}</td>
       <td class="dispatch-col-count">${escapeHtml(r.count)}</td>
-      <td>${escapeHtml(r.vehicleNo)}</td>
-      <td>${escapeHtml(r.driver)}</td>
+      <td>${vehicleNoCell}</td>
+      <td>${driverCell}</td>
+      <td class="dispatch-col-action"><button type="button" class="dispatch-edit-btn" onclick="dispatchEditRow(${i})">編集</button></td>
+    </tr>
+  `;
+  }).join("");
+}
+
+// ===== 海上コンテナ配車管理（②先行配車表とは完全に独立。①②とデータ連携しない／Firestore未接続） =====
+let containerDispatchRecords=[];
+let containerCurrentMonth=localDateKey().slice(0,7);
+let containerEditingIndex=-1; // -1: 新規登録 / 0以上: 編集対象のcontainerDispatchRecords内インデックス
+let containerLastRenderedRows=[];
+let containerArrivalDateTouched=false; // trueになったら「日付」変更時の着日自動追従を止める
+
+function containerShiftMonth(monthStr,months){
+  const [y,m]=String(monthStr||"").split("-").map(Number);
+  const d=new Date(y,(m-1)+months,1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+}
+function containerGoPrevMonth(){ containerCurrentMonth=containerShiftMonth(containerCurrentMonth,-1); renderContainerDispatch(); }
+function containerGoNextMonth(){ containerCurrentMonth=containerShiftMonth(containerCurrentMonth,1); renderContainerDispatch(); }
+function containerGoThisMonth(){ containerCurrentMonth=localDateKey().slice(0,7); renderContainerDispatch(); }
+function containerGoToMonth(value){ if(value){ containerCurrentMonth=value; renderContainerDispatch(); } }
+function containerOnDateChanged(){
+  if(containerArrivalDateTouched) return;
+  const dateEl=document.getElementById("containerFormDate");
+  const arrivalEl=document.getElementById("containerFormArrivalDate");
+  if(dateEl && arrivalEl) arrivalEl.value=dateEl.value;
+}
+function containerOnArrivalDateChanged(){
+  containerArrivalDateTouched=true;
+}
+// コンテナ番号は半角英大文字A-Zと半角数字0-9だけを許可する（小文字は自動的に大文字化）。
+function containerNormalizeContainerNumber(v){
+  return String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+}
+function containerOnContainerNumberInput(el){
+  el.value=containerNormalizeContainerNumber(el.value);
+}
+
+// ②で実装した「マスターに無い現在値は一時optionとして保持する」互換処理を再利用する。
+function containerBuildSelectOptions(masterList,currentValue){
+  const cur=String(currentValue||"");
+  let html=`<option value=""${cur===""?" selected":""}>未定</option>`;
+  if(cur && !masterList.includes(cur)){
+    html+=`<option value="${escapeAttr(cur)}" selected>${escapeHtml(cur)}</option>`;
+  }
+  html+=masterList.map(v=>`<option value="${escapeAttr(v)}"${v===cur?" selected":""}>${escapeHtml(v)}</option>`).join("");
+  return html;
+}
+function containerPopulateVehicleSelect(currentValue){
+  const sel=document.getElementById("containerFormVehicleNumber");
+  if(!sel) return;
+  const names=getMaster("truck_vehicles",defaultVehicles).map(v=>v.name).filter(Boolean);
+  sel.innerHTML=containerBuildSelectOptions(names,currentValue);
+}
+function containerPopulateDriverSelect(currentValue){
+  const sel=document.getElementById("containerFormDriverName");
+  if(!sel) return;
+  const names=getMaster("truck_drivers",defaultDrivers).filter(Boolean);
+  sel.innerHTML=containerBuildSelectOptions(names,currentValue);
+}
+
+// mode:"create" は新規登録、mode:"edit" は登録済みの行をフォームへ読み込んで再利用する。
+function containerOpenForm(mode,record){
+  containerEditingIndex=(mode==="edit" && record) ? containerDispatchRecords.indexOf(record) : -1;
+  const title=document.getElementById("containerFormTitle");
+  if(title) title.textContent=(mode==="edit") ? "海上コンテナ配車の編集" : "海上コンテナ配車の新規登録";
+  const submitBtn=document.getElementById("containerFormSubmitBtn");
+  if(submitBtn) submitBtn.textContent=(mode==="edit") ? "更新" : "登録";
+
+  // 新規登録時：表示中の月が今月なら今日の日付、それ以外はその月の1日を初期値にする。編集時は元の日付を維持。
+  const containerDefaultDate=(containerCurrentMonth===localDateKey().slice(0,7)) ? localDateKey() : `${containerCurrentMonth}-01`;
+  document.getElementById("containerFormDate").value=record?record.date:containerDefaultDate;
+  // 既存データにarrivalDateが無い場合はdateと同じ扱いにする互換処理。新規登録時は日付と同じ値を初期値にする。
+  document.getElementById("containerFormArrivalDate").value=record?(record.arrivalDate||record.date):containerDefaultDate;
+  containerArrivalDateTouched=(mode==="edit"); // 編集時は既存値を保持するため自動追従を止める
+  document.getElementById("containerFormShipper").value=record?record.shipper:"";
+  document.getElementById("containerFormOrigin").value=record?record.origin:"";
+  document.getElementById("containerFormChassisNumber").value=record?record.chassisNumber:"";
+  document.getElementById("containerFormContainerNumber").value=record?record.containerNumber:"";
+  document.getElementById("containerFormFt").value=record?(record.ft||"20"):"20";
+  document.getElementById("containerFormContent").value=record?(record.content||"実入り搬出"):"実入り搬出";
+  document.getElementById("containerFormDestination").value=record?record.destination:"";
+  document.getElementById("containerFormTime").value=record?record.time:"";
+  containerPopulateVehicleSelect(record?record.vehicleNumber:"");
+  containerPopulateDriverSelect(record?record.driverName:"");
+
+  const overlay=document.getElementById("containerFormOverlay");
+  if(overlay) overlay.style.display="flex";
+}
+function containerCloseForm(){
+  const overlay=document.getElementById("containerFormOverlay");
+  if(overlay) overlay.style.display="none";
+  containerEditingIndex=-1;
+}
+function containerAddNew(){
+  containerOpenForm("create",null);
+}
+function containerEditRow(i){
+  const record=containerLastRenderedRows[i];
+  if(record) containerOpenForm("edit",record);
+}
+function containerSubmitForm(){
+  const date=document.getElementById("containerFormDate").value;
+  if(!date){ alert("日付を選択してください。"); return; }
+
+  // 画面側の制限だけに依存せず、保存直前にもコンテナ番号を正規化（半角英大文字A-Z・数字0-9のみ）する。
+  const containerNumber=containerNormalizeContainerNumber(document.getElementById("containerFormContainerNumber").value);
+  if(!containerNumber){ alert("コンテナ番号を半角英数字（A-Z、0-9）で入力してください。"); return; }
+
+  const record={
+    date,
+    arrivalDate:document.getElementById("containerFormArrivalDate").value||date,
+    shipper:document.getElementById("containerFormShipper").value.trim(),
+    origin:document.getElementById("containerFormOrigin").value.trim(),
+    vehicleNumber:document.getElementById("containerFormVehicleNumber").value,
+    chassisNumber:document.getElementById("containerFormChassisNumber").value.trim(),
+    containerNumber,
+    ft:document.getElementById("containerFormFt").value,
+    content:document.getElementById("containerFormContent").value,
+    destination:document.getElementById("containerFormDestination").value.trim(),
+    driverName:document.getElementById("containerFormDriverName").value,
+    time:document.getElementById("containerFormTime").value
+  };
+
+  if(containerEditingIndex>=0){
+    containerDispatchRecords[containerEditingIndex]=record;
+  }else{
+    containerDispatchRecords.push(record);
+  }
+
+  containerCloseForm();
+  containerCurrentMonth=date.slice(0,7);
+  renderContainerDispatch();
+}
+
+function renderContainerDispatch(){
+  const monthInput=document.getElementById("containerMonth");
+  if(monthInput) monthInput.value=containerCurrentMonth;
+
+  // ③では②と異なり、過去日付も選択した月であればそのまま表示する（履歴確認用途のため自動非表示にしない）。
+  const rows=containerDispatchRecords
+    .filter(r=>String(r.date||"").slice(0,7)===containerCurrentMonth)
+    .slice()
+    .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  containerLastRenderedRows=rows;
+
+  const body=document.getElementById("containerTableBody");
+  const empty=document.getElementById("containerEmpty");
+  if(!body) return;
+
+  if(!rows.length){
+    body.innerHTML="";
+    if(empty) empty.style.display="block";
+    return;
+  }
+  if(empty) empty.style.display="none";
+
+  body.innerHTML=rows.map((r,i)=>`
+    <tr>
+      <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td>
+      <td>${escapeHtml(r.shipper)}</td>
+      <td>${escapeHtml(r.origin)}</td>
+      <td>${escapeHtml(r.vehicleNumber||"未定")}</td>
+      <td>${escapeHtml(r.chassisNumber)}</td>
+      <td>${escapeHtml(r.containerNumber)}</td>
+      <td class="container-col-ft">${escapeHtml(r.ft)}</td>
+      <td>${escapeHtml(r.content)}</td>
+      <td>${escapeHtml(r.destination)}</td>
+      <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.arrivalDate||r.date))}</td>
+      <td class="container-col-time">${escapeHtml(r.time)}</td>
+      <td>${escapeHtml(r.driverName||"未定")}</td>
+      <td class="container-col-action"><button type="button" class="dispatch-edit-btn" onclick="containerEditRow(${i})">編集</button></td>
+    </tr>
+  `).join("");
+}
+
+// ===== ④コンテナ履歴・追跡（③の containerDispatchRecords を参照するだけの検索専用画面。データは複製しない／編集不可） =====
+function containerHistoryPopulateFilterSelects(){
+  const vs=document.getElementById("containerHistoryVehicleNumber");
+  if(vs){
+    const cur=vs.value;
+    const names=getMaster("truck_vehicles",defaultVehicles).map(v=>v.name).filter(Boolean);
+    vs.innerHTML='<option value="">すべて</option>'+names.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
+    vs.value=cur;
+  }
+  const ds=document.getElementById("containerHistoryDriverName");
+  if(ds){
+    const cur=ds.value;
+    const names=getMaster("truck_drivers",defaultDrivers).filter(Boolean);
+    ds.innerHTML='<option value="">すべて</option>'+names.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
+    ds.value=cur;
+  }
+}
+function containerHistorySearch(){
+  renderContainerHistory();
+}
+function containerHistoryClearFilters(){
+  ["containerHistoryFrom","containerHistoryTo","containerHistoryContainerNumber","containerHistoryShipper",
+    "containerHistoryChassisNumber"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; });
+  ["containerHistoryVehicleNumber","containerHistoryDriverName","containerHistoryFt","containerHistoryContent"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value="";
+  });
+  renderContainerHistory();
+}
+function renderContainerHistory(){
+  containerHistoryPopulateFilterSelects();
+
+  const from=(document.getElementById("containerHistoryFrom")||{}).value||"";
+  const to=(document.getElementById("containerHistoryTo")||{}).value||"";
+  const containerNumberQuery=((document.getElementById("containerHistoryContainerNumber")||{}).value||"").trim().toLowerCase();
+  const shipperQuery=((document.getElementById("containerHistoryShipper")||{}).value||"").trim();
+  const chassisQuery=((document.getElementById("containerHistoryChassisNumber")||{}).value||"").trim();
+  const vehicleFilter=(document.getElementById("containerHistoryVehicleNumber")||{}).value||"";
+  const driverFilter=(document.getElementById("containerHistoryDriverName")||{}).value||"";
+  const ftFilter=(document.getElementById("containerHistoryFt")||{}).value||"";
+  const contentFilter=(document.getElementById("containerHistoryContent")||{}).value||"";
+
+  // ③の containerDispatchRecords を直接参照するだけで、④側にはコピーを作らない。
+  const hasAnyRecord=containerDispatchRecords.length>0;
+  const rows=containerDispatchRecords
+    .filter(r=>{
+      if(from && String(r.date||"")<from) return false;
+      if(to && String(r.date||"")>to) return false;
+      if(containerNumberQuery && !String(r.containerNumber||"").toLowerCase().includes(containerNumberQuery)) return false;
+      if(shipperQuery && !String(r.shipper||"").includes(shipperQuery)) return false;
+      if(chassisQuery && !String(r.chassisNumber||"").includes(chassisQuery)) return false;
+      if(vehicleFilter && String(r.vehicleNumber||"")!==vehicleFilter) return false;
+      if(driverFilter && String(r.driverName||"")!==driverFilter) return false;
+      if(ftFilter && String(r.ft||"")!==ftFilter) return false;
+      if(contentFilter && String(r.content||"")!==contentFilter) return false;
+      return true;
+    })
+    .slice()
+    .sort((a,b)=>{
+      const dateCompare=String(b.date||"").localeCompare(String(a.date||""));
+      if(dateCompare!==0) return dateCompare;
+      return String(b.time||"").localeCompare(String(a.time||""));
+    });
+
+  const countEl=document.getElementById("containerHistoryCount");
+  if(countEl) countEl.textContent=`検索結果：${rows.length}件`;
+
+  const body=document.getElementById("containerHistoryTableBody");
+  const empty=document.getElementById("containerHistoryEmpty");
+  if(!body) return;
+
+  if(!rows.length){
+    body.innerHTML="";
+    if(empty){
+      empty.style.display="block";
+      empty.textContent=hasAnyRecord ? "条件に一致する履歴はありません。" : "海上コンテナ配車の履歴はありません。";
+    }
+    return;
+  }
+  if(empty) empty.style.display="none";
+
+  body.innerHTML=rows.map(r=>`
+    <tr>
+      <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td>
+      <td>${escapeHtml(r.shipper)}</td>
+      <td>${escapeHtml(r.origin)}</td>
+      <td>${escapeHtml(r.destination)}</td>
+      <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.arrivalDate||r.date))}</td>
+      <td class="container-col-time">${escapeHtml(r.time)}</td>
+      <td>${escapeHtml(r.containerNumber)}</td>
+      <td class="container-col-ft">${escapeHtml(r.ft)}</td>
+      <td>${escapeHtml(r.content)}</td>
+      <td>${escapeHtml(r.chassisNumber)}</td>
+      <td>${escapeHtml(r.vehicleNumber||"未定")}</td>
+      <td>${escapeHtml(r.driverName||"未定")}</td>
     </tr>
   `).join("");
 }
