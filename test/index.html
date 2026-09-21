@@ -1569,16 +1569,39 @@ function getCurrentInspectionRecord(){
   }
   return null;
 }
+function normalizeInspectionName(value){
+  return String(value==null?"":value).trim().replace(/\s+/g," ").replace(/[\\/]/g,"／");
+}
+function buildInspectionId(date, vehicle, driver){
+  return String(date||"").slice(0,10) + "__" + normalizeInspectionName(vehicle) + "__" + normalizeInspectionName(driver);
+}
 function saveInspectionRecord(record){
   // 点検1回ごとに固有IDを持たせる。
   // 日付・車両・運転者が同じでも、別の点検として安全に積み上げられる。
   const records=JSON.parse(localStorage.getItem("truck_inspection_records_v1")||"[]");
+  const expectedId = buildInspectionId(record.date, record.vehicle, record.driver);
+
+  const duplicateRecord = records.find(x => {
+    if(record.id && String(x.id||"")===String(record.id||"")) return false;
+    return buildInspectionId(x.date, x.vehicle, x.driver) === expectedId;
+  });
+
   if(!record.id){
-    record.id="R"+Date.now()+"_"+Math.random().toString(36).slice(2,10);
+    if(duplicateRecord){
+      throw new Error("同じ日付・車両・運転者の点検はすでに登録されています。");
+    }
+    record.id = expectedId;
+  }else if(String(record.id||"") !== expectedId){
+    const sameExistingRecord = records.some(x => String(x.id||"") === String(record.id||""));
+    if(!sameExistingRecord && duplicateRecord){
+      throw new Error("同じ日付・車両・運転者の点検はすでに登録されています。");
+    }
   }
+
   const idx=records.findIndex(x=>String(x.id||"")===String(record.id||""));
   if(idx>=0) records[idx]=record; else records.push(record);
   localStorage.setItem("truck_inspection_records_v1",JSON.stringify(records));
+
   if(typeof renderHistory==="function") renderHistory();
 }
 function showManagerStatus(record){
@@ -1691,7 +1714,7 @@ function resetAfterSave(){
 
 async function saveRecord(){
   const record={
-    id:(crypto.randomUUID ? crypto.randomUUID() : ('R'+Date.now()+Math.random().toString(16).slice(2))),
+    id:buildInspectionId(document.getElementById("date").value, selectedVehicle(), selectedDriver()),
     date:document.getElementById("date").value,
     vehicle:selectedVehicle(), driver:selectedDriver(),
     shaken:getSelectedShaken(), shakenConfirmed:!!document.getElementById("shakenConfirm").checked,

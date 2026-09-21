@@ -1888,3 +1888,158 @@ test("42. 日常点検の保存・tenant分離・管理者確認を総合確認�
     `companies/${companyId}/offices/${officeId}/inspections/${inspectionId}`
   )));
 });
+
+test("43. 同日・同車両・同運転者の二重登録を拒否し、別運転者・別車両・別日は許可する", async () => {
+  const companyId = "company-a";
+  const officeId = "office-main";
+  const driverUid = "duplicate-driver-a";
+  const date = "2026-09-21";
+  const vehicleName = "○○ 100 あ 1234";
+  const driverName = "テスト運転者";
+  const createdAt = "2026-09-21T00:00:00.000Z";
+  const canonicalId = `${date}__${vehicleName}__${driverName}`;
+
+  const results = Object.fromEntries(
+    Array.from({ length: 27 }, (_, index) => [
+      index + 1,
+      index === 17 ? "☆" : "○"
+    ])
+  );
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+
+    await setDoc(
+      doc(db, `companies/${companyId}`),
+      { name: "Company A" }
+    );
+
+    await setDoc(
+      doc(db, `companies/${companyId}/offices/${officeId}`),
+      { name: "Main Office" }
+    );
+
+    await setDoc(
+      doc(db, `users/${driverUid}`),
+      {
+        role: "driver",
+        companyId,
+        officeId,
+        displayName: driverName,
+        loginId: "duplicate-driver-a"
+      }
+    );
+  });
+
+  const driverDb = testEnv.authenticatedContext(driverUid).firestore();
+
+  function inspectionData({
+    id,
+    inspectionDate = date,
+    vehicle = vehicleName,
+    driver = driverName,
+    driverChange = false
+  }) {
+    return {
+      id,
+      date: inspectionDate,
+      vehicle,
+      driver,
+      shaken: "2027-09-21",
+      shakenConfirmed: true,
+      managerConfirmedBy: "",
+      managerConfirmedRole: "",
+      results,
+      overall: "良好",
+      abnormal: "",
+      previous: "",
+      today: "",
+      driverChange,
+      previousDriverReport: "",
+      savedAt: createdAt,
+      companyId,
+      officeId,
+      cloudUpdatedAt: createdAt
+    };
+  }
+
+  // A: 正しい決定的IDの1件目 → 成功
+  await assertSucceeds(
+    setDoc(
+      doc(
+        driverDb,
+        `companies/${companyId}/offices/${officeId}/inspections/${canonicalId}`
+      ),
+      inspectionData({ id: canonicalId })
+    )
+  );
+
+  // B: 同じ日・車両・運転者の2件目 → 拒否
+  await assertFails(
+    setDoc(
+      doc(
+        driverDb,
+        `companies/${companyId}/offices/${officeId}/inspections/${canonicalId}`
+      ),
+      inspectionData({ id: canonicalId, driverChange: true })
+    )
+  );
+
+  // C: 同条件なのに偽の別document IDで作成 → 拒否
+  const fakeId = `${date}__${vehicleName}__${driverName}__fake`;
+  await assertFails(
+    setDoc(
+      doc(
+        driverDb,
+        `companies/${companyId}/offices/${officeId}/inspections/${fakeId}`
+      ),
+      inspectionData({ id: canonicalId, driver: driverName })
+    )
+  );
+
+  // D: 同日 + 同車両 + 別運転者 → 成功
+  const otherDriverId = `${date}__${vehicleName}__別の運転者`;
+  await assertSucceeds(
+    setDoc(
+      doc(
+        driverDb,
+        `companies/${companyId}/offices/${officeId}/inspections/${otherDriverId}`
+      ),
+      inspectionData({
+        id: otherDriverId,
+        driver: "別の運転者",
+        driverChange: true
+      })
+    )
+  );
+
+  // E: 同日 + 別車両 + 同運転者 → 成功
+  const otherVehicleId = `${date}__○○ 100 あ 5678__${driverName}`;
+  await assertSucceeds(
+    setDoc(
+      doc(
+        driverDb,
+        `companies/${companyId}/offices/${officeId}/inspections/${otherVehicleId}`
+      ),
+      inspectionData({
+        id: otherVehicleId,
+        vehicle: "○○ 100 あ 5678"
+      })
+    )
+  );
+
+  // F: 別日 + 同車両 + 同運転者 → 成功
+  const otherDateId = `2026-09-22__${vehicleName}__${driverName}`;
+  await assertSucceeds(
+    setDoc(
+      doc(
+        driverDb,
+        `companies/${companyId}/offices/${officeId}/inspections/${otherDateId}`
+      ),
+      inspectionData({
+        id: otherDateId,
+        inspectionDate: "2026-09-22"
+      })
+    )
+  );
+});

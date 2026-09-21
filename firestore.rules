@@ -289,6 +289,7 @@ service cloud.firestore {
                     )
                     && request.resource.data.companyId == companyId
                     && request.resource.data.officeId == officeId
+                    && inspectionId == request.resource.data.id
                     && request.resource.data.keys().hasOnly([
                       "id",
                       "date",
