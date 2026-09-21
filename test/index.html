@@ -96,6 +96,31 @@ textarea{min-height:80px;resize:vertical}
 .registration-request button{border:0;border-radius:9px;padding:10px;font-weight:800}
 .registration-request .approve{background:#dcefdc;color:#245c2a}.registration-request .reject{background:#ffd7d7;color:#8b0000}
 .user-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px}.user-bar.show{display:flex}.logout-btn{width:auto;border:1px solid #ffffff88;border-radius:8px;background:#ffffff20;color:#fff;padding:5px 9px;font-weight:700}
+
+/* ===== 先行配車表（専用スタイル） ===== */
+.dispatch-wrap{max-width:1100px}
+.dispatch-title{font-size:19px;font-weight:800;color:#17365d;margin-bottom:10px}
+.dispatch-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.dispatch-toolbar button{border:0;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:800;background:#eef2f6;color:#17365d;box-shadow:0 1px 3px #0002}
+.dispatch-toolbar button.dispatch-today{background:#dcecff}
+.dispatch-toolbar button.dispatch-add{background:#17365d;color:#fff}
+.dispatch-toolbar input[type="date"]{width:auto;padding:9px 10px;font-size:14px;border:1px solid #ccd2d8;border-radius:10px;background:#fff}
+.dispatch-table-scroll{width:100%;overflow-x:auto;border-radius:12px;box-shadow:0 1px 4px #0001;background:#fff}
+.dispatch-table{width:100%;border-collapse:collapse;min-width:760px}
+.dispatch-table th,.dispatch-table td{border:1px solid #d5dce6;padding:8px 6px;font-size:13px;text-align:center;white-space:nowrap}
+.dispatch-table thead th{background:#17365d;color:#fff;font-weight:800;position:sticky;top:0}
+.dispatch-table tbody tr:nth-child(even){background:#f4f7fb}
+.dispatch-table td.dispatch-wide{white-space:normal;text-align:left;min-width:120px}
+.dispatch-table th.dispatch-col-date,.dispatch-table td.dispatch-col-date,
+.dispatch-table th.dispatch-col-time,.dispatch-table td.dispatch-col-time,
+.dispatch-table th.dispatch-col-count,.dispatch-table td.dispatch-col-count{min-width:56px}
+.dispatch-empty{padding:16px;text-align:center;color:#667;font-size:13px}
+
+@media(max-width:760px) and (orientation:landscape){
+  .dispatch-toolbar button{padding:8px 10px;font-size:12px}
+  .dispatch-table th,.dispatch-table td{padding:5px 4px;font-size:11px}
+  .dispatch-table{min-width:0}
+}
 </style>
 </head>
 <body>
@@ -143,6 +168,7 @@ textarea{min-height:80px;resize:vertical}
 
 <div class="tabs">
   <button class="tab active" onclick="showPage('inspection',this)">① 点検入力</button>
+  <button class="tab" onclick="showPage('dispatch',this)">② 先行配車表</button>
   <button class="tab" onclick="showPage('records',this)">② 点検履歴</button>
   <button class="tab" onclick="showPage('savedRecords',this)">③ 点検履歴（保存版）</button>
   <button class="tab" onclick="showPage('master',this)">④ 管理画面</button>
@@ -334,6 +360,39 @@ textarea{min-height:80px;resize:vertical}
   </div>
 </div>
 <div class="small" style="margin-top:8px">出力したExcelの「点検記録」シートで、整備管理者・補助者確認者を▽から選択できます。</div>
+</section>
+</div>
+
+<div id="dispatchPage" class="page">
+<section class="card dispatch-wrap">
+  <div class="dispatch-title">先行配車表</div>
+  <div class="dispatch-toolbar">
+    <button type="button" onclick="dispatchGoPrevDay()">◀ 前日</button>
+    <input id="dispatchDate" type="date" onchange="dispatchGoToDate(this.value)">
+    <button type="button" onclick="dispatchGoNextDay()">翌日 ▶</button>
+    <button type="button" class="dispatch-today" onclick="dispatchGoToday()">今日</button>
+    <button type="button" class="dispatch-add" onclick="dispatchAddNew()">＋ 新規追加</button>
+  </div>
+  <div class="dispatch-table-scroll">
+    <table class="dispatch-table">
+      <thead>
+        <tr>
+          <th class="dispatch-col-date">日付</th>
+          <th>荷主</th>
+          <th>積み地</th>
+          <th>荷下ろし地</th>
+          <th class="dispatch-col-time">着時間</th>
+          <th>品名</th>
+          <th>車種</th>
+          <th class="dispatch-col-count">台数</th>
+          <th>車番</th>
+          <th>乗務員</th>
+        </tr>
+      </thead>
+      <tbody id="dispatchTableBody"></tbody>
+    </table>
+  </div>
+  <div id="dispatchEmpty" class="dispatch-empty" style="display:none">この日の先行配車予定はありません。</div>
 </section>
 </div>
 </main>
@@ -1133,6 +1192,65 @@ function showPage(page,btn){
     refreshSavedRecordsFromCloud();
   }
   if(page==="master") renderMasters();
+  if(page==="dispatch") renderDispatch();
+}
+
+// ===== 先行配車表（表示専用モックアップ／Firestore未接続） =====
+// 既存の点検データ・localStorageキーとは完全に分離した専用の状態を持つ。
+const DISPATCH_SAMPLE_DATA=[
+  {date:"2026-09-27",shipper:"A社",loadPlace:"笠間",unloadPlace:"青森",arrivalTime:"8:00",item:"石材",vehicleType:"4tユニック",count:"3台",vehicleNo:"未定",driver:"未定"},
+  {date:"2026-09-28",shipper:"B社",loadPlace:"市川",unloadPlace:"水戸",arrivalTime:"10:00",item:"鋼材",vehicleType:"10t平",count:"1台",vehicleNo:"1234",driver:"田中"},
+  {date:"2026-09-29",shipper:"C社",loadPlace:"横浜",unloadPlace:"土浦",arrivalTime:"13:00",item:"機械",vehicleType:"7tユニック",count:"2台",vehicleNo:"未定",driver:"未定"}
+];
+let dispatchCurrentDate=DISPATCH_SAMPLE_DATA[0].date;
+
+function dispatchFormatDate(dateStr){
+  const [y,m,d]=String(dateStr||"").split("-");
+  return (m&&d)?`${Number(m)}/${Number(d)}`:(dateStr||"");
+}
+function dispatchShiftDate(dateStr,days){
+  const d=new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate()+days);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function dispatchGoPrevDay(){ dispatchCurrentDate=dispatchShiftDate(dispatchCurrentDate,-1); renderDispatch(); }
+function dispatchGoNextDay(){ dispatchCurrentDate=dispatchShiftDate(dispatchCurrentDate,1); renderDispatch(); }
+function dispatchGoToday(){ dispatchCurrentDate=localDateKey(); renderDispatch(); }
+function dispatchGoToDate(value){ if(value){ dispatchCurrentDate=value; renderDispatch(); } }
+function dispatchAddNew(){
+  // 表示専用モックアップのため、今回は新規追加の保存処理は未実装。
+  alert("先行配車表の新規追加は次の工程（Firestore連携）で実装予定です。");
+}
+function renderDispatch(){
+  const dateInput=document.getElementById("dispatchDate");
+  if(dateInput) dateInput.value=dispatchCurrentDate;
+
+  const rows=DISPATCH_SAMPLE_DATA.filter(r=>r.date===dispatchCurrentDate);
+  const body=document.getElementById("dispatchTableBody");
+  const empty=document.getElementById("dispatchEmpty");
+  if(!body) return;
+
+  if(!rows.length){
+    body.innerHTML="";
+    if(empty) empty.style.display="block";
+    return;
+  }
+  if(empty) empty.style.display="none";
+
+  body.innerHTML=rows.map(r=>`
+    <tr>
+      <td class="dispatch-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td>
+      <td>${escapeHtml(r.shipper)}</td>
+      <td class="dispatch-wide">${escapeHtml(r.loadPlace)}</td>
+      <td class="dispatch-wide">${escapeHtml(r.unloadPlace)}</td>
+      <td class="dispatch-col-time">${escapeHtml(r.arrivalTime)}</td>
+      <td class="dispatch-wide">${escapeHtml(r.item)}</td>
+      <td>${escapeHtml(r.vehicleType)}</td>
+      <td class="dispatch-col-count">${escapeHtml(r.count)}</td>
+      <td>${escapeHtml(r.vehicleNo)}</td>
+      <td>${escapeHtml(r.driver)}</td>
+    </tr>
+  `).join("");
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function escapeAttr(s){return s.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
