@@ -393,8 +393,8 @@ textarea{min-height:80px;resize:vertical}
 
 <div id="savedRecordsPage" class="page">
 <section class="card">
-<div class="section-title">点検履歴（保存版）</div>
-<div class="small">管理者が「確認・承認する」で保存した正式な点検記録だけを表示します。ここには消去ボタンはありません。②の点検履歴から消去した記録は、この保存版には入りません。</div>
+<div class="section-title">点検記録</div>
+<div class="small">管理者が「確認・承認する」で保存した正式な点検記録を表示します。</div>
 <div style="margin:12px 0;">
   <input
     id="savedRecordSearch"
@@ -2061,7 +2061,7 @@ function renderSavedRecords(){
 
       return `
         <details>
-          <summary><b>${escapeHtml(dayLabel)}　${records.length}件</b></summary>
+          <summary><b><span style="display:inline-block;width:5.8em">${escapeHtml(dayLabel)}</span><span>${records.length}件</span></b></summary>
           ${recordsHtml}
         </details>
       `;
