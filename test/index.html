@@ -105,7 +105,7 @@ textarea{min-height:80px;resize:vertical}
 .registration-request .approve{background:#dcefdc;color:#245c2a}.registration-request .reject{background:#ffd7d7;color:#8b0000}
 .user-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px}.user-bar.show{display:flex}.logout-btn{width:auto;border:1px solid #ffffff88;border-radius:8px;background:#ffffff20;color:#fff;padding:5px 9px;font-weight:700}
 
-/* ===== 先行配車表（専用スタイル） ===== */
+/* ===== 配車表（専用スタイル） ===== */
 .dispatch-wrap{max-width:1100px}
 .dispatch-title{font-size:19px;font-weight:800;color:#17365d;margin-bottom:10px}
 .dispatch-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
@@ -164,7 +164,7 @@ textarea{min-height:80px;resize:vertical}
   .dispatch-table{min-width:0}
 }
 
-/* ===== 海上コンテナ配車管理（②とは独立した専用スタイル） ===== */
+/* ===== コンテナ配車（②とは独立した専用スタイル） ===== */
 .container-wrap{max-width:1100px}
 .container-title{font-size:19px;font-weight:800;color:#17365d;margin-bottom:10px}
 .container-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
@@ -208,7 +208,7 @@ textarea{min-height:80px;resize:vertical}
   .container-table{min-width:0}
 }
 
-/* ===== ④コンテナ履歴・追跡（③のcontainerDispatchRecordsを参照する検索専用画面） ===== */
+/* ===== ④コンテナ履歴（③のcontainerDispatchRecordsを参照する検索専用画面） ===== */
 .container-history-search{background:#f5f8fb;border:1px solid #d5dce3;border-radius:12px;padding:12px;margin-bottom:6px}
 .container-history-search-grid{display:grid;grid-template-columns:1fr;gap:10px}
 .container-history-search-grid label{font-size:13px;font-weight:700;display:block;margin-bottom:5px}
@@ -390,7 +390,7 @@ textarea{min-height:80px;resize:vertical}
 
 <div id="masterPage" class="page">
 <section class="card">
-<div class="section-title">🚛 車両マスター</div>
+<div class="section-title">🚛 車両管理</div>
 <div class="small">車両番号・車検満了日・自賠責保険満了日・任意保険満了日を登録します。点検入力時には車検満了日が自動表示されます。</div>
 <div id="vehicleMasterList"></div>
 <div class="master-row vehicle-master-form">
@@ -410,22 +410,22 @@ textarea{min-height:80px;resize:vertical}
 </div>
 </section>
 <section class="card">
-<div class="section-title">🔔 車検期限アラート</div>
+<div class="section-title">🔔 車検期限</div>
 <div id="shakenAlerts"></div>
 </section>
 <section class="card">
-<div class="section-title">📱 初回アカウント登録申請</div>
+<div class="section-title">👤 登録申請</div>
 <div class="small">QRコードから申請された運転者を確認します。「承認」すると、その人の個人IDでログインできるようになります。</div>
 <div id="registrationRequestList" style="margin-top:10px"><div class="small">申請を読み込み中...</div></div>
 </section>
 <section class="card">
-<div class="section-title">👤 運転者マスター</div>
+<div class="section-title">👤 運転者管理</div>
 <div class="small">ここで登録した運転者が点検入力画面の選択肢に表示されます。</div>
 <div id="driverMasterList"></div>
 <div class="master-row"><input id="newDriver" placeholder="例：田中 太郎"><button class="save" onclick="addDriver()">追加</button></div>
 </section>
 <section class="card">
-<div class="section-title">🔧 整備管理者・補助者 選任マスター</div>
+<div class="section-title">🔧 整備管理者・補助者</div>
 <div class="small">整備管理者または補助者として選任した方を登録します。登録した方は、点検後の確認者選択に表示されます。</div>
 <div id="managerList"></div>
 <div class="manager-form" style="margin-top:10px">
@@ -445,8 +445,8 @@ textarea{min-height:80px;resize:vertical}
 </div>
 </section>
 <section class="card">
-<div class="section-title">📊 Excel出力</div>
-<div class="small">③「点検履歴（保存版）」に保存された正式な点検記録をExcelファイル（.xlsx）として出力します。期間・車両を指定して絞り込めます。</div><div class="small" style="margin-top:6px">※Excel出力は記録を消しません。②で「確認・承認」された記録だけが③の保存版とExcelの対象になります。②で消去した記録はExcelにも出ません。</div>
+<div class="section-title">📊 データ出力</div>
+<div class="small">③「点検記録」に保存された正式な点検記録をExcelファイル（.xlsx）として出力します。期間・車両を指定して絞り込めます。</div><div class="small" style="margin-top:6px">※Excel出力は記録を消しません。②で「確認・承認」された記録だけが③点検記録とExcelの対象になります。②で消去した記録はExcelにも出ません。</div>
 <div class="manager-form" style="margin-top:10px">
   <label>開始日
     <input id="excelFrom" type="date">
@@ -459,8 +459,8 @@ textarea{min-height:80px;resize:vertical}
       <option value="">全車両</option>
     </select>
   </label>
-  <button type="button" class="save" onclick="exportExcel()">📥 保存版をExcel出力</button><div class="small" style="margin-top:6px">管理Excel出力版 v2026-09-12 / XML修正版・18番手動選択対応｜③保存版の記録だけをExcel出力。Excel出力では履歴は消えません。</div>
-  <div class="small" style="margin-top:8px">※「確認・承認する」で保存された記録は③保存版に残ります。Excel出力だけでは記録は消えません。</div>
+  <button type="button" class="save" onclick="exportExcel()">📥 保存版をExcel出力</button><div class="small" style="margin-top:6px">管理Excel出力版 v2026-09-12 / XML修正版・18番手動選択対応｜③点検記録の記録だけをExcel出力。Excel出力では履歴は消えません。</div>
+  <div class="small" style="margin-top:8px">※「確認・承認する」で保存された記録は③点検記録に残ります。Excel出力だけでは記録は消えません。</div>
 </div>
 <div class="daily-print-box" style="margin-top:14px;padding:12px;border:2px solid #8a6d3b;border-radius:10px;background:#fffaf0">
   <div style="font-weight:700;margin-bottom:6px">🖨️ 1日・全車両 A4印刷用</div>
@@ -480,7 +480,7 @@ textarea{min-height:80px;resize:vertical}
       <input id="monthlyPrintMonth" type="month">
     </label>
     <button type="button" class="save" onclick="exportMonthlyPrintExcel()">📄 1カ月分をExcel出力</button>
-    <div class="small" style="margin-top:6px">※③保存版に正式保存された点検実績だけを出力します。点検していない日・車両の「未点検」行は作りません。</div>
+    <div class="small" style="margin-top:6px">※③点検記録に正式保存された点検実績だけを出力します。点検していない日・車両の「未点検」行は作りません。</div>
   </div>
 </div>
 <div class="small" style="margin-top:8px">出力したExcelの「点検記録」シートで、整備管理者・補助者確認者を▽から選択できます。</div>
@@ -489,7 +489,7 @@ textarea{min-height:80px;resize:vertical}
 
 <div id="dispatchPage" class="page">
 <section class="card dispatch-wrap">
-  <div class="dispatch-title">先行配車表</div>
+  <div class="dispatch-title">配車表</div>
   <div class="dispatch-toolbar">
     <button type="button" onclick="dispatchGoPrevMonth()">◀ 前月</button>
     <input id="dispatchMonth" type="month" onchange="dispatchGoToMonth(this.value)">
@@ -518,12 +518,12 @@ textarea{min-height:80px;resize:vertical}
       <tbody id="dispatchTableBody"></tbody>
     </table>
   </div>
-  <div id="dispatchEmpty" class="dispatch-empty" style="display:none">この月の先行配車予定はありません。</div>
+  <div id="dispatchEmpty" class="dispatch-empty" style="display:none">この月の配車予定はありません。</div>
 </section>
 
 <div id="dispatchFormOverlay" class="dispatch-form-overlay" style="display:none">
   <section class="card dispatch-form-card">
-    <div class="dispatch-title" id="dispatchFormTitle">先行配車の新規登録</div>
+    <div class="dispatch-title" id="dispatchFormTitle">配車の新規登録</div>
     <div class="grid">
       <div>
         <label>日付</label>
@@ -576,7 +576,7 @@ textarea{min-height:80px;resize:vertical}
 
 <div id="containerPage" class="page">
 <section class="card container-wrap">
-  <div class="container-title">海上コンテナ配車管理</div>
+  <div class="container-title">コンテナ配車</div>
   <div class="container-toolbar">
     <button type="button" onclick="containerGoPrevMonth()">◀ 前月</button>
     <input id="containerMonth" type="month" onchange="containerGoToMonth(this.value)">
@@ -606,12 +606,12 @@ textarea{min-height:80px;resize:vertical}
       <tbody id="containerTableBody"></tbody>
     </table>
   </div>
-  <div id="containerEmpty" class="dispatch-empty" style="display:none">この月の海上コンテナ配車予定はありません。</div>
+  <div id="containerEmpty" class="dispatch-empty" style="display:none">この月のコンテナ配車予定はありません。</div>
 </section>
 
 <div id="containerFormOverlay" class="dispatch-form-overlay" style="display:none">
   <section class="card dispatch-form-card">
-    <div class="dispatch-title" id="containerFormTitle">海上コンテナ配車の新規登録</div>
+    <div class="dispatch-title" id="containerFormTitle">コンテナ配車の新規登録</div>
     <div class="grid">
       <div>
         <label>日付</label>
@@ -682,7 +682,7 @@ textarea{min-height:80px;resize:vertical}
 
 <div id="containerHistoryPage" class="page">
 <section class="card container-wrap">
-  <div class="container-title">コンテナ履歴・追跡</div>
+  <div class="container-title">コンテナ履歴</div>
   <div class="container-history-search">
     <div class="container-history-search-grid">
       <div>
@@ -761,7 +761,7 @@ textarea{min-height:80px;resize:vertical}
       <tbody id="containerHistoryTableBody"></tbody>
     </table>
   </div>
-  <div id="containerHistoryEmpty" class="dispatch-empty" style="display:none">海上コンテナ配車の履歴はありません。</div>
+  <div id="containerHistoryEmpty" class="dispatch-empty" style="display:none">コンテナ配車の履歴はありません。</div>
 </section>
 </div>
 </main>
@@ -1577,7 +1577,7 @@ function showPage(page,btn){
   if(page==="containerHistory") renderContainerHistory();
 }
 
-// ===== 先行配車表（表示専用モックアップ／Firestore未接続） =====
+// ===== 配車表（表示専用モックアップ／Firestore未接続） =====
 // 既存の点検データ・localStorageキーとは完全に分離した専用の状態を持つ。
 const DISPATCH_SAMPLE_DATA=[
   {date:"2026-09-27",shipper:"A社",loadPlace:"笠間",unloadPlace:"青森",arrivalTime:"8:00",item:"石材",vehicleType:"4tユニック",count:"3台",vehicleNo:"未定",driver:"未定"},
@@ -1724,7 +1724,7 @@ function dispatchRenderAssignmentRows(){
 function dispatchOpenForm(mode,record){
   dispatchEditingIndex=(mode==="edit" && record) ? dispatchRecords.indexOf(record) : -1;
   const title=document.getElementById("dispatchFormTitle");
-  if(title) title.textContent=(mode==="edit") ? "先行配車の編集" : "先行配車の新規登録";
+  if(title) title.textContent=(mode==="edit") ? "先行配車の編集" : "配車の新規登録";
   const submitBtn=document.getElementById("dispatchFormSubmitBtn");
   if(submitBtn) submitBtn.textContent=(mode==="edit") ? "更新" : "登録";
 
@@ -1856,7 +1856,7 @@ function renderDispatch(){
   }).join("");
 }
 
-// ===== 海上コンテナ配車管理（②先行配車表とは完全に独立。①②とデータ連携しない／Firestore未接続） =====
+// ===== コンテナ配車（②配車表とは完全に独立。①②とデータ連携しない／Firestore未接続） =====
 let containerDispatchRecords=[];
 let containerCurrentMonth=localDateKey().slice(0,7);
 let containerEditingIndex=-1; // -1: 新規登録 / 0以上: 編集対象のcontainerDispatchRecords内インデックス
@@ -1916,7 +1916,7 @@ function containerPopulateDriverSelect(currentValue){
 function containerOpenForm(mode,record){
   containerEditingIndex=(mode==="edit" && record) ? containerDispatchRecords.indexOf(record) : -1;
   const title=document.getElementById("containerFormTitle");
-  if(title) title.textContent=(mode==="edit") ? "海上コンテナ配車の編集" : "海上コンテナ配車の新規登録";
+  if(title) title.textContent=(mode==="edit") ? "海上コンテナ配車の編集" : "コンテナ配車の新規登録";
   const submitBtn=document.getElementById("containerFormSubmitBtn");
   if(submitBtn) submitBtn.textContent=(mode==="edit") ? "更新" : "登録";
 
@@ -2027,7 +2027,7 @@ function renderContainerDispatch(){
   `).join("");
 }
 
-// ===== ④コンテナ履歴・追跡（③の containerDispatchRecords を参照するだけの検索専用画面。データは複製しない／編集不可） =====
+// ===== ④コンテナ履歴（③の containerDispatchRecords を参照するだけの検索専用画面。データは複製しない／編集不可） =====
 function containerHistoryPopulateFilterSelects(){
   const vs=document.getElementById("containerHistoryVehicleNumber");
   if(vs){
@@ -2101,7 +2101,7 @@ function renderContainerHistory(){
     body.innerHTML="";
     if(empty){
       empty.style.display="block";
-      empty.textContent=hasAnyRecord ? "条件に一致する履歴はありません。" : "海上コンテナ配車の履歴はありません。";
+      empty.textContent=hasAnyRecord ? "条件に一致する履歴はありません。" : "コンテナ配車の履歴はありません。";
     }
     return;
   }
@@ -2160,7 +2160,7 @@ function renderRecords(){
 }
 
 function getSavedRecords(){
-  // ③「点検履歴（保存版）」専用の正式保存台帳。
+  // ③「点検記録」専用の正式保存台帳。
   // ここに入った記録だけが③と月別Excelの対象になる。
   let saved=[];
   let hasSavedStore=false;
@@ -2242,7 +2242,7 @@ async function deleteHistoryRecord(index){
   // IDがない旧データにも確実に削除印を付ける
   if(!target.id){ target.id='R'+Date.now()+Math.random().toString(16).slice(2); }
   target.deletedAt=new Date().toISOString();
-  // ③保存版に入っていた記録も、②で消去した時点で保存版から除外する。
+  // ③点検記録に入っていた記録も、②で消去した時点で保存版から除外する。
   try{
     const saved=getSavedRecords();
     const targetId=String(target.id||"");
@@ -2947,7 +2947,7 @@ function exportExcel(){
   const to=(document.getElementById("excelTo")||{}).value||"";
   const vehicle=(document.getElementById("excelVehicle")||{}).value||"";
   const filtered=records.filter(r=>{
-    // 管理Excelは③「点検履歴（保存版）」に入った正式保存記録だけを出力する
+    // 管理Excelは③「点検記録」に入った正式保存記録だけを出力する
     if(r.deletedAt || !r.managerConfirmedAt) return false;
     const d=(r.date||"").slice(0,10);
     if(from && d<from) return false;
@@ -3089,7 +3089,7 @@ function getResultValue(record, no){
   return r[no] || r[String(no)] || r[`item_${no}`] || r[`result_${no}`] || "";
 }
 function uniqueRecordsForExports(){
-  // Excelの正式保存データは③「点検履歴（保存版）」と同じ集合にする。
+  // Excelの正式保存データは③「点検記録」と同じ集合にする。
   // つまり「確認・承認済み」かつ「削除されていない」記録だけを対象にする。
   let a=getRecords(); let b=[]; let deletedIds=[];
   try{ b=JSON.parse(localStorage.getItem("truck_inspection_archived_v1")||"[]"); }catch(e){ b=[]; }
@@ -3217,7 +3217,7 @@ function exportMonthlyPrintExcel(){
   const month=(document.getElementById("monthlyPrintMonth")||{}).value||"";
   if(!month){alert("対象月を選択してください。");return;}
 
-  // ③「点検履歴（保存版）」に入っている正式保存記録だけを対象にする。
+  // ③「点検記録」に入っている正式保存記録だけを対象にする。
   const records=getSavedRecords();
 
   const trucks=getMaster("truck_vehicles",defaultVehicles);
@@ -3230,7 +3230,7 @@ function exportMonthlyPrintExcel(){
   const lastDay=new Date(yy,mm,0).getDate();
   const monthStart=`${month}-01`, monthEnd=`${month}-${String(lastDay).padStart(2,"0")}`;
 
-  // ③「点検履歴（保存版）」に実際に存在する正式保存記録だけを出力する。
+  // ③「点検記録」に実際に存在する正式保存記録だけを出力する。
   // 点検していない日・車両の「未点検」行は作らない。
   const monthRecords=records
     .filter(r=>{
@@ -3246,7 +3246,7 @@ function exportMonthlyPrintExcel(){
       return String(a.savedAt||a.createdAt||"").localeCompare(String(b.savedAt||b.createdAt||""));
     });
 
-  if(!monthRecords.length){alert(`${month}には③保存版の点検記録がありません。`);return;}
+  if(!monthRecords.length){alert(`${month}には③点検記録の点検記録がありません。`);return;}
 
   const rows=[headers];
   monthRecords.forEach(r=>{
@@ -3315,7 +3315,7 @@ function exportMonthlyPrintExcel(){
     const bytes=zipStore(files);
     const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     downloadXlsxBlob(blob,`トラック日常点検_${month.replaceAll("-","")}_1カ月全車両_全履歴.xlsx`);
-    const st=document.getElementById("status"); if(st) st.textContent=`${month} の1カ月Excelを出力しました（③保存版の実績${rows.length-1}件）。`;
+    const st=document.getElementById("status"); if(st) st.textContent=`${month} の1カ月Excelを出力しました（③点検記録の実績${rows.length-1}件）。`;
   }catch(e){ alert("1カ月・全車両Excelの出力に失敗しました。\n"+(e&&e.message?e.message:e)); console.error(e); }
 }
 
