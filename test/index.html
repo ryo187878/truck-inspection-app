@@ -43,6 +43,12 @@ textarea{min-height:80px;resize:vertical}
 .tab.active{background:#6f82a6;color:white}
 .tab-2line{flex-direction:column;line-height:1.25}
 .tab-2line span{display:block}
+.tramo-home-nav{max-width:760px;margin:12px auto 0;padding:0 12px;display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.tramo-home-btn{border:0;border-radius:14px;padding:15px 6px;font-size:15px;font-weight:800;background:#e8edf3;color:#17365d;box-shadow:0 1px 4px #0002}
+.tramo-home-btn.active{background:#17365d;color:#fff}
+.tramo-subnav{max-width:760px;margin:9px auto 0;padding:0 12px;display:none;gap:5px}
+.tramo-subnav.active{display:flex}
+.tramo-subnav .tab{border-radius:10px;min-height:46px}
 .page{display:none}
 .page.active{display:block}
 /* 整備管理者の確認欄は①点検入力だけに表示 */
@@ -273,14 +279,23 @@ textarea{min-height:80px;resize:vertical}
 </header>
 
 
-<div class="tabs">
+<div class="tramo-home-nav" aria-label="TRAMOメインメニュー">
+  <button class="tramo-home-btn active" data-group="inspection" onclick="showNavGroup('inspection',this)">🛠 日常点検</button>
+  <button class="tramo-home-btn" data-group="dispatch" onclick="showNavGroup('dispatch',this)">🚚 配車版</button>
+  <button class="tramo-home-btn" data-group="admin" onclick="showNavGroup('admin',this)">⚙️ 管理</button>
+</div>
+<div id="inspectionNav" class="tramo-subnav active">
   <button class="tab active" onclick="showPage('inspection',this)">① 点検入力</button>
-  <button class="tab" onclick="showPage('dispatch',this)">② 先行配車表</button>
-  <button class="tab tab-2line" onclick="showPage('container',this)"><span>③ 海コン</span><span>配車管理</span></button>
-  <button class="tab tab-2line" onclick="showPage('containerHistory',this)"><span>④ コンテナ</span><span>履歴・追跡</span></button>
   <button class="tab" onclick="showPage('records',this)">② 点検履歴</button>
   <button class="tab tab-2line" onclick="showPage('savedRecords',this)"><span>③ 点検履歴</span><span>（保存版）</span></button>
-  <button class="tab" onclick="showPage('master',this)">④ 管理画面</button>
+</div>
+<div id="dispatchNav" class="tramo-subnav">
+  <button class="tab" onclick="showPage('dispatch',this)">① 先行配車表</button>
+  <button class="tab" onclick="showPage('container',this)">② 海上コンテナ配車</button>
+  <button class="tab tab-2line" onclick="showPage('containerHistory',this)"><span>③ コンテナ</span><span>履歴・追跡</span></button>
+</div>
+<div id="adminNav" class="tramo-subnav">
+  <button class="tab" onclick="showPage('master',this)">管理画面</button>
 </div>
 <main>
 <div id="inspectionPage" class="page active">
@@ -1534,6 +1549,17 @@ function removeDriver(i){
     renderMasters();
   }
 }
+function showNavGroup(group,btn){
+  document.querySelectorAll(".tramo-home-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".tramo-subnav").forEach(n=>n.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+  const nav=document.getElementById(group+"Nav");
+  if(nav) nav.classList.add("active");
+  const firstPage={inspection:"inspection",dispatch:"dispatch",admin:"master"}[group];
+  const firstBtn=nav?nav.querySelector(".tab"):null;
+  if(firstPage && firstBtn) showPage(firstPage,firstBtn);
+}
+
 function showPage(page,btn){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
