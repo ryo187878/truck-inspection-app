@@ -47,11 +47,11 @@ textarea{min-height:80px;resize:vertical}
 .tab-2line{flex-direction:column;line-height:1.25}
 .tab-2line span{display:block}
 .tramo-home-nav{max-width:760px;margin:12px auto 0;padding:0 12px;display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-.tramo-home-btn{border:0;border-radius:14px;padding:15px 6px;font-size:15px;font-weight:800;background:#e8edf3;color:#17365d;box-shadow:0 1px 4px #0002}
+.tramo-home-btn{border:0;border-radius:14px;padding:12px 6px;font-size:15px;font-weight:800;background:#e8edf3;color:#17365d;box-shadow:0 1px 4px #0002}
 .tramo-home-btn.active{background:#17365d;color:#fff}
 .tramo-subnav{max-width:760px;margin:9px auto 0;padding:0 12px;display:none;gap:5px}
 .tramo-subnav.active{display:flex}
-.tramo-subnav .tab{border-radius:10px;min-height:46px}
+.tramo-subnav .tab{border-radius:10px;min-height:42px;font-size:12px;padding:8px 4px}
 .page{display:none}
 .page.active{display:block}
 /* 整備管理者の確認欄は①点検入力だけに表示 */
@@ -284,7 +284,7 @@ textarea{min-height:80px;resize:vertical}
 </div>
 <header>
 <h1>🚚 トラック日常点検</h1>
-<div class="sub">iPad縦長入力版 · 1台ごとに保存 · 整備管理者欄は①のみ · 18番☆ミックスタイヤ対応・確実表示版</div>
+<div class="sub">安全は、走り出す前に決まる。</div>
 <div id="cloudStatus" class="cloud-status">☁️ Firebase：ログイン待ち</div>
 <div id="userBar" class="user-bar"><span id="loginUserLabel"></span><button type="button" id="logoutButton" class="logout-btn">ログアウト</button></div>
 </header>
@@ -292,7 +292,7 @@ textarea{min-height:80px;resize:vertical}
 
 <div class="tramo-home-nav" aria-label="TRAMOメインメニュー">
   <button class="tramo-home-btn active" data-group="inspection" onclick="showNavGroup('inspection',this)">🛠 日常点検</button>
-  <button class="tramo-home-btn" data-group="dispatch" onclick="showNavGroup('dispatch',this)">🚚 配車版</button>
+  <button class="tramo-home-btn" data-group="dispatch" onclick="showNavGroup('dispatch',this)">🚚 配車</button>
   <button class="tramo-home-btn" data-group="admin" onclick="showNavGroup('admin',this)">⚙️ 管理</button>
 </div>
 <div id="inspectionNav" class="tramo-subnav active">
