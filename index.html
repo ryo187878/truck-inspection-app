@@ -97,6 +97,15 @@ textarea{min-height:80px;resize:vertical}
 .auth-card h2{margin:0 0 8px;font-size:22px}.auth-card p{margin:0 0 16px;color:#667;font-size:13px;line-height:1.6}
 .auth-card input{margin-bottom:10px}.auth-card button{width:100%;border:0;border-radius:11px;padding:13px;font-size:16px;font-weight:800;background:#6f82a6;color:#fff}
 .auth-error{min-height:22px;color:#a30000;font-size:13px;font-weight:700;margin-top:10px}.auth-hidden{display:none!important}
+.auth-switch{margin-top:10px;background:#eef2f6!important;color:#334!important}
+.auth-back{margin-top:8px;background:#eee!important;color:#334!important}
+.register-panel{display:none}.register-panel.show{display:block}.login-panel.hide{display:none}
+.tenant-chip{background:#eef5ff;border:1px solid #c7d8ef;border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;color:#42566f}
+.auth-success{margin-top:10px;padding:10px;border-radius:10px;background:#eaf7ee;color:#176b35;font-size:13px;font-weight:700;display:none}.auth-success.show{display:block}
+.registration-request{border:1px solid #d8e0e8;border-radius:10px;padding:10px;margin:8px 0;background:#fafcff}
+.registration-request .req-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.registration-request button{border:0;border-radius:9px;padding:10px;font-weight:800}
+.registration-request .approve{background:#dcefdc;color:#245c2a}.registration-request .reject{background:#ffd7d7;color:#8b0000}
 .user-bar{display:none;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:12px}.user-bar.show{display:flex}.logout-btn{width:auto;border:1px solid #ffffff88;border-radius:8px;background:#ffffff20;color:#fff;padding:5px 9px;font-weight:700}
 
 /* ===== 配車表（専用スタイル） ===== */
@@ -272,14 +281,35 @@ textarea{min-height:80px;resize:vertical}
 <body>
 <div id="authGate" class="auth-gate">
   <div class="auth-card">
-    <h2>🔐 管理者ログイン</h2>
-    <p>会社の管理画面を利用するには、登録済みのメールアドレスとパスワードでログインしてください。</p>
-    <label>メールアドレス</label>
-    <input id="loginEmail" type="email" autocomplete="username" placeholder="メールアドレス">
-    <label>パスワード</label>
-    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード">
-    <button type="button" id="loginButton">ログイン</button>
-    <div id="authError" class="auth-error"></div>
+    <div id="loginPanel" class="login-panel">
+      <h2>🔐 TRAMO ログイン</h2>
+      <p>個人IDまたは管理者メールアドレスとパスワードでログインしてください。</p>
+      <label>ログインID または メールアドレス</label>
+      <input id="loginEmail" type="text" autocomplete="username" placeholder="例：tanaka01">
+      <label>パスワード</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード">
+      <button type="button" id="loginButton">ログイン</button>
+      <button type="button" id="showRegisterButton" class="auth-switch" style="display:none">初めての方：アカウント登録</button>
+      <div id="authError" class="auth-error"></div>
+      <div id="authSuccess" class="auth-success"></div>
+    </div>
+    <div id="registerPanel" class="register-panel">
+      <h2>👤 初回アカウント登録</h2>
+      <p>会社・営業所は登録用QRコードから自動設定されます。</p>
+      <div id="registerTenant" class="tenant-chip">会社・営業所を確認中...</div>
+      <label>名前</label>
+      <input id="registerName" type="text" autocomplete="name" placeholder="例：田中 太郎">
+      <label>ログインID</label>
+      <input id="registerLoginId" type="text" autocapitalize="none" autocomplete="username" placeholder="例：tanaka01">
+      <div class="small" style="margin:-4px 0 10px">半角英数字・「.」「_」「-」で3〜30文字</div>
+      <label>パスワード</label>
+      <input id="registerPassword" type="password" autocomplete="new-password" placeholder="6文字以上">
+      <label>パスワード確認</label>
+      <input id="registerPassword2" type="password" autocomplete="new-password" placeholder="もう一度入力">
+      <button type="button" id="registerButton">登録申請する</button>
+      <button type="button" id="backToLoginButton" class="auth-back">ログインに戻る</button>
+      <div id="registerError" class="auth-error"></div>
+    </div>
   </div>
 </div>
 <header>
@@ -503,6 +533,13 @@ textarea{min-height:80px;resize:vertical}
 <section class="card">
 <div class="section-title">🔔 車検期限</div>
 <div id="shakenAlerts"></div>
+</section>
+<section class="card">
+<details>
+  <summary class="section-title" style="cursor:pointer;">👤 登録申請</summary>
+  <div class="small">登録用QRコードから申請された運転者を確認します。「承認」すると個人IDでログインできます。</div>
+  <div id="registrationRequestList" style="margin-top:10px"><div class="small">申請を読み込み中...</div></div>
+</details>
 </section>
 <section class="card">
 <details>
@@ -981,8 +1018,8 @@ textarea{min-height:80px;resize:vertical}
 </section>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+  import { getAuth, createUserWithEmailAndPassword, deleteUser, signInWithEmailAndPassword, signOut, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCnnljHeudw5t_US6v5nkZ4555NGfH-vF8",
@@ -1002,6 +1039,34 @@ textarea{min-height:80px;resize:vertical}
   let CLOUD_COLLECTION = "";
   let CLOUD_VEHICLES = "";
   let CLOUD_MASTER_DOC = "";
+  let CLOUD_REGISTRATION_REQUESTS = "";
+  const TENANT_CONTEXT_KEY = "truck_registration_tenant_v1";
+
+  function sanitizeLoginPart(value){
+    return String(value||"").trim().toLowerCase().replace(/[^a-z0-9._-]/g,"");
+  }
+  function makeInternalEmail(companyId, officeId, loginId){
+    return `${sanitizeLoginPart(loginId)}.${sanitizeLoginPart(officeId)}.${sanitizeLoginPart(companyId)}@truck-inspection.invalid`;
+  }
+  function getTenantContext(){
+    const params=new URLSearchParams(location.search);
+    const companyId=String(params.get("company")||"").trim();
+    const officeId=String(params.get("office")||"").trim();
+    const inviteId=String(params.get("invite")||"").trim();
+    if(companyId && officeId && inviteId && !companyId.includes("/") && !officeId.includes("/") && !inviteId.includes("/")){
+      const ctx={companyId,officeId,inviteId};
+      localStorage.setItem(TENANT_CONTEXT_KEY,JSON.stringify(ctx));
+      return ctx;
+    }
+    try{
+      const saved=JSON.parse(localStorage.getItem(TENANT_CONTEXT_KEY)||"null");
+      if(saved?.companyId && saved?.officeId && saved?.inviteId) return saved;
+    }catch(e){}
+    return null;
+  }
+  function registrationCollectionPath(companyId,officeId){
+    return `companies/${companyId}/offices/${officeId}/registrationRequests`;
+  }
 
   function setCloudTenant(profile){
     const companyId=String(profile?.companyId||"").trim();
@@ -1014,6 +1079,7 @@ textarea{min-height:80px;resize:vertical}
     CLOUD_COLLECTION=`companies/${companyId}/offices/${officeId}/inspections`;
     CLOUD_VEHICLES=`companies/${companyId}/offices/${officeId}/vehicles`;
     CLOUD_MASTER_DOC=`companies/${companyId}/offices/${officeId}/settings/masterData`;
+    CLOUD_REGISTRATION_REQUESTS=registrationCollectionPath(companyId,officeId);
   }
 
   function vehicleDocId(name){
@@ -1082,6 +1148,25 @@ textarea{min-height:80px;resize:vertical}
       if(!window.firebaseReady) throw new Error("Firebase認証がまだ完了していません。");
       const id=vehicle._cloudId||vehicleDocId(vehicle.name);
       await deleteDoc(doc(firestoreDb, CLOUD_VEHICLES, id));
+    },
+    async loadRegistrationRequests(){
+      if(!window.firebaseReady) return [];
+      const path=CLOUD_REGISTRATION_REQUESTS || registrationCollectionPath(CLOUD_COMPANY,CLOUD_OFFICE);
+      const snap=await getDocs(collection(firestoreDb,path));
+      return snap.docs.map(d=>({id:d.id,...(d.data()||{})})).filter(x=>x?.status==="pending");
+    },
+    async approveRegistration(req){
+      if(!window.firebaseReady || !req?.id) throw new Error("登録申請が見つかりません。");
+      if(req.status!=="pending" || String(req.companyId)!==String(CLOUD_COMPANY) || String(req.officeId)!==String(CLOUD_OFFICE) || req.role!=="driver") throw new Error("承認対象が正しくありません。");
+      const approvedAt=new Date().toISOString(), approvedBy=window.firebaseUser?.uid||"";
+      const batch=writeBatch(firestoreDb);
+      batch.set(doc(firestoreDb,CLOUD_USERS,req.id),{role:"driver",companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,displayName:String(req.displayName||"").trim(),loginId:String(req.loginId||"").trim(),approvedAt});
+      batch.update(doc(firestoreDb,CLOUD_REGISTRATION_REQUESTS,req.id),{status:"approved",approvedAt,approvedBy});
+      await batch.commit();
+    },
+    async rejectRegistration(req){
+      if(!window.firebaseReady || !req?.id) throw new Error("登録申請が見つかりません。");
+      await setDoc(doc(firestoreDb,CLOUD_REGISTRATION_REQUESTS,req.id),{status:"rejected",rejectedAt:new Date().toISOString(),rejectedBy:window.firebaseUser?.uid||""},{merge:true});
     },
     async loadMasterData(){
       if(!window.firebaseReady) return {};
@@ -1208,24 +1293,88 @@ async function syncAfterLogin(profile){
   const loginEmail=document.getElementById("loginEmail");
   const loginPassword=document.getElementById("loginPassword");
   const authError=document.getElementById("authError");
+  const authSuccess=document.getElementById("authSuccess");
   const authGate=document.getElementById("authGate");
-  loginButton.addEventListener("click", async ()=>{
-    authError.textContent="";
-    const email=loginEmail.value.trim();
-    const password=loginPassword.value;
-    if(!email || !password){ authError.textContent="メールアドレスとパスワードを入力してください。"; return; }
-    loginButton.disabled=true; loginButton.textContent="ログイン中…";
-    try { await signInWithEmailAndPassword(firebaseAuth,email,password); }
-    catch(e){ console.error(e); authError.textContent="ログインできません。メールアドレスまたはパスワードを確認してください。"; }
-    finally { loginButton.disabled=false; loginButton.textContent="ログイン"; }
+  const loginPanel=document.getElementById("loginPanel");
+  const registerPanel=document.getElementById("registerPanel");
+  const showRegisterButton=document.getElementById("showRegisterButton");
+  const backToLoginButton=document.getElementById("backToLoginButton");
+  const registerButton=document.getElementById("registerButton");
+  const registerError=document.getElementById("registerError");
+  const registerTenant=document.getElementById("registerTenant");
+  const tenantContext=getTenantContext();
+
+  function showLoginPanel(message=""){
+    registerPanel.classList.remove("show"); loginPanel.classList.remove("hide");
+    authError.textContent=""; registerError.textContent="";
+    if(message){authSuccess.textContent=message;authSuccess.classList.add("show");}
+    else{authSuccess.classList.remove("show");authSuccess.textContent="";}
+  }
+  function showRegistrationPanel(){
+    if(!tenantContext){authError.textContent="会社専用の登録用QRコードから開いてください。";return;}
+    loginPanel.classList.add("hide");registerPanel.classList.add("show");registerError.textContent="";
+  }
+  if(tenantContext){
+    showRegisterButton.style.display="";
+    registerTenant.textContent=`会社・営業所：自動設定済み（${tenantContext.companyId} / ${tenantContext.officeId}）`;
+  }else registerTenant.textContent="会社・営業所情報がありません。登録用QRコードから開いてください。";
+  showRegisterButton.addEventListener("click",showRegistrationPanel);
+  backToLoginButton.addEventListener("click",()=>showLoginPanel());
+  if(new URLSearchParams(location.search).get("register")==="1" && tenantContext) showRegistrationPanel();
+
+  loginButton.addEventListener("click",async()=>{
+    authError.textContent="";authSuccess.classList.remove("show");
+    const loginValue=loginEmail.value.trim(), password=loginPassword.value;
+    if(!loginValue||!password){authError.textContent="ログインID（またはメールアドレス）とパスワードを入力してください。";return;}
+    let authEmail=loginValue;
+    if(!loginValue.includes("@")){
+      const ctx=getTenantContext();
+      if(!ctx){authError.textContent="個人IDでログインする場合は会社専用QRコードから開いてください。";return;}
+      const normalized=sanitizeLoginPart(loginValue);
+      if(normalized.length<3){authError.textContent="ログインIDを確認してください。";return;}
+      authEmail=makeInternalEmail(ctx.companyId,ctx.officeId,normalized);
+    }
+    loginButton.disabled=true;loginButton.textContent="ログイン中…";
+    try{await signInWithEmailAndPassword(firebaseAuth,authEmail,password);}
+    catch(e){console.error(e);authError.textContent="ログインできません。ID（またはメールアドレス）とパスワードを確認してください。";}
+    finally{loginButton.disabled=false;loginButton.textContent="ログイン";}
   });
-  loginPassword.addEventListener("keydown",e=>{ if(e.key==="Enter") loginButton.click(); });
-  document.getElementById("logoutButton").addEventListener("click",()=>{
-    clearTenantLocalCache();
-    signOut(firebaseAuth);
+  loginPassword.addEventListener("keydown",e=>{if(e.key==="Enter")loginButton.click();});
+
+  registerButton.addEventListener("click",async()=>{
+    registerError.textContent="";
+    if(!tenantContext){registerError.textContent="会社専用の登録用QRコードから開いてください。";return;}
+    const displayName=document.getElementById("registerName").value.trim();
+    const raw=document.getElementById("registerLoginId").value.trim(), loginId=sanitizeLoginPart(raw);
+    const password=document.getElementById("registerPassword").value, password2=document.getElementById("registerPassword2").value;
+    if(!displayName){registerError.textContent="名前を入力してください。";return;}
+    if(raw!==loginId || !/^[a-z0-9._-]{3,30}$/.test(loginId)){registerError.textContent="ログインIDは半角英数字・. _ - で3〜30文字にしてください。";return;}
+    if(password.length<6){registerError.textContent="パスワードは6文字以上にしてください。";return;}
+    if(password!==password2){registerError.textContent="確認用パスワードが一致しません。";return;}
+    const internalEmail=makeInternalEmail(tenantContext.companyId,tenantContext.officeId,loginId);
+    registerButton.disabled=true;registerButton.textContent="登録申請中…";window.registrationInProgress=true;
+    let createdUser=null,batchCommitted=false;
+    try{
+      const cred=await createUserWithEmailAndPassword(firebaseAuth,internalEmail,password);createdUser=cred.user;
+      const {companyId,officeId,inviteId}=tenantContext, uid=cred.user.uid;
+      const batch=writeBatch(firestoreDb);
+      batch.set(doc(firestoreDb,registrationCollectionPath(companyId,officeId),uid),{displayName,loginId,role:"driver",companyId,officeId,status:"pending",createdAt:new Date().toISOString(),inviteId});
+      batch.update(doc(firestoreDb,`companies/${companyId}/offices/${officeId}/invites/${inviteId}`),{status:"used",usedAt:serverTimestamp(),usedBy:uid});
+      await batch.commit();batchCommitted=true;await signOut(firebaseAuth);
+      ["registerName","registerLoginId","registerPassword","registerPassword2"].forEach(id=>document.getElementById(id).value="");
+      showLoginPanel("登録申請を送信しました。管理者の承認後、このIDでログインできます。");
+    }catch(e){
+      console.error(e);
+      if(createdUser&&!batchCommitted&&firebaseAuth.currentUser?.uid===createdUser.uid){try{await deleteUser(createdUser);}catch(de){console.error(de);}}
+      registerError.textContent=e?.code==="auth/email-already-in-use"?"このログインIDはすでに使われています。別のIDを入力してください。":"登録申請に失敗しました。通信状況または登録用QRコードを確認してください。";
+      try{if(firebaseAuth.currentUser)await signOut(firebaseAuth);}catch(_e){}
+    }finally{window.registrationInProgress=false;registerButton.disabled=false;registerButton.textContent="登録申請する";}
   });
 
+  document.getElementById("logoutButton").addEventListener("click",()=>{clearTenantLocalCache();signOut(firebaseAuth);});
+
   onAuthStateChanged(firebaseAuth, async user=>{
+    if(window.registrationInProgress) return;
     if(!user){
       window.firebaseUser=null; window.firebaseReady=false;
       authGate.classList.remove("auth-hidden");
@@ -1246,7 +1395,19 @@ async function syncAfterLogin(profile){
     }catch(e){
       console.error(e);
       window.firebaseReady=false;
-      authError.textContent=e?.message||"権限を確認できませんでした。";
+      let msg=e?.message||"権限を確認できませんでした。";
+      const ctx=getTenantContext();
+      if(ctx && user){
+        try{
+          const reqSnap=await getDoc(doc(firestoreDb,registrationCollectionPath(ctx.companyId,ctx.officeId),user.uid));
+          if(reqSnap.exists()){
+            const st=reqSnap.data()?.status;
+            if(st==="pending") msg="このアカウントは管理者の承認待ちです。";
+            if(st==="rejected") msg="このアカウント登録申請は承認されていません。管理者へ確認してください。";
+          }
+        }catch(_e){}
+      }
+      authError.textContent=msg;
       cloudStatus("⚠️ Firebase：権限確認エラー", "ng");
       authGate.classList.remove("auth-hidden");
       await signOut(firebaseAuth).catch(()=>{});
