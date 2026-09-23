@@ -1462,7 +1462,48 @@ function renderShakenAlerts(){
     return `<div class="alert ${cls}">${escapeHtml(v.name)}　${msg}<br><span class="small">満了日：${escapeHtml(v.shaken)}</span></div>`;
   }).join("");
 }
+async function renderRegistrationRequests(){
+  const root=document.getElementById("registrationRequestList");
+  if(!root) return;
+  if(!window.firebaseReady || window.firebaseProfile?.role!=="admin"){
+    root.innerHTML='<div class="small">管理者ログイン時のみ表示します。</div>';
+    return;
+  }
+  root.innerHTML='<div class="small">申請を読み込み中...</div>';
+  try{
+    const requests=await window.firebaseCloud.loadRegistrationRequests();
+    window._registrationRequests=requests;
+    if(!requests.length){root.innerHTML='<div class="small">現在、承認待ちの申請はありません。</div>';return;}
+    root.innerHTML=requests.map((r,i)=>`
+      <div class="registration-request">
+        <b>${escapeHtml(String(r.displayName||"名前未設定"))}</b><br>
+        <span class="small">ログインID：${escapeHtml(String(r.loginId||""))}</span>
+        <div class="req-actions">
+          <button class="approve" onclick="approveRegistrationRequest(${i})">✅ 承認</button>
+          <button class="reject" onclick="rejectRegistrationRequest(${i})">却下</button>
+        </div>
+      </div>`).join("");
+  }catch(e){console.error(e);root.innerHTML='<div class="small" style="color:#a30000">登録申請を読み込めませんでした。</div>';}
+}
+async function approveRegistrationRequest(i){
+  const req=(window._registrationRequests||[])[i]; if(!req) return;
+  if(!confirm(`「${req.displayName||req.loginId}」さんの登録を承認しますか？`)) return;
+  try{
+    await window.firebaseCloud.approveRegistration(req);
+    const drivers=getMaster("truck_drivers",defaultDrivers), name=String(req.displayName||"").trim();
+    if(name&&!drivers.includes(name)){drivers.push(name);saveMaster("truck_drivers",drivers);await window.firebaseCloud.saveDrivers(drivers);}
+    renderMasters(); alert("登録を承認しました。本人は個人IDでログインできます。");
+  }catch(e){console.error(e);alert("承認に失敗しました。");}
+}
+async function rejectRegistrationRequest(i){
+  const req=(window._registrationRequests||[])[i]; if(!req) return;
+  if(!confirm(`「${req.displayName||req.loginId}」さんの申請を却下しますか？`)) return;
+  try{await window.firebaseCloud.rejectRegistration(req);renderRegistrationRequests();}
+  catch(e){console.error(e);alert("却下処理に失敗しました。");}
+}
+
 function renderMasters(){
+  renderRegistrationRequests();
   renderShakenAlerts();
   const vehicles=getMaster("truck_vehicles",defaultVehicles);
   const drivers=getMaster("truck_drivers",defaultDrivers);
