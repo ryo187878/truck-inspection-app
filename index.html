@@ -1314,10 +1314,19 @@ async function loadCompanyProfile(companyId){
   }
 
   function applyRole(profile, user){
-    const tabs=[...document.querySelectorAll(".tabs .tab")];
+    const tabs=[...document.querySelectorAll(".tramo-subnav .tab")];
     if(profile.role==="driver") {
-      tabs.forEach((b,i)=>b.style.display=i===0?"":"none");
-      const first=tabs[0]; if(first) first.click();
+      const allowedPages=new Set(["inspection","dispatch","container","containerHistory"]);
+      const allowedGroups=new Set(["inspection","dispatch"]);
+      document.querySelectorAll(".tramo-home-btn").forEach(button=>{
+        button.style.display=allowedGroups.has(button.dataset.group)?"":"none";
+      });
+      tabs.forEach(button=>{
+        const match=String(button.getAttribute("onclick")||"").match(/showPage\('([^']+)'/);
+        button.style.display=match&&allowedPages.has(match[1])?"":"none";
+      });
+      const first=tabs.find(button=>button.style.display!=="none");
+      if(first) first.click();
     } else {
       tabs.forEach(b=>b.style.display="");
     }
