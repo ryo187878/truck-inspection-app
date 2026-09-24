@@ -1370,6 +1370,11 @@ async function syncAfterLogin(profile){
       // 運転者は点検履歴を端末にも読み込まない。
       localStorage.setItem("truck_inspection_records_v1", "[]");
       localStorage.setItem("truck_inspection_saved_v1", "[]");
+      dispatchRecords=await window.firebaseCloud.loadDispatchRecords();
+      containerDispatchRecords=await window.firebaseCloud.loadContainerDispatchRecords();
+      if(typeof renderDispatch === "function") renderDispatch();
+      if(typeof renderContainerDispatch === "function") renderContainerDispatch();
+      if(typeof renderContainerHistory === "function") renderContainerHistory();
       if(typeof renderMasters === "function") renderMasters();
       if(typeof renderRecords === "function") renderRecords();
       if(typeof renderSavedRecords === "function") renderSavedRecords();
