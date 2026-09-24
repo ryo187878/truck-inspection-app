@@ -1269,7 +1269,7 @@ textarea{min-height:80px;resize:vertical}
       return snap.docs.map(d=>({id:d.id,...(d.data()||{})})).filter(r=>r.date);
     },
     async saveDispatchRecord(record){
-      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみ配車を変更できます。");
+      if(!window.firebaseReady || !["admin","driver"].includes(window.firebaseProfile?.role)) throw new Error("管理者または運転者のみ配車を変更できます。");
       const id=String(record.id||crypto.randomUUID());
       await setDoc(doc(firestoreDb,CLOUD_DISPATCH_COLLECTION,id),{...record,id,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,cloudUpdatedAt:new Date().toISOString()});
       return id;
@@ -1280,7 +1280,7 @@ textarea{min-height:80px;resize:vertical}
       return snap.docs.map(d=>({id:d.id,...(d.data()||{})})).filter(r=>r.date);
     },
     async saveContainerDispatchRecord(record){
-      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみコンテナ配車を変更できます。");
+      if(!window.firebaseReady || !["admin","driver"].includes(window.firebaseProfile?.role)) throw new Error("管理者または運転者のみコンテナ配車を変更できます。");
       const id=String(record.id||crypto.randomUUID());
       await setDoc(doc(firestoreDb,CLOUD_CONTAINER_DISPATCH_COLLECTION,id),{...record,id,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,cloudUpdatedAt:new Date().toISOString()});
       return id;
