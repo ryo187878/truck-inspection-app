@@ -312,6 +312,18 @@ textarea{min-height:80px;resize:vertical}
     </div>
   </div>
 </div>
+<script>
+  // Firebase読み込み完了を待たず、登録QR URLなら即座に登録パネルを表示する（読み込み中のログイン画面フラッシュを防止）
+  (function(){
+    try{
+      var p=new URLSearchParams(location.search);
+      if(p.get("register")==="1" && p.get("company") && p.get("office") && p.get("invite")){
+        document.getElementById("loginPanel").classList.add("hide");
+        document.getElementById("registerPanel").classList.add("show");
+      }
+    }catch(e){}
+  })();
+</script>
 <header>
 <h1>🚚 トラック日常点検</h1>
 <div class="sub">安全は、走り出す前に決まる。</div>
@@ -539,11 +551,15 @@ textarea{min-height:80px;resize:vertical}
   <summary class="section-title" style="cursor:pointer;">👤 登録申請</summary>
   <div class="small">登録用QRコードから申請された運転者を確認します。「承認」すると個人IDでログインできます。</div>
   <div style="margin:12px 0;padding:12px;border:1px solid #d8e0e8;border-radius:10px;background:#fafcff">
-    <button type="button" class="save" onclick="createDriverRegistrationQr()" style="width:100%">📱 新しい登録用QRを発行</button>
-    <div class="small" style="margin-top:7px">QRは1回だけ使用できます。有効期限は24時間です。</div>
+    <button type="button" class="save" onclick="showDriverRegistrationQr()" style="width:100%">📱 運転者登録QRを表示</button>
+    <div class="small" style="margin-top:7px">会社・営業所ごとの固定QRです。何度でも読み取って登録申請できます。印刷して事務所に掲示できます。</div>
     <div id="driverRegistrationQrWrap" style="display:none;text-align:center;margin-top:12px">
       <div id="driverRegistrationQr" style="display:inline-block;padding:10px;background:#fff"></div>
       <div id="driverRegistrationUrl" class="small" style="margin-top:8px;word-break:break-all"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button type="button" class="save" onclick="printDriverRegistrationQr()">🖨 印刷</button>
+        <button type="button" id="reissueDriverInviteButton" class="save" style="display:none;background:#a30000" onclick="reissueDriverRegistrationQr()">🔄 登録QRを再発行</button>
+      </div>
     </div>
   </div>
   <div id="registrationRequestList" style="margin-top:10px"><div class="small">申請を読み込み中...</div></div>
@@ -1026,21 +1042,37 @@ textarea{min-height:80px;resize:vertical}
 </section>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, deleteUser, signInWithEmailAndPassword, signOut, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-  import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+  import { getAuth, connectAuthEmulator, createUserWithEmailAndPassword, deleteUser, signInWithEmailAndPassword, signOut, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+  import { getFirestore, connectFirestoreEmulator, collection, query, where, limit, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCnnljHeudw5t_US6v5nkZ4555NGfH-vF8",
-    authDomain: "truck-inspection-app-6a0c8.firebaseapp.com",
-    projectId: "truck-inspection-app-6a0c8",
-    storageBucket: "truck-inspection-app-6a0c8.firebasestorage.app",
-    messagingSenderId: "597073700511",
-    appId: "1:597073700511:web:59e8ee8d9112e6c659a4aa"
-  };
+  const useEmulator =
+    new URLSearchParams(location.search).get("emulator") === "1" &&
+    (location.hostname === "127.0.0.1" || location.hostname === "localhost");
+  window.useEmulator = useEmulator;
+
+  const firebaseConfig = useEmulator
+    ? {
+        apiKey: "demo-local",
+        authDomain: "localhost",
+        projectId: "tramo-browser-test",
+        appId: "demo-local"
+      }
+    : {
+        apiKey: "AIzaSyCnnljHeudw5t_US6v5nkZ4555NGfH-vF8",
+        authDomain: "truck-inspection-app-6a0c8.firebaseapp.com",
+        projectId: "truck-inspection-app-6a0c8",
+        storageBucket: "truck-inspection-app-6a0c8.firebasestorage.app",
+        messagingSenderId: "597073700511",
+        appId: "1:597073700511:web:59e8ee8d9112e6c659a4aa"
+      };
 
   const firebaseApp = initializeApp(firebaseConfig);
   const firebaseAuth = getAuth(firebaseApp);
   const firestoreDb = getFirestore(firebaseApp);
+  if (useEmulator) {
+    connectAuthEmulator(firebaseAuth, "http://127.0.0.1:9099", { disableWarnings: true });
+    connectFirestoreEmulator(firestoreDb, "127.0.0.1", 8080);
+  }
   const CLOUD_USERS = `users`;
   let CLOUD_COMPANY = "";
   let CLOUD_OFFICE = "";
@@ -1048,6 +1080,8 @@ textarea{min-height:80px;resize:vertical}
   let CLOUD_VEHICLES = "";
   let CLOUD_MASTER_DOC = "";
   let CLOUD_REGISTRATION_REQUESTS = "";
+  let CLOUD_DISPATCH_COLLECTION = "";
+  let CLOUD_CONTAINER_DISPATCH_COLLECTION = "";
   const TENANT_CONTEXT_KEY = "truck_registration_tenant_v1";
 
   function sanitizeLoginPart(value){
@@ -1088,6 +1122,8 @@ textarea{min-height:80px;resize:vertical}
     CLOUD_VEHICLES=`companies/${companyId}/offices/${officeId}/vehicles`;
     CLOUD_MASTER_DOC=`companies/${companyId}/offices/${officeId}/settings/masterData`;
     CLOUD_REGISTRATION_REQUESTS=registrationCollectionPath(companyId,officeId);
+    CLOUD_DISPATCH_COLLECTION=`companies/${companyId}/offices/${officeId}/dispatchRecords`;
+    CLOUD_CONTAINER_DISPATCH_COLLECTION=`companies/${companyId}/offices/${officeId}/containerDispatchRecords`;
   }
 
   function vehicleDocId(name){
@@ -1157,16 +1193,37 @@ textarea{min-height:80px;resize:vertical}
       const id=vehicle._cloudId||vehicleDocId(vehicle.name);
       await deleteDoc(doc(firestoreDb, CLOUD_VEHICLES, id));
     },
-    async createDriverInvite(){
-      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみ発行できます。");
-      const inviteId=crypto.randomUUID().replaceAll("-","");
-      const now=new Date(), expires=new Date(now.getTime()+24*60*60*1000);
-      await setDoc(doc(firestoreDb,`companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/invites/${inviteId}`),{
+    async getOrCreateDriverInvite(){
+      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみ利用できます。");
+      const invitesPath=`companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/invites`;
+      const activeSnap=await getDocs(query(collection(firestoreDb,invitesPath), where("status","==","active"), limit(1)));
+      if(!activeSnap.empty){
+        const found=activeSnap.docs[0], data=found.data()||{};
+        return {inviteId:found.id,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,createdAt:data.createdAt?.toDate?data.createdAt.toDate():new Date()};
+      }
+      const inviteId=crypto.randomUUID().replaceAll("-",""), now=new Date();
+      await setDoc(doc(firestoreDb,`${invitesPath}/${inviteId}`),{
         companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,status:"active",
-        expiresAt:Timestamp.fromDate(expires),createdAt:Timestamp.fromDate(now),
-        createdBy:window.firebaseUser.uid,usedAt:null,usedBy:null,revokedAt:null,revokedBy:null
+        createdAt:Timestamp.fromDate(now),createdBy:window.firebaseUser.uid,revokedAt:null,revokedBy:null
       });
-      return {inviteId,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,expiresAt:expires};
+      return {inviteId,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,createdAt:now};
+    },
+    async reissueDriverInvite(){
+      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみ利用できます。");
+      const invitesPath=`companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/invites`;
+      const activeSnap=await getDocs(query(collection(firestoreDb,invitesPath), where("status","==","active"), limit(1)));
+      const now=new Date(), newInviteId=crypto.randomUUID().replaceAll("-","");
+      const batch=writeBatch(firestoreDb);
+      if(!activeSnap.empty){
+        const oldDoc=activeSnap.docs[0];
+        batch.update(doc(firestoreDb,`${invitesPath}/${oldDoc.id}`),{status:"revoked",revokedAt:Timestamp.fromDate(now),revokedBy:window.firebaseUser.uid});
+      }
+      batch.set(doc(firestoreDb,`${invitesPath}/${newInviteId}`),{
+        companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,status:"active",
+        createdAt:Timestamp.fromDate(now),createdBy:window.firebaseUser.uid,revokedAt:null,revokedBy:null
+      });
+      await batch.commit();
+      return {inviteId:newInviteId,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,createdAt:now};
     },
     async loadRegistrationRequests(){
       if(!window.firebaseReady) return [];
@@ -1205,6 +1262,28 @@ textarea{min-height:80px;resize:vertical}
         managers:Array.isArray(managers)?managers:[],
         cloudUpdatedAt:new Date().toISOString()
       }, {merge:true});
+    },
+    async loadDispatchRecords(){
+      if(!window.firebaseReady) return [];
+      const snap=await getDocs(collection(firestoreDb,CLOUD_DISPATCH_COLLECTION));
+      return snap.docs.map(d=>({id:d.id,...(d.data()||{})})).filter(r=>r.date);
+    },
+    async saveDispatchRecord(record){
+      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみ配車を変更できます。");
+      const id=String(record.id||crypto.randomUUID());
+      await setDoc(doc(firestoreDb,CLOUD_DISPATCH_COLLECTION,id),{...record,id,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,cloudUpdatedAt:new Date().toISOString()});
+      return id;
+    },
+    async loadContainerDispatchRecords(){
+      if(!window.firebaseReady) return [];
+      const snap=await getDocs(collection(firestoreDb,CLOUD_CONTAINER_DISPATCH_COLLECTION));
+      return snap.docs.map(d=>({id:d.id,...(d.data()||{})})).filter(r=>r.date);
+    },
+    async saveContainerDispatchRecord(record){
+      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみコンテナ配車を変更できます。");
+      const id=String(record.id||crypto.randomUUID());
+      await setDoc(doc(firestoreDb,CLOUD_CONTAINER_DISPATCH_COLLECTION,id),{...record,id,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,cloudUpdatedAt:new Date().toISOString()});
+      return id;
     }
   };
 
@@ -1292,6 +1371,12 @@ async function syncAfterLogin(profile){
     // 管理者も現在の会社・営業所のクラウド記録だけを採用する。
     // 旧仕様のローカル→クラウド自動移行は、別会社への混入防止のため行わない。
     const cloud = await window.firebaseCloud.loadRecords();
+    const cloudDispatch=await window.firebaseCloud.loadDispatchRecords();
+    const cloudContainerDispatch=await window.firebaseCloud.loadContainerDispatchRecords();
+    window.cloudDispatchRecords=cloudDispatch;
+    window.cloudContainerDispatchRecords=cloudContainerDispatch;
+    dispatchRecords=cloudDispatch;
+    containerDispatchRecords=cloudContainerDispatch;
     const currentTenantRecords = cloud.filter(r =>
       r && r.id &&
       (!r.companyId || String(r.companyId)===String(CLOUD_COMPANY)) &&
@@ -1322,6 +1407,17 @@ async function syncAfterLogin(profile){
   const registerError=document.getElementById("registerError");
   const registerTenant=document.getElementById("registerTenant");
   const tenantContext=getTenantContext();
+
+  function hasRegistrationQrParams(){
+    const params=new URLSearchParams(location.search);
+    return params.get("register")==="1"
+      && !!String(params.get("company")||"").trim()
+      && !!String(params.get("office")||"").trim()
+      && !!String(params.get("invite")||"").trim();
+  }
+  const registrationQrAccess=hasRegistrationQrParams();
+  let forcedSignOutForRegistration=false;
+  let explicitLoginInProgress=false;
 
   function showLoginPanel(message=""){
     registerPanel.classList.remove("show"); loginPanel.classList.remove("hide");
@@ -1354,9 +1450,10 @@ async function syncAfterLogin(profile){
       authEmail=makeInternalEmail(ctx.companyId,ctx.officeId,normalized);
     }
     loginButton.disabled=true;loginButton.textContent="ログイン中…";
+    explicitLoginInProgress=true;
     try{await signInWithEmailAndPassword(firebaseAuth,authEmail,password);}
     catch(e){console.error(e);authError.textContent="ログインできません。ID（またはメールアドレス）とパスワードを確認してください。";}
-    finally{loginButton.disabled=false;loginButton.textContent="ログイン";}
+    finally{loginButton.disabled=false;loginButton.textContent="ログイン";explicitLoginInProgress=false;}
   });
   loginPassword.addEventListener("keydown",e=>{if(e.key==="Enter")loginButton.click();});
 
@@ -1376,10 +1473,8 @@ async function syncAfterLogin(profile){
     try{
       const cred=await createUserWithEmailAndPassword(firebaseAuth,internalEmail,password);createdUser=cred.user;
       const {companyId,officeId,inviteId}=tenantContext, uid=cred.user.uid;
-      const batch=writeBatch(firestoreDb);
-      batch.set(doc(firestoreDb,registrationCollectionPath(companyId,officeId),uid),{displayName,loginId,role:"driver",companyId,officeId,status:"pending",createdAt:new Date().toISOString(),inviteId});
-      batch.update(doc(firestoreDb,`companies/${companyId}/offices/${officeId}/invites/${inviteId}`),{status:"used",usedAt:serverTimestamp(),usedBy:uid});
-      await batch.commit();batchCommitted=true;await signOut(firebaseAuth);
+      await setDoc(doc(firestoreDb,registrationCollectionPath(companyId,officeId),uid),{displayName,loginId,role:"driver",companyId,officeId,status:"pending",createdAt:new Date().toISOString(),inviteId});
+      batchCommitted=true;await signOut(firebaseAuth);
       ["registerName","registerLoginId","registerPassword","registerPassword2"].forEach(id=>document.getElementById(id).value="");
       showLoginPanel("登録申請を送信しました。管理者の承認後、このIDでログインできます。");
     }catch(e){
@@ -1394,11 +1489,18 @@ async function syncAfterLogin(profile){
 
   onAuthStateChanged(firebaseAuth, async user=>{
     if(window.registrationInProgress) return;
+    if(user && registrationQrAccess && !forcedSignOutForRegistration && !explicitLoginInProgress){
+      // 登録QRアクセス時は既存ログインより登録モードを優先するため、既存セッションを一度だけ解除する（明示ログイン中は対象外）
+      forcedSignOutForRegistration=true;
+      await signOut(firebaseAuth).catch(()=>{});
+      return;
+    }
     if(!user){
-      window.firebaseUser=null; window.firebaseReady=false;
+      window.firebaseUser=null; window.firebaseReady=false; window.firebaseProfile=null;
       authGate.classList.remove("auth-hidden");
       document.getElementById("userBar").classList.remove("show");
       cloudStatus("☁️ Firebase：ログイン待ち");
+      if(registrationQrAccess) showRegistrationPanel();
       return;
     }
     try{
@@ -1481,22 +1583,50 @@ function renderShakenAlerts(){
     return `<div class="alert ${cls}">${escapeHtml(v.name)}　${msg}<br><span class="small">満了日：${escapeHtml(v.shaken)}</span></div>`;
   }).join("");
 }
-async function createDriverRegistrationQr(){
+function buildDriverRegistrationUrl(invite){
+  const url=new URL(location.href);
+  url.search="";url.hash="";
+  url.searchParams.set("company",invite.companyId);
+  url.searchParams.set("office",invite.officeId);
+  url.searchParams.set("invite",invite.inviteId);
+  url.searchParams.set("register","1");
+  if(window.useEmulator) url.searchParams.set("emulator","1");
+  return url;
+}
+function renderDriverRegistrationQr(invite){
+  const url=buildDriverRegistrationUrl(invite);
+  const wrap=document.getElementById("driverRegistrationQrWrap");
+  const box=document.getElementById("driverRegistrationQr");
+  const label=document.getElementById("driverRegistrationUrl");
+  const reissueButton=document.getElementById("reissueDriverInviteButton");
+  wrap.style.display="block";box.innerHTML="";
+  label.textContent=`固定QR（発行日：${invite.createdAt.toLocaleString("ja-JP")}）：${url.toString()}`;
+  if(typeof QRCode==="undefined") throw new Error("QRコード機能を読み込めませんでした。");
+  new QRCode(box,{text:url.toString(),width:220,height:220,correctLevel:QRCode.CorrectLevel.H});
+  if(reissueButton) reissueButton.style.display=window.firebaseProfile?.role==="admin"?"":"none";
+}
+async function showDriverRegistrationQr(){
   try{
-    const invite=await window.firebaseCloud.createDriverInvite();
-    const url=new URL(location.href);
-    url.search="";url.hash="";
-    url.searchParams.set("company",invite.companyId);
-    url.searchParams.set("office",invite.officeId);
-    url.searchParams.set("invite",invite.inviteId);
-    url.searchParams.set("register","1");
-    const wrap=document.getElementById("driverRegistrationQrWrap");
-    const box=document.getElementById("driverRegistrationQr");
-    const label=document.getElementById("driverRegistrationUrl");
-    wrap.style.display="block";box.innerHTML="";label.textContent=`有効期限：${invite.expiresAt.toLocaleString("ja-JP")}`;
-    if(typeof QRCode==="undefined") throw new Error("QRコード機能を読み込めませんでした。");
-    new QRCode(box,{text:url.toString(),width:220,height:220,correctLevel:QRCode.CorrectLevel.H});
-  }catch(e){console.error(e);alert("登録用QRの発行に失敗しました。");}
+    const invite=await window.firebaseCloud.getOrCreateDriverInvite();
+    renderDriverRegistrationQr(invite);
+  }catch(e){console.error(e);alert("登録用QRを表示できませんでした。");}
+}
+function printDriverRegistrationQr(){
+  const box=document.getElementById("driverRegistrationQr");
+  if(!box||!box.innerHTML){alert("先にQRを表示してください。");return;}
+  const win=window.open("","_blank","width=400,height=520");
+  if(!win){alert("ポップアップがブロックされました。印刷を許可してください。");return;}
+  const label=document.getElementById("driverRegistrationUrl")?.textContent||"";
+  win.document.write(`<html><head><title>運転者登録QR</title></head><body style="text-align:center;font-family:sans-serif">${box.innerHTML}<p style="word-break:break-all;font-size:12px">${label}</p></body></html>`);
+  win.document.close();win.focus();win.print();
+}
+async function reissueDriverRegistrationQr(){
+  if(!confirm("登録QRを再発行しますか？現在のQRは無効になります。")) return;
+  try{
+    const invite=await window.firebaseCloud.reissueDriverInvite();
+    renderDriverRegistrationQr(invite);
+    alert("登録QRを再発行しました。旧QRは無効になりました。");
+  }catch(e){console.error(e);alert("再発行に失敗しました。");}
 }
 
 async function renderRegistrationRequests(){
@@ -1855,7 +1985,153 @@ function showPage(page,btn){
   if(page==="containerHistory") renderContainerHistory();
 }
 
-// ===== コンテナ配車（②配車表とは完全に独立。①②とデータ連携しない／Firestore未接続） =====
+// ===== ②先行配車（Firestore保存） =====
+let dispatchRecords=[];
+let dispatchCurrentMonth=localDateKey().slice(0,7);
+const DISPATCH_VEHICLE_TYPES=["4t平","4tユニック","7t平","7tユニック","10t平","10tW","トレーラー"];
+let dispatchEditingIndex=-1;
+let dispatchLastRenderedRows=[];
+let dispatchAssignmentDraft=[{vehicleNumber:"",driverName:""}];
+let dispatchArrivalDateTouched=false;
+let dispatchSubmitting=false;
+
+function dispatchFormatDate(dateStr){
+  const [y,m,d]=String(dateStr||"").split("-");
+  return (m&&d)?`${Number(m)}/${Number(d)}`:(dateStr||"");
+}
+function dispatchOnDateChanged(){
+  if(dispatchArrivalDateTouched) return;
+  const dateEl=document.getElementById("dispatchFormDate");
+  const arrivalEl=document.getElementById("dispatchFormArrivalDate");
+  if(dateEl && arrivalEl) arrivalEl.value=dateEl.value;
+}
+function dispatchOnArrivalDateChanged(){ dispatchArrivalDateTouched=true; }
+function dispatchShiftMonth(monthStr,months){
+  const [y,m]=String(monthStr||"").split("-").map(Number);
+  const d=new Date(y,(m-1)+months,1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+}
+function dispatchGoPrevMonth(){ dispatchCurrentMonth=dispatchShiftMonth(dispatchCurrentMonth,-1); renderDispatch(); }
+function dispatchGoNextMonth(){ dispatchCurrentMonth=dispatchShiftMonth(dispatchCurrentMonth,1); renderDispatch(); }
+function dispatchGoThisMonth(){ dispatchCurrentMonth=localDateKey().slice(0,7); renderDispatch(); }
+function dispatchGoToMonth(value){ if(value){ dispatchCurrentMonth=value; renderDispatch(); } }
+function dispatchPopulateVehicleTypeSelect(selected){
+  const sel=document.getElementById("dispatchFormVehicleType");
+  if(!sel) return;
+  sel.innerHTML=DISPATCH_VEHICLE_TYPES.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
+  if(selected && DISPATCH_VEHICLE_TYPES.includes(selected)) sel.value=selected;
+}
+function dispatchNormalizeAssignments(record){
+  const countNum=Math.max(1,parseInt(String((record&&record.count)||"1").replace(/[^0-9]/g,""),10)||1);
+  const arr=record&&Array.isArray(record.assignments)&&record.assignments.length
+    ? record.assignments.map(a=>({vehicleNumber:String(a?.vehicleNumber||""),driverName:String(a?.driverName||"")}))
+    : [{vehicleNumber:String(record?.vehicleNo||""),driverName:String(record?.driver||"")}];
+  while(arr.length<countNum) arr.push({vehicleNumber:"",driverName:""});
+  return arr.slice(0,countNum);
+}
+function dispatchDisplayAssignments(record){
+  return dispatchNormalizeAssignments(record).map(a=>({vehicleNumber:a.vehicleNumber||"未定",driverName:a.driverName||"未定"}));
+}
+function dispatchResizeAssignmentDraft(countNum){
+  while(dispatchAssignmentDraft.length<countNum) dispatchAssignmentDraft.push({vehicleNumber:"",driverName:""});
+  if(dispatchAssignmentDraft.length>countNum) dispatchAssignmentDraft.length=countNum;
+}
+function dispatchOnCountChanged(){
+  const raw=parseInt(document.getElementById("dispatchFormCount").value,10);
+  dispatchResizeAssignmentDraft(!raw||raw<1?1:raw);
+  dispatchRenderAssignmentRows();
+}
+function dispatchSelectOptions(masterList,currentValue,used){
+  const cur=String(currentValue||"");
+  const usedSet=used||new Set();
+  let html=`<option value=""${cur===""?" selected":""}>未定</option>`;
+  if(cur && !masterList.includes(cur)) html+=`<option value="${escapeAttr(cur)}" selected>${escapeHtml(cur)}</option>`;
+  html+=masterList.map(v=>`<option value="${escapeAttr(v)}"${v===cur?" selected":""}${v!==cur&&usedSet.has(v)?" disabled":""}>${escapeHtml(v)}</option>`).join("");
+  return html;
+}
+function dispatchRenderAssignmentRows(){
+  const wrap=document.getElementById("dispatchAssignmentsList");
+  if(!wrap) return;
+  const vehicles=getMaster("truck_vehicles",defaultVehicles).map(v=>v.name).filter(Boolean);
+  const drivers=getMaster("truck_drivers",defaultDrivers).filter(Boolean);
+  wrap.innerHTML=dispatchAssignmentDraft.map((a,i)=>{
+    const usedVehicles=new Set(dispatchAssignmentDraft.filter((x,xi)=>xi!==i&&x.vehicleNumber).map(x=>x.vehicleNumber));
+    const usedDrivers=new Set(dispatchAssignmentDraft.filter((x,xi)=>xi!==i&&x.driverName).map(x=>x.driverName));
+    return `<div class="dispatch-assign-row"><span class="dispatch-assign-label">${i+1}台目</span><select onchange="dispatchAssignmentDraft[${i}].vehicleNumber=this.value;dispatchRenderAssignmentRows()">${dispatchSelectOptions(vehicles,a.vehicleNumber,usedVehicles)}</select><select onchange="dispatchAssignmentDraft[${i}].driverName=this.value;dispatchRenderAssignmentRows()">${dispatchSelectOptions(drivers,a.driverName,usedDrivers)}</select></div>`;
+  }).join("");
+}
+function dispatchOpenForm(mode,record){
+  dispatchEditingIndex=(mode==="edit"&&record)?dispatchRecords.indexOf(record):-1;
+  document.getElementById("dispatchFormTitle").textContent=mode==="edit"?"先行配車の編集":"配車の新規登録";
+  document.getElementById("dispatchFormSubmitBtn").textContent=mode==="edit"?"更新":"登録";
+  const formDate=record?record.date:`${dispatchCurrentMonth}-01`;
+  document.getElementById("dispatchFormDate").value=formDate;
+  document.getElementById("dispatchFormArrivalDate").value=record?(record.arrivalDate||record.date):formDate;
+  dispatchArrivalDateTouched=mode==="edit";
+  document.getElementById("dispatchFormShipper").value=record?.shipper||"";
+  document.getElementById("dispatchFormLoadPlace").value=record?.loadPlace||"";
+  document.getElementById("dispatchFormUnloadPlace").value=record?.unloadPlace||"";
+  document.getElementById("dispatchFormArrivalTime").value=record?.arrivalTime||"";
+  document.getElementById("dispatchFormItem").value=record?.item||"";
+  document.getElementById("dispatchFormCount").value=record?String(record.count).replace(/[^0-9]/g,"")||"1":"1";
+  dispatchPopulateVehicleTypeSelect(record?.vehicleType||DISPATCH_VEHICLE_TYPES[0]);
+  dispatchAssignmentDraft=record?dispatchNormalizeAssignments(record):[{vehicleNumber:"",driverName:""}];
+  dispatchRenderAssignmentRows();
+  document.getElementById("dispatchFormOverlay").style.display="flex";
+}
+function dispatchCloseForm(){ document.getElementById("dispatchFormOverlay").style.display="none"; dispatchEditingIndex=-1; }
+function dispatchAddNew(){ dispatchOpenForm("create",null); }
+function dispatchEditRow(i){ const record=dispatchLastRenderedRows[i]; if(record) dispatchOpenForm("edit",record); }
+async function dispatchSubmitForm(){
+  if(dispatchSubmitting) return;
+  const date=document.getElementById("dispatchFormDate").value;
+  if(!date){ alert("日付を選択してください。"); return; }
+  dispatchOnCountChanged();
+  const assignments=dispatchAssignmentDraft.map(a=>({vehicleNumber:(a.vehicleNumber||"").trim(),driverName:(a.driverName||"").trim()}));
+  const values=assignments.flatMap(a=>[a.vehicleNumber,a.driverName]).filter(Boolean);
+  if(new Set(values).size!==values.length){ alert("同じ車両または乗務員が複数の割当に選択されています。"); return; }
+  const previous=dispatchEditingIndex>=0?dispatchRecords[dispatchEditingIndex]:null;
+  const record={
+    ...(previous?.id?{id:previous.id}:{}),date,
+    arrivalDate:document.getElementById("dispatchFormArrivalDate").value||date,
+    shipper:document.getElementById("dispatchFormShipper").value.trim(),
+    loadPlace:document.getElementById("dispatchFormLoadPlace").value.trim(),
+    unloadPlace:document.getElementById("dispatchFormUnloadPlace").value.trim(),
+    arrivalTime:document.getElementById("dispatchFormArrivalTime").value,
+    item:document.getElementById("dispatchFormItem").value.trim(),
+    vehicleType:document.getElementById("dispatchFormVehicleType").value,
+    count:`${assignments.length}台`,vehicleNo:assignments[0]?.vehicleNumber||"",driver:assignments[0]?.driverName||"",assignments
+  };
+  dispatchSubmitting=true;
+  const submitButton=document.getElementById("dispatchFormSubmitBtn");
+  if(submitButton) submitButton.disabled=true;
+  try{
+    const id=await window.firebaseCloud.saveDispatchRecord(record);
+    record.id=id;
+    if(dispatchEditingIndex>=0) dispatchRecords[dispatchEditingIndex]=record; else dispatchRecords.push(record);
+    dispatchCloseForm();
+    dispatchCurrentMonth=date.slice(0,7);
+    renderDispatch();
+  }catch(e){ console.error(e); alert("配車のFirestore保存に失敗しました。通信状態を確認してください。"); }
+  finally{ dispatchSubmitting=false; if(submitButton) submitButton.disabled=false; }
+}
+function renderDispatch(){
+  const monthInput=document.getElementById("dispatchMonth");
+  if(monthInput) monthInput.value=dispatchCurrentMonth;
+  const rows=dispatchRecords.filter(r=>String(r.date||"").slice(0,7)===dispatchCurrentMonth).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  dispatchLastRenderedRows=rows;
+  const body=document.getElementById("dispatchTableBody");
+  const empty=document.getElementById("dispatchEmpty");
+  if(!body) return;
+  if(!rows.length){ body.innerHTML=""; if(empty) empty.style.display="block"; return; }
+  if(empty) empty.style.display="none";
+  body.innerHTML=rows.map((r,i)=>{
+    const assignments=dispatchDisplayAssignments(r);
+    return `<tr><td class="dispatch-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td><td>${escapeHtml(r.shipper||"")}</td><td class="dispatch-wide">${escapeHtml(r.loadPlace||"")}</td><td class="dispatch-wide">${escapeHtml(r.unloadPlace||"")}</td><td class="dispatch-col-date">${escapeHtml(dispatchFormatDate(r.arrivalDate||r.date))}</td><td class="dispatch-col-time">${escapeHtml(r.arrivalTime||"")}</td><td class="dispatch-wide">${escapeHtml(r.item||"")}</td><td>${escapeHtml(r.vehicleType||"")}</td><td class="dispatch-col-count">${escapeHtml(r.count||"")}</td><td>${assignments.map(a=>escapeHtml(a.vehicleNumber)).join("<br>")}</td><td>${assignments.map(a=>escapeHtml(a.driverName)).join("<br>")}</td><td class="dispatch-col-action"><button type="button" class="dispatch-edit-btn" onclick="dispatchEditRow(${i})">編集</button></td></tr>`;
+  }).join("");
+}
+
+// ===== コンテナ配車（②配車表とは完全に独立。Firestore未接続） =====
 let containerDispatchRecords=[];
 let containerCurrentMonth=localDateKey().slice(0,7);
 let containerEditingIndex=-1; // -1: 新規登録 / 0以上: 編集対象のcontainerDispatchRecords内インデックス
@@ -1951,7 +2227,7 @@ function containerEditRow(i){
   const record=containerLastRenderedRows[i];
   if(record) containerOpenForm("edit",record);
 }
-function containerSubmitForm(){
+async function containerSubmitForm(){
   const date=document.getElementById("containerFormDate").value;
   if(!date){ alert("日付を選択してください。"); return; }
 
@@ -1959,7 +2235,9 @@ function containerSubmitForm(){
   const containerNumber=containerNormalizeContainerNumber(document.getElementById("containerFormContainerNumber").value);
   if(!containerNumber){ alert("コンテナ番号を半角英数字（A-Z、0-9）で入力してください。"); return; }
 
+  const previous=containerEditingIndex>=0?containerDispatchRecords[containerEditingIndex]:null;
   const record={
+    ...(previous?.id?{id:previous.id}:{}),
     date,
     arrivalDate:document.getElementById("containerFormArrivalDate").value||date,
     shipper:document.getElementById("containerFormShipper").value.trim(),
@@ -1974,15 +2252,21 @@ function containerSubmitForm(){
     time:document.getElementById("containerFormTime").value
   };
 
-  if(containerEditingIndex>=0){
-    containerDispatchRecords[containerEditingIndex]=record;
-  }else{
-    containerDispatchRecords.push(record);
+  try{
+    const id=await window.firebaseCloud.saveContainerDispatchRecord(record);
+    record.id=id;
+    if(containerEditingIndex>=0){
+      containerDispatchRecords[containerEditingIndex]=record;
+    }else{
+      containerDispatchRecords.push(record);
+    }
+    containerCloseForm();
+    containerCurrentMonth=date.slice(0,7);
+    renderContainerDispatch();
+  }catch(e){
+    console.error(e);
+    alert("コンテナ配車のFirestore保存に失敗しました。通信状態を確認してください。");
   }
-
-  containerCloseForm();
-  containerCurrentMonth=date.slice(0,7);
-  renderContainerDispatch();
 }
 
 function renderContainerDispatch(){
