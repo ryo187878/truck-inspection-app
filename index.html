@@ -127,6 +127,8 @@ textarea{min-height:80px;resize:vertical}
 .dispatch-table th.dispatch-col-count,.dispatch-table td.dispatch-col-count,
 .dispatch-table th.dispatch-col-action,.dispatch-table td.dispatch-col-action{min-width:56px}
 .dispatch-edit-btn{border:0;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:800;background:#eef2f6;color:#17365d;box-shadow:0 1px 3px #0002}
+/* 編集ボタンと区別するため、削除ボタンは赤系配色にする（adminのみ表示）。 */
+.dispatch-delete-btn{border:0;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:800;background:#ffd7d7;color:#8a1f1f;box-shadow:0 1px 3px #0002;margin-left:6px}
 .dispatch-empty{padding:16px;text-align:center;color:#667;font-size:13px}
 
 .dispatch-form-overlay{position:fixed;inset:0;z-index:50;background:#17365d55;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -238,6 +240,64 @@ textarea{min-height:80px;resize:vertical}
   #containerHistoryPage .container-table th:nth-child(12),#containerHistoryPage .container-table td:nth-child(12){width:8%}
 }
 
+/* ===== 配車マスター専用レイアウト（①②③・日常点検・管理画面には影響させない。ID指定で優先度を確保） ===== */
+main:has(#dispatchMasterPage.active){max-width:1600px}
+#dispatchMasterPage .container-wrap{max-width:100%}
+/* table-layout:autoで文字量に応じた幅にし、見出し・データが1文字ずつ縦に折り返すのを防ぐ。 */
+#dispatchMasterPage .container-table{table-layout:auto;min-width:1300px}
+#dispatchMasterPage .container-table th,#dispatchMasterPage .container-table td{white-space:nowrap}
+#dispatchMasterPage .container-table th:nth-child(1),#dispatchMasterPage .container-table td:nth-child(1){width:60px}
+#dispatchMasterPage .container-table th:nth-child(2),#dispatchMasterPage .container-table td:nth-child(2){width:60px}
+#dispatchMasterPage .container-table th:nth-child(3),#dispatchMasterPage .container-table td:nth-child(3){width:110px}
+#dispatchMasterPage .container-table th:nth-child(4),#dispatchMasterPage .container-table td:nth-child(4){width:110px}
+#dispatchMasterPage .container-table th:nth-child(5),#dispatchMasterPage .container-table td:nth-child(5){width:110px}
+#dispatchMasterPage .container-table th:nth-child(6),#dispatchMasterPage .container-table td:nth-child(6){width:110px}
+#dispatchMasterPage .container-table th:nth-child(7),#dispatchMasterPage .container-table td:nth-child(7){width:110px}
+#dispatchMasterPage .container-table th:nth-child(8),#dispatchMasterPage .container-table td:nth-child(8){width:110px}
+#dispatchMasterPage .container-table th:nth-child(9),#dispatchMasterPage .container-table td:nth-child(9){width:150px}
+#dispatchMasterPage .container-table th:nth-child(10),#dispatchMasterPage .container-table td:nth-child(10){width:140px}
+#dispatchMasterPage .container-table th:nth-child(11),#dispatchMasterPage .container-table td:nth-child(11){width:140px}
+#dispatchMasterPage .container-table th:nth-child(12),#dispatchMasterPage .container-table td:nth-child(12){width:60px}
+#dispatchMasterPage .container-table th:nth-child(13),#dispatchMasterPage .container-table td:nth-child(13){width:60px}
+
+/* ===== ②コンテナ配車専用レイアウト（配車マスター・①・③・日常点検には影響させない。ID指定で優先度を確保） ===== */
+/* table-layout:autoで文字量に応じた幅にし、見出し・データが1文字ずつ縦に折り返すのを防ぐ。 */
+#containerPage .container-table{table-layout:auto;min-width:1290px}
+#containerPage .container-table th,#containerPage .container-table td{white-space:nowrap;font-size:12.5px;padding:7px 5px}
+#containerPage .container-table th:nth-child(1),#containerPage .container-table td:nth-child(1){width:55px}
+#containerPage .container-table th:nth-child(2),#containerPage .container-table td:nth-child(2){width:100px}
+#containerPage .container-table th:nth-child(3),#containerPage .container-table td:nth-child(3){width:100px}
+#containerPage .container-table th:nth-child(4),#containerPage .container-table td:nth-child(4){width:90px}
+#containerPage .container-table th:nth-child(5),#containerPage .container-table td:nth-child(5){width:90px}
+#containerPage .container-table th:nth-child(6),#containerPage .container-table td:nth-child(6){width:140px}
+#containerPage .container-table th:nth-child(7),#containerPage .container-table td:nth-child(7){width:50px}
+#containerPage .container-table th:nth-child(8),#containerPage .container-table td:nth-child(8){width:100px}
+#containerPage .container-table th:nth-child(9),#containerPage .container-table td:nth-child(9){width:110px}
+#containerPage .container-table th:nth-child(10),#containerPage .container-table td:nth-child(10){width:100px}
+#containerPage .container-table th:nth-child(11),#containerPage .container-table td:nth-child(11){width:100px}
+#containerPage .container-table th:nth-child(12),#containerPage .container-table td:nth-child(12){width:55px}
+#containerPage .container-table th:nth-child(13),#containerPage .container-table td:nth-child(13){width:55px}
+#containerPage .container-table th:nth-child(14),#containerPage .container-table td:nth-child(14){width:90px}
+#containerPage .container-table th:nth-child(15),#containerPage .container-table td:nth-child(15){width:55px}
+
+/* ===== ③コンテナ履歴専用レイアウト（配車マスター・①・②・日常点検には影響させない。ID指定で優先度を確保） ===== */
+#containerHistoryPage .container-table{table-layout:auto;min-width:1235px}
+#containerHistoryPage .container-table th,#containerHistoryPage .container-table td{white-space:nowrap;font-size:12.5px;padding:7px 5px}
+#containerHistoryPage .container-table th:nth-child(1),#containerHistoryPage .container-table td:nth-child(1){width:55px}
+#containerHistoryPage .container-table th:nth-child(2),#containerHistoryPage .container-table td:nth-child(2){width:100px}
+#containerHistoryPage .container-table th:nth-child(3),#containerHistoryPage .container-table td:nth-child(3){width:100px}
+#containerHistoryPage .container-table th:nth-child(4),#containerHistoryPage .container-table td:nth-child(4){width:100px}
+#containerHistoryPage .container-table th:nth-child(5),#containerHistoryPage .container-table td:nth-child(5){width:55px}
+#containerHistoryPage .container-table th:nth-child(6),#containerHistoryPage .container-table td:nth-child(6){width:55px}
+#containerHistoryPage .container-table th:nth-child(7),#containerHistoryPage .container-table td:nth-child(7){width:140px}
+#containerHistoryPage .container-table th:nth-child(8),#containerHistoryPage .container-table td:nth-child(8){width:50px}
+#containerHistoryPage .container-table th:nth-child(9),#containerHistoryPage .container-table td:nth-child(9){width:100px}
+#containerHistoryPage .container-table th:nth-child(10),#containerHistoryPage .container-table td:nth-child(10){width:110px}
+#containerHistoryPage .container-table th:nth-child(11),#containerHistoryPage .container-table td:nth-child(11){width:100px}
+#containerHistoryPage .container-table th:nth-child(12),#containerHistoryPage .container-table td:nth-child(12){width:90px}
+#containerHistoryPage .container-table th:nth-child(13),#containerHistoryPage .container-table td:nth-child(13){width:90px}
+#containerHistoryPage .container-table th:nth-child(14),#containerHistoryPage .container-table td:nth-child(14){width:90px}
+
 @media print {
   body * {
     visibility: hidden;
@@ -343,7 +403,8 @@ textarea{min-height:80px;resize:vertical}
   <button class="tab tab-2line" onclick="showPage('savedRecords',this)"><span>③ 点検記録</span></button>
 </div>
 <div id="dispatchNav" class="tramo-subnav">
-  <button class="tab" onclick="showPage('dispatch',this)">① 配車表</button>
+  <button class="tab" onclick="showPage('dispatchMaster',this)">配車マスター</button>
+  <button class="tab" onclick="showPage('dispatch',this)">① 先行配車</button>
   <button class="tab" onclick="showPage('container',this)">② コンテナ配車</button>
   <button class="tab tab-2line" onclick="showPage('containerHistory',this)"><span>③ コンテナ履歴</span></button>
 </div>
@@ -642,7 +703,7 @@ textarea{min-height:80px;resize:vertical}
 
 <div id="dispatchPage" class="page">
 <section class="card dispatch-wrap">
-  <div class="dispatch-title">配車表</div>
+  <div class="dispatch-title">先行配車</div>
   <div class="dispatch-toolbar">
     <button type="button" onclick="dispatchGoPrevMonth()">◀ 前月</button>
     <input id="dispatchMonth" type="month" onchange="dispatchGoToMonth(this.value)">
@@ -748,7 +809,9 @@ textarea{min-height:80px;resize:vertical}
           <th>シャーシ車番</th>
           <th>コンテナ番号</th>
           <th class="container-col-ft">FT</th>
-          <th>内容</th>
+          <th>荷物</th>
+          <th>作業内容①</th>
+          <th>作業内容②</th>
           <th>着地</th>
           <th class="container-col-date">着日</th>
           <th class="container-col-time">時間</th>
@@ -798,12 +861,22 @@ textarea{min-height:80px;resize:vertical}
         </select>
       </div>
       <div>
-        <label>内容</label>
+        <label>荷物</label>
+        <input id="containerFormItem" type="text" placeholder="例：石材">
+      </div>
+      <div>
+        <label>作業内容①</label>
         <select id="containerFormContent">
           <option value="実入り搬出">実入り搬出</option>
           <option value="空バン搬出">空バン搬出</option>
           <option value="空バン返却">空バン返却</option>
           <option value="実入り搬入">実入り搬入</option>
+        </select>
+      </div>
+      <div>
+        <label>作業内容②</label>
+        <select id="containerFormHandlingContent">
+          <option value="">未選択</option>
           <option value="デバン">デバン</option>
           <option value="バン積め">バン積め</option>
         </select>
@@ -855,6 +928,10 @@ textarea{min-height:80px;resize:vertical}
         <input id="containerHistoryShipper" type="text" placeholder="部分一致">
       </div>
       <div>
+        <label>荷物</label>
+        <input id="containerHistoryItem" type="text" placeholder="部分一致">
+      </div>
+      <div>
         <label>車番</label>
         <select id="containerHistoryVehicleNumber"></select>
       </div>
@@ -875,13 +952,19 @@ textarea{min-height:80px;resize:vertical}
         </select>
       </div>
       <div>
-        <label>内容</label>
+        <label>作業内容①</label>
         <select id="containerHistoryContent">
           <option value="">すべて</option>
           <option value="実入り搬出">実入り搬出</option>
           <option value="空バン搬出">空バン搬出</option>
           <option value="空バン返却">空バン返却</option>
           <option value="実入り搬入">実入り搬入</option>
+        </select>
+      </div>
+      <div>
+        <label>作業内容②</label>
+        <select id="containerHistoryHandlingContent">
+          <option value="">すべて</option>
           <option value="デバン">デバン</option>
           <option value="バン積め">バン積め</option>
         </select>
@@ -905,7 +988,9 @@ textarea{min-height:80px;resize:vertical}
           <th class="container-col-time">時間</th>
           <th>コンテナ番号</th>
           <th class="container-col-ft">FT</th>
-          <th>内容</th>
+          <th>荷物</th>
+          <th>作業内容①</th>
+          <th>作業内容②</th>
           <th>シャーシ車番</th>
           <th>車番</th>
           <th>乗務員</th>
@@ -916,6 +1001,110 @@ textarea{min-height:80px;resize:vertical}
   </div>
   <div id="containerHistoryEmpty" class="dispatch-empty" style="display:none">コンテナ配車の履歴はありません。</div>
 </section>
+</div>
+
+<div id="dispatchMasterPage" class="page">
+<section class="card container-wrap">
+  <div class="container-title">配車マスター</div>
+  <div class="container-toolbar">
+    <button type="button" onclick="masterGoPrevMonth()">◀ 前月</button>
+    <input id="masterMonth" type="month" onchange="masterGoToMonth(this.value)">
+    <button type="button" onclick="masterGoNextMonth()">翌月 ▶</button>
+    <button type="button" class="container-today" onclick="masterGoThisMonth()">今月</button>
+    <button type="button" class="container-add" onclick="masterAddNew()">＋ 新規登録</button>
+  </div>
+  <div class="container-table-scroll">
+    <table class="container-table">
+      <thead>
+        <tr>
+          <th class="container-col-date">日付</th>
+          <th>区分</th>
+          <th>荷主</th>
+          <th>発地</th>
+          <th>着地</th>
+          <th>車番</th>
+          <th>乗務員</th>
+          <th>荷物</th>
+          <th>コンテナ番号</th>
+          <th>作業内容①</th>
+          <th>作業内容②</th>
+          <th class="container-col-time">時間</th>
+          <th class="container-col-action">操作</th>
+        </tr>
+      </thead>
+      <tbody id="masterTableBody"></tbody>
+    </table>
+  </div>
+  <div id="masterEmpty" class="dispatch-empty" style="display:none">この月の配車データはありません。</div>
+</section>
+
+<div id="masterFormOverlay" class="dispatch-form-overlay" style="display:none">
+  <section class="card dispatch-form-card">
+    <div class="dispatch-title" id="masterFormTitle">配車マスターの新規登録</div>
+    <div class="grid">
+      <div>
+        <label>日付</label>
+        <input id="masterFormDate" type="date">
+      </div>
+      <div>
+        <label>荷主</label>
+        <input id="masterFormShipper" type="text" placeholder="例：A社">
+      </div>
+      <div>
+        <label>発地</label>
+        <input id="masterFormOrigin" type="text" placeholder="例：笠間">
+      </div>
+      <div>
+        <label>着地</label>
+        <input id="masterFormDestination" type="text" placeholder="例：青森">
+      </div>
+      <div>
+        <label>車番</label>
+        <select id="masterFormVehicleNumber"></select>
+      </div>
+      <div>
+        <label>乗務員</label>
+        <select id="masterFormDriverName"></select>
+      </div>
+      <div>
+        <label>荷物</label>
+        <input id="masterFormItem" type="text" placeholder="例：石材">
+      </div>
+      <div>
+        <label>コンテナ番号</label>
+        <!-- コンテナ番号の入力有無で「作業内容」の選択肢を自動切替する（masterRefreshContentOptions） -->
+        <input id="masterFormContainerNumber" type="text" placeholder="例：ABCD1234567" inputmode="latin" autocapitalize="characters" autocomplete="off" spellcheck="false" oninput="masterOnContainerNumberInput(this)">
+      </div>
+      <div id="masterFormFtWrap">
+        <label>コンテナサイズ</label>
+        <select id="masterFormFt">
+          <option value="20">20</option>
+          <option value="40">40</option>
+        </select>
+      </div>
+      <div>
+        <label>作業内容①</label>
+        <select id="masterFormContent"></select>
+      </div>
+      <div id="masterFormHandlingContentWrap">
+        <label>作業内容②</label>
+        <select id="masterFormHandlingContent"></select>
+      </div>
+      <div>
+        <label>時間</label>
+        <input id="masterFormTime" type="time">
+      </div>
+      <div>
+        <label>備考</label>
+        <input id="masterFormNote" type="text" placeholder="任意">
+      </div>
+    </div>
+    <div class="dispatch-form-actions">
+      <button type="button" id="masterFormSubmitBtn" class="save" onclick="masterSubmitForm()">登録</button>
+      <button type="button" class="clear" onclick="masterCloseForm()">キャンセル</button>
+    </div>
+  </section>
+</div>
 </div>
 
 <div id="installPage" class="page">
@@ -1284,6 +1473,14 @@ textarea{min-height:80px;resize:vertical}
       const id=String(record.id||crypto.randomUUID());
       await setDoc(doc(firestoreDb,CLOUD_CONTAINER_DISPATCH_COLLECTION,id),{...record,id,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,cloudUpdatedAt:new Date().toISOString()});
       return id;
+    },
+    async deleteDispatchRecord(recordId){
+      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみ配車予定を削除できます。");
+      await deleteDoc(doc(firestoreDb,CLOUD_DISPATCH_COLLECTION,String(recordId)));
+    },
+    async deleteContainerDispatchRecord(recordId){
+      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみコンテナ配車を削除できます。");
+      await deleteDoc(doc(firestoreDb,CLOUD_CONTAINER_DISPATCH_COLLECTION,String(recordId)));
     }
   };
 
@@ -1997,6 +2194,7 @@ function showPage(page,btn){
   if(page==="dispatch") renderDispatch();
   if(page==="container") renderContainerDispatch();
   if(page==="containerHistory") renderContainerHistory();
+  if(page==="dispatchMaster") renderDispatchMaster();
 }
 
 // ===== ②先行配車（Firestore保存） =====
@@ -2096,6 +2294,23 @@ function dispatchOpenForm(mode,record){
 function dispatchCloseForm(){ document.getElementById("dispatchFormOverlay").style.display="none"; dispatchEditingIndex=-1; }
 function dispatchAddNew(){ dispatchOpenForm("create",null); }
 function dispatchEditRow(i){ const record=dispatchLastRenderedRows[i]; if(record) dispatchOpenForm("edit",record); }
+// 削除はadminのみ。既存のdeleteDispatchRecordを再利用し、record.idで1件だけ削除する。
+async function dispatchDeleteRow(i){
+  const record=dispatchLastRenderedRows[i];
+  if(!record || !record.id) return;
+  if(!window.confirm("この配車予定を削除しますか？\nこの操作は元に戻せません。")) return;
+  try{
+    await window.firebaseCloud.deleteDispatchRecord(record.id);
+  }catch(e){
+    console.error(e);
+    alert("配車予定の削除に失敗しました。通信状態や権限を確認してください。");
+    return;
+  }
+  const idx=dispatchRecords.findIndex(r=>String(r.id||"")===String(record.id));
+  if(idx>=0) dispatchRecords.splice(idx,1);
+  renderDispatch();
+  if(typeof renderDispatchMaster==="function") renderDispatchMaster();
+}
 async function dispatchSubmitForm(){
   if(dispatchSubmitting) return;
   const date=document.getElementById("dispatchFormDate").value;
@@ -2132,16 +2347,19 @@ async function dispatchSubmitForm(){
 function renderDispatch(){
   const monthInput=document.getElementById("dispatchMonth");
   if(monthInput) monthInput.value=dispatchCurrentMonth;
-  const rows=dispatchRecords.filter(r=>String(r.date||"").slice(0,7)===dispatchCurrentMonth).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  // ①先行配車は「今日より未来」の予定だけを表示する。当日・過去のデータはdispatchRecords／Firestoreから削除せず、配車マスター側では引き続きすべて表示する。
+  const todayKey=localDateKey();
+  const rows=dispatchRecords.filter(r=>String(r.date||"").slice(0,7)===dispatchCurrentMonth && String(r.date||"")>todayKey).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   dispatchLastRenderedRows=rows;
   const body=document.getElementById("dispatchTableBody");
   const empty=document.getElementById("dispatchEmpty");
   if(!body) return;
   if(!rows.length){ body.innerHTML=""; if(empty) empty.style.display="block"; return; }
   if(empty) empty.style.display="none";
+  const isAdmin=window.firebaseProfile?.role==="admin";
   body.innerHTML=rows.map((r,i)=>{
     const assignments=dispatchDisplayAssignments(r);
-    return `<tr><td class="dispatch-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td><td>${escapeHtml(r.shipper||"")}</td><td class="dispatch-wide">${escapeHtml(r.loadPlace||"")}</td><td class="dispatch-wide">${escapeHtml(r.unloadPlace||"")}</td><td class="dispatch-col-date">${escapeHtml(dispatchFormatDate(r.arrivalDate||r.date))}</td><td class="dispatch-col-time">${escapeHtml(r.arrivalTime||"")}</td><td class="dispatch-wide">${escapeHtml(r.item||"")}</td><td>${escapeHtml(r.vehicleType||"")}</td><td class="dispatch-col-count">${escapeHtml(r.count||"")}</td><td>${assignments.map(a=>escapeHtml(a.vehicleNumber)).join("<br>")}</td><td>${assignments.map(a=>escapeHtml(a.driverName)).join("<br>")}</td><td class="dispatch-col-action"><button type="button" class="dispatch-edit-btn" onclick="dispatchEditRow(${i})">編集</button></td></tr>`;
+    return `<tr><td class="dispatch-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td><td>${escapeHtml(r.shipper||"")}</td><td class="dispatch-wide">${escapeHtml(r.loadPlace||"")}</td><td class="dispatch-wide">${escapeHtml(r.unloadPlace||"")}</td><td class="dispatch-col-date">${escapeHtml(dispatchFormatDate(r.arrivalDate||r.date))}</td><td class="dispatch-col-time">${escapeHtml(r.arrivalTime||"")}</td><td class="dispatch-wide">${escapeHtml(r.item||"")}</td><td>${escapeHtml(r.vehicleType||"")}</td><td class="dispatch-col-count">${escapeHtml(r.count||"")}</td><td>${assignments.map(a=>escapeHtml(a.vehicleNumber)).join("<br>")}</td><td>${assignments.map(a=>escapeHtml(a.driverName)).join("<br>")}</td><td class="dispatch-col-action"><button type="button" class="dispatch-edit-btn" onclick="dispatchEditRow(${i})">編集</button>${isAdmin?`<button type="button" class="dispatch-delete-btn" onclick="dispatchDeleteRow(${i})">削除</button>`:""}</td></tr>`;
   }).join("");
 }
 
@@ -2220,7 +2438,9 @@ function containerOpenForm(mode,record){
   document.getElementById("containerFormChassisNumber").value=record?record.chassisNumber:"";
   document.getElementById("containerFormContainerNumber").value=record?record.containerNumber:"";
   document.getElementById("containerFormFt").value=record?(record.ft||"20"):"20";
+  document.getElementById("containerFormItem").value=record?(record.item||""):"";
   document.getElementById("containerFormContent").value=record?(record.content||"実入り搬出"):"実入り搬出";
+  document.getElementById("containerFormHandlingContent").value=record?(record.handlingContent||""):"";
   document.getElementById("containerFormDestination").value=record?record.destination:"";
   document.getElementById("containerFormTime").value=record?record.time:"";
   containerPopulateVehicleSelect(record?record.vehicleNumber:"");
@@ -2241,6 +2461,24 @@ function containerEditRow(i){
   const record=containerLastRenderedRows[i];
   if(record) containerOpenForm("edit",record);
 }
+// 削除はadminのみ（firebaseCloud.deleteContainerDispatchRecordが役割を再確認する）。record.idで対象1件だけを削除する。
+async function containerDeleteRow(i){
+  const record=containerLastRenderedRows[i];
+  if(!record || !record.id) return;
+  if(!window.confirm("このコンテナ配車を削除しますか？\nこの操作は元に戻せません。")) return;
+  try{
+    await window.firebaseCloud.deleteContainerDispatchRecord(record.id);
+  }catch(e){
+    console.error(e);
+    alert("コンテナ配車の削除に失敗しました。通信状態や権限を確認してください。");
+    return;
+  }
+  const idx=containerDispatchRecords.findIndex(r=>String(r.id||"")===String(record.id));
+  if(idx>=0) containerDispatchRecords.splice(idx,1);
+  renderContainerDispatch();
+  if(typeof renderContainerHistory==="function") renderContainerHistory();
+  if(typeof renderDispatchMaster==="function") renderDispatchMaster();
+}
 async function containerSubmitForm(){
   const date=document.getElementById("containerFormDate").value;
   if(!date){ alert("日付を選択してください。"); return; }
@@ -2260,7 +2498,9 @@ async function containerSubmitForm(){
     chassisNumber:document.getElementById("containerFormChassisNumber").value.trim(),
     containerNumber,
     ft:document.getElementById("containerFormFt").value,
+    item:document.getElementById("containerFormItem").value.trim(),
     content:document.getElementById("containerFormContent").value,
+    handlingContent:document.getElementById("containerFormHandlingContent").value,
     destination:document.getElementById("containerFormDestination").value.trim(),
     driverName:document.getElementById("containerFormDriverName").value,
     time:document.getElementById("containerFormTime").value
@@ -2305,6 +2545,7 @@ function renderContainerDispatch(){
   }
   if(empty) empty.style.display="none";
 
+  const isAdmin=window.firebaseProfile?.role==="admin";
   body.innerHTML=rows.map((r,i)=>`
     <tr>
       <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td>
@@ -2314,12 +2555,14 @@ function renderContainerDispatch(){
       <td>${escapeHtml(r.chassisNumber)}</td>
       <td>${escapeHtml(r.containerNumber)}</td>
       <td class="container-col-ft">${escapeHtml(r.ft)}</td>
+      <td>${escapeHtml(r.item||"")}</td>
       <td>${escapeHtml(r.content)}</td>
+      <td>${escapeHtml(r.handlingContent||"")}</td>
       <td>${escapeHtml(r.destination)}</td>
       <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.arrivalDate||r.date))}</td>
       <td class="container-col-time">${escapeHtml(r.time)}</td>
       <td>${escapeHtml(r.driverName||"未定")}</td>
-      <td class="container-col-action"><button type="button" class="dispatch-edit-btn" onclick="containerEditRow(${i})">編集</button></td>
+      <td class="container-col-action"><button type="button" class="dispatch-edit-btn" onclick="containerEditRow(${i})">編集</button>${isAdmin?`<button type="button" class="dispatch-delete-btn" onclick="containerDeleteRow(${i})">削除</button>`:""}</td>
     </tr>
   `).join("");
 }
@@ -2346,8 +2589,8 @@ function containerHistorySearch(){
 }
 function containerHistoryClearFilters(){
   ["containerHistoryFrom","containerHistoryTo","containerHistoryContainerNumber","containerHistoryShipper",
-    "containerHistoryChassisNumber"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; });
-  ["containerHistoryVehicleNumber","containerHistoryDriverName","containerHistoryFt","containerHistoryContent"].forEach(id=>{
+    "containerHistoryChassisNumber","containerHistoryItem"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; });
+  ["containerHistoryVehicleNumber","containerHistoryDriverName","containerHistoryFt","containerHistoryContent","containerHistoryHandlingContent"].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value="";
   });
   renderContainerHistory();
@@ -2359,11 +2602,13 @@ function renderContainerHistory(){
   const to=(document.getElementById("containerHistoryTo")||{}).value||"";
   const containerNumberQuery=((document.getElementById("containerHistoryContainerNumber")||{}).value||"").trim().toLowerCase();
   const shipperQuery=((document.getElementById("containerHistoryShipper")||{}).value||"").trim();
+  const itemQuery=((document.getElementById("containerHistoryItem")||{}).value||"").trim();
   const chassisQuery=((document.getElementById("containerHistoryChassisNumber")||{}).value||"").trim();
   const vehicleFilter=(document.getElementById("containerHistoryVehicleNumber")||{}).value||"";
   const driverFilter=(document.getElementById("containerHistoryDriverName")||{}).value||"";
   const ftFilter=(document.getElementById("containerHistoryFt")||{}).value||"";
   const contentFilter=(document.getElementById("containerHistoryContent")||{}).value||"";
+  const handlingContentFilter=(document.getElementById("containerHistoryHandlingContent")||{}).value||"";
 
   // ③の containerDispatchRecords を直接参照するだけで、④側にはコピーを作らない。
   const hasAnyRecord=containerDispatchRecords.length>0;
@@ -2373,11 +2618,13 @@ function renderContainerHistory(){
       if(to && String(r.date||"")>to) return false;
       if(containerNumberQuery && !String(r.containerNumber||"").toLowerCase().includes(containerNumberQuery)) return false;
       if(shipperQuery && !String(r.shipper||"").includes(shipperQuery)) return false;
+      if(itemQuery && !String(r.item||"").includes(itemQuery)) return false;
       if(chassisQuery && !String(r.chassisNumber||"").includes(chassisQuery)) return false;
       if(vehicleFilter && String(r.vehicleNumber||"")!==vehicleFilter) return false;
       if(driverFilter && String(r.driverName||"")!==driverFilter) return false;
       if(ftFilter && String(r.ft||"")!==ftFilter) return false;
       if(contentFilter && String(r.content||"")!==contentFilter) return false;
+      if(handlingContentFilter && String(r.handlingContent||"")!==handlingContentFilter) return false;
       return true;
     })
     .slice()
@@ -2414,7 +2661,9 @@ function renderContainerHistory(){
       <td class="container-col-time">${escapeHtml(r.time)}</td>
       <td>${escapeHtml(r.containerNumber)}</td>
       <td class="container-col-ft">${escapeHtml(r.ft)}</td>
+      <td>${escapeHtml(r.item||"")}</td>
       <td>${escapeHtml(r.content)}</td>
+      <td>${escapeHtml(r.handlingContent||"")}</td>
       <td>${escapeHtml(r.chassisNumber)}</td>
       <td>${escapeHtml(r.vehicleNumber||"未定")}</td>
       <td>${escapeHtml(r.driverName||"未定")}</td>
@@ -2422,7 +2671,277 @@ function renderContainerHistory(){
   `).join("");
 }
 
-function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+// ===== 配車マスター（①dispatchRecords・②containerDispatchRecordsを共通データとして参照するだけ。データは複製しない） =====
+// コンテナ番号が空欄なら一般作業内容、入力されていればコンテナ専用作業内容を表示する。
+const MASTER_GENERAL_CONTENT_OPTIONS=["定期","荷下ろし","引取り","横持"];
+// ②コンテナ配車の作業内容①と同じ表記・並び（デバン・バン積めは作業内容②へ分離）。
+const MASTER_CONTAINER_CONTENT_OPTIONS=["実入り搬出","空バン搬出","空バン返却","実入り搬入"];
+// 作業内容②（handlingContent）。コンテナ番号がある場合だけ選択可能にする。
+const MASTER_HANDLING_CONTENT_OPTIONS=["","デバン","バン積め"];
+let masterCurrentMonth=localDateKey().slice(0,7);
+let masterLastRenderedRows=[];
+let masterEditingKind=null; // null: 新規登録 / "general" | "container": 編集中の元データ種別（編集時は保存先を変更しない）
+let masterEditingId="";
+
+function masterGoPrevMonth(){ masterCurrentMonth=dispatchShiftMonth(masterCurrentMonth,-1); renderDispatchMaster(); }
+function masterGoNextMonth(){ masterCurrentMonth=dispatchShiftMonth(masterCurrentMonth,1); renderDispatchMaster(); }
+function masterGoThisMonth(){ masterCurrentMonth=localDateKey().slice(0,7); renderDispatchMaster(); }
+function masterGoToMonth(value){ if(value){ masterCurrentMonth=value; renderDispatchMaster(); } }
+
+function masterRefreshContentOptions(){
+  const containerInput=document.getElementById("masterFormContainerNumber");
+  const contentSelect=document.getElementById("masterFormContent");
+  if(!containerInput || !contentSelect) return;
+  const hasContainerNumber=!!containerNormalizeContainerNumber(containerInput.value);
+  const options=hasContainerNumber?MASTER_CONTAINER_CONTENT_OPTIONS:MASTER_GENERAL_CONTENT_OPTIONS;
+  const currentValue=contentSelect.value;
+  contentSelect.innerHTML=options.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
+  contentSelect.value=options.includes(currentValue)?currentValue:"";
+}
+// コンテナ番号が空欄の間は「コンテナサイズ」欄自体を非表示にし、値も残さない。
+function masterRefreshFtVisibility(){
+  const containerInput=document.getElementById("masterFormContainerNumber");
+  const ftWrap=document.getElementById("masterFormFtWrap");
+  const ftSelect=document.getElementById("masterFormFt");
+  if(!containerInput || !ftWrap || !ftSelect) return;
+  const hasContainerNumber=!!containerNormalizeContainerNumber(containerInput.value);
+  ftWrap.style.display=hasContainerNumber?"":"none";
+  if(!hasContainerNumber) ftSelect.value="";
+}
+// コンテナ番号が空欄の間は「作業内容②」欄自体を非表示にし、handlingContentも残さない。
+function masterRefreshHandlingContentVisibility(){
+  const containerInput=document.getElementById("masterFormContainerNumber");
+  const wrap=document.getElementById("masterFormHandlingContentWrap");
+  const select=document.getElementById("masterFormHandlingContent");
+  if(!containerInput || !wrap || !select) return;
+  const hasContainerNumber=!!containerNormalizeContainerNumber(containerInput.value);
+  wrap.style.display=hasContainerNumber?"":"none";
+  const currentValue=select.value;
+  select.innerHTML=MASTER_HANDLING_CONTENT_OPTIONS.map(v=>`<option value="${escapeAttr(v)}">${v===""?"未選択":escapeHtml(v)}</option>`).join("");
+  select.value=(hasContainerNumber && MASTER_HANDLING_CONTENT_OPTIONS.includes(currentValue))?currentValue:"";
+}
+function masterOnContainerNumberInput(el){
+  el.value=containerNormalizeContainerNumber(el.value);
+  masterRefreshContentOptions();
+  masterRefreshFtVisibility();
+  masterRefreshHandlingContentVisibility();
+}
+function masterPopulateVehicleSelect(currentValue){
+  const sel=document.getElementById("masterFormVehicleNumber");
+  if(!sel) return;
+  const names=getMaster("truck_vehicles",defaultVehicles).map(v=>v.name).filter(Boolean);
+  sel.innerHTML=containerBuildSelectOptions(names,currentValue);
+}
+function masterPopulateDriverSelect(currentValue){
+  const sel=document.getElementById("masterFormDriverName");
+  if(!sel) return;
+  const names=getMaster("truck_drivers",defaultDrivers).filter(Boolean);
+  sel.innerHTML=containerBuildSelectOptions(names,currentValue);
+}
+function masterBuildRows(){
+  const generalRows=dispatchRecords
+    .filter(r=>String(r.date||"").slice(0,7)===masterCurrentMonth)
+    .map(r=>({kind:"general",record:r}));
+  const containerRows=containerDispatchRecords
+    .filter(r=>String(r.date||"").slice(0,7)===masterCurrentMonth)
+    .map(r=>({kind:"container",record:r}));
+  return generalRows.concat(containerRows).sort((a,b)=>String(a.record.date||"").localeCompare(String(b.record.date||"")));
+}
+function renderDispatchMaster(){
+  const monthInput=document.getElementById("masterMonth");
+  if(monthInput) monthInput.value=masterCurrentMonth;
+  const rows=masterBuildRows();
+  masterLastRenderedRows=rows;
+  const body=document.getElementById("masterTableBody");
+  const empty=document.getElementById("masterEmpty");
+  if(!body) return;
+  if(!rows.length){ body.innerHTML=""; if(empty) empty.style.display="block"; return; }
+  if(empty) empty.style.display="none";
+  const isAdmin=window.firebaseProfile?.role==="admin";
+  body.innerHTML=rows.map((row,i)=>{
+    const r=row.record;
+    const isContainer=row.kind==="container";
+    const origin=isContainer?r.origin:r.loadPlace;
+    const destination=isContainer?r.destination:r.unloadPlace;
+    const firstAssignment=isContainer?null:dispatchDisplayAssignments(r)[0];
+    const vehicleNumber=isContainer?(r.vehicleNumber||"未定"):(firstAssignment?firstAssignment.vehicleNumber:"未定");
+    const driverName=isContainer?(r.driverName||"未定"):(firstAssignment?firstAssignment.driverName:"未定");
+    const content=isContainer?r.content:r.workType;
+    const handlingContent=isContainer?(r.handlingContent||""):"";
+    const time=isContainer?r.time:r.arrivalTime;
+    return `<tr>
+      <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td>
+      <td>${isContainer?"コンテナ":"一般"}</td>
+      <td>${escapeHtml(r.shipper||"")}</td>
+      <td>${escapeHtml(origin||"")}</td>
+      <td>${escapeHtml(destination||"")}</td>
+      <td>${escapeHtml(vehicleNumber)}</td>
+      <td>${escapeHtml(driverName)}</td>
+      <td>${escapeHtml(r.item||"")}</td>
+      <td>${escapeHtml(r.containerNumber||"")}</td>
+      <td>${escapeHtml(content||"")}</td>
+      <td>${escapeHtml(handlingContent)}</td>
+      <td class="container-col-time">${escapeHtml(time||"")}</td>
+      <td class="container-col-action"><button type="button" class="dispatch-edit-btn" onclick="masterEditRow(${i})">編集</button>${isAdmin?`<button type="button" class="dispatch-delete-btn" onclick="masterDeleteRow(${i})">削除</button>`:""}</td>
+    </tr>`;
+  }).join("");
+}
+function masterOpenForm(mode,row){
+  masterEditingKind=(mode==="edit" && row) ? row.kind : null;
+  masterEditingId=(mode==="edit" && row) ? String(row.record.id||"") : "";
+  const record=row?row.record:null;
+  const isContainer=row&&row.kind==="container";
+  document.getElementById("masterFormTitle").textContent=(mode==="edit")?"配車マスターの編集":"配車マスターの新規登録";
+  document.getElementById("masterFormSubmitBtn").textContent=(mode==="edit")?"更新":"登録";
+
+  const defaultDate=(masterCurrentMonth===localDateKey().slice(0,7))?localDateKey():`${masterCurrentMonth}-01`;
+  document.getElementById("masterFormDate").value=record?record.date:defaultDate;
+  document.getElementById("masterFormShipper").value=record?(record.shipper||""):"";
+  document.getElementById("masterFormOrigin").value=record?(isContainer?(record.origin||""):(record.loadPlace||"")):"";
+  document.getElementById("masterFormDestination").value=record?(isContainer?(record.destination||""):(record.unloadPlace||"")):"";
+  document.getElementById("masterFormItem").value=record?(record.item||""):"";
+  document.getElementById("masterFormContainerNumber").value=record?(record.containerNumber||""):"";
+  document.getElementById("masterFormFt").value=(record&&record.ft)?record.ft:"20";
+  document.getElementById("masterFormTime").value=record?(isContainer?(record.time||""):(record.arrivalTime||"")):"";
+  document.getElementById("masterFormNote").value=record?(record.note||""):"";
+
+  masterRefreshContentOptions();
+  masterRefreshFtVisibility();
+  masterRefreshHandlingContentVisibility();
+  const currentContent=record?(isContainer?(record.content||""):(record.workType||"")):"";
+  const contentSelect=document.getElementById("masterFormContent");
+  if(currentContent && [...contentSelect.options].some(o=>o.value===currentContent)) contentSelect.value=currentContent;
+
+  const currentHandlingContent=record?(isContainer?(record.handlingContent||""):""):"";
+  const handlingContentSelect=document.getElementById("masterFormHandlingContent");
+  if(isContainer && currentHandlingContent && [...handlingContentSelect.options].some(o=>o.value===currentHandlingContent)) handlingContentSelect.value=currentHandlingContent;
+
+  const firstAssignment=(record&&!isContainer)?dispatchNormalizeAssignments(record)[0]:null;
+  const vehicleValue=record?(isContainer?(record.vehicleNumber||""):(firstAssignment?firstAssignment.vehicleNumber:"")):"";
+  const driverValue=record?(isContainer?(record.driverName||""):(firstAssignment?firstAssignment.driverName:"")):"";
+  masterPopulateVehicleSelect(vehicleValue);
+  masterPopulateDriverSelect(driverValue);
+
+  const overlay=document.getElementById("masterFormOverlay");
+  if(overlay) overlay.style.display="flex";
+}
+function masterCloseForm(){
+  const overlay=document.getElementById("masterFormOverlay");
+  if(overlay) overlay.style.display="none";
+  masterEditingKind=null;
+  masterEditingId="";
+}
+function masterAddNew(){ masterOpenForm("create",null); }
+function masterEditRow(i){
+  const row=masterLastRenderedRows[i];
+  if(row) masterOpenForm("edit",row);
+}
+// 削除はadminのみ。区分（一般／コンテナ）に応じて元データ（dispatchRecords／containerDispatchRecords）をrecord.idで1件だけ削除する。
+async function masterDeleteRow(i){
+  const row=masterLastRenderedRows[i];
+  if(!row || !row.record || !row.record.id) return;
+  const isContainer=row.kind==="container";
+  const confirmMessage=isContainer
+    ? "このコンテナ配車を削除しますか？\nこの操作は元に戻せません。"
+    : "この配車予定を削除しますか？\nこの操作は元に戻せません。";
+  if(!window.confirm(confirmMessage)) return;
+  const id=row.record.id;
+  try{
+    if(isContainer){
+      await window.firebaseCloud.deleteContainerDispatchRecord(id);
+    }else{
+      await window.firebaseCloud.deleteDispatchRecord(id);
+    }
+  }catch(e){
+    console.error(e);
+    alert("削除に失敗しました。通信状態や権限を確認してください。");
+    return;
+  }
+  if(isContainer){
+    const idx=containerDispatchRecords.findIndex(r=>String(r.id||"")===String(id));
+    if(idx>=0) containerDispatchRecords.splice(idx,1);
+    if(typeof renderContainerDispatch==="function") renderContainerDispatch();
+    if(typeof renderContainerHistory==="function") renderContainerHistory();
+  }else{
+    const idx=dispatchRecords.findIndex(r=>String(r.id||"")===String(id));
+    if(idx>=0) dispatchRecords.splice(idx,1);
+    if(typeof renderDispatch==="function") renderDispatch();
+  }
+  renderDispatchMaster();
+}
+async function masterSubmitForm(){
+  const date=document.getElementById("masterFormDate").value;
+  if(!date){ alert("日付を選択してください。"); return; }
+
+  const containerNumber=containerNormalizeContainerNumber(document.getElementById("masterFormContainerNumber").value);
+  // 編集時は元データの保存先（一般配車／コンテナ配車）を変えない。新規登録時のみコンテナ番号の有無で保存先を決める。
+  const isContainer=masterEditingKind?masterEditingKind==="container":!!containerNumber;
+  if(isContainer && !containerNumber){ alert("コンテナ番号を半角英数字（A-Z、0-9）で入力してください。"); return; }
+
+  const shipper=document.getElementById("masterFormShipper").value.trim();
+  const origin=document.getElementById("masterFormOrigin").value.trim();
+  const destination=document.getElementById("masterFormDestination").value.trim();
+  const item=document.getElementById("masterFormItem").value.trim();
+  const time=document.getElementById("masterFormTime").value;
+  const note=document.getElementById("masterFormNote").value.trim();
+  const vehicleNumber=document.getElementById("masterFormVehicleNumber").value;
+  const driverName=document.getElementById("masterFormDriverName").value;
+  const content=document.getElementById("masterFormContent").value;
+  const handlingContent=document.getElementById("masterFormHandlingContent").value;
+
+  try{
+    if(isContainer){
+      const previous=masterEditingId?containerDispatchRecords.find(r=>String(r.id||"")===masterEditingId):null;
+      const record={
+        ...(previous||{}),
+        ...(previous?.id?{id:previous.id}:{}),
+        date, arrivalDate:date,
+        shipper, origin, destination,
+        vehicleNumber, driverName,
+        containerNumber,
+        // 配車マスターにシャーシ車番の入力欄はないため、②登録済みの値を編集時は保持し、新規登録時は空文字にする。
+        chassisNumber:previous?.chassisNumber||"",
+        ft:document.getElementById("masterFormFt").value,
+        content, handlingContent, time, item, note
+      };
+      const id=await window.firebaseCloud.saveContainerDispatchRecord(record);
+      record.id=id;
+      const idx=containerDispatchRecords.findIndex(r=>String(r.id||"")===id);
+      if(idx>=0) containerDispatchRecords[idx]=record; else containerDispatchRecords.push(record);
+    }else{
+      const previous=masterEditingId?dispatchRecords.find(r=>String(r.id||"")===masterEditingId):null;
+      const assignments=previous?dispatchNormalizeAssignments(previous):[{vehicleNumber:"",driverName:""}];
+      assignments[0]={vehicleNumber,driverName};
+      const record={
+        ...(previous||{}),
+        ...(previous?.id?{id:previous.id}:{}),
+        date, arrivalDate:date,
+        shipper, loadPlace:origin, unloadPlace:destination,
+        arrivalTime:time,
+        item,
+        vehicleType:previous?.vehicleType||DISPATCH_VEHICLE_TYPES[0],
+        count:previous?.count||`${assignments.length}台`,
+        assignments,
+        vehicleNo:assignments[0].vehicleNumber,
+        driver:assignments[0].driverName,
+        workType:content,
+        note
+      };
+      const id=await window.firebaseCloud.saveDispatchRecord(record);
+      record.id=id;
+      const idx=dispatchRecords.findIndex(r=>String(r.id||"")===id);
+      if(idx>=0) dispatchRecords[idx]=record; else dispatchRecords.push(record);
+    }
+    masterCloseForm();
+    masterCurrentMonth=date.slice(0,7);
+    renderDispatchMaster();
+  }catch(e){
+    console.error(e);
+    alert("配車マスターのFirestore保存に失敗しました。通信状態を確認してください。");
+  }
+}
+
+function escapeHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function escapeAttr(s){return s.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function renderRecords(){
   const all=getRecords();
