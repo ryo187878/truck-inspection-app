@@ -1513,7 +1513,7 @@ async function loadCompanyProfile(companyId){
   function applyRole(profile, user){
     const tabs=[...document.querySelectorAll(".tramo-subnav .tab")];
     if(profile.role==="driver") {
-      const allowedPages=new Set(["inspection","dispatch","container","containerHistory"]);
+      const allowedPages=new Set(["inspection","dispatch","container","containerHistory","dispatchMaster"]);
       const allowedGroups=new Set(["inspection","dispatch"]);
       document.querySelectorAll(".tramo-home-btn").forEach(button=>{
         button.style.display=allowedGroups.has(button.dataset.group)?"":"none";
