@@ -243,6 +243,9 @@ textarea{min-height:80px;resize:vertical}
 /* ===== 配車マスター専用レイアウト（①②③・日常点検・管理画面には影響させない。ID指定で優先度を確保） ===== */
 main:has(#dispatchMasterPage.active){max-width:1600px}
 #dispatchMasterPage .container-wrap{max-width:100%}
+/* Excel出力（1日）専用の対象日入力。検索条件に見えないよう、月選択とは別グループでコンパクトに表示する。 */
+#dispatchMasterPage .master-excel-group{display:inline-flex;align-items:center;gap:6px}
+#dispatchMasterPage .container-toolbar input[type="date"]{width:auto;padding:9px 10px;font-size:14px;border:1px solid #ccd2d8;border-radius:10px;background:#fff}
 /* table-layout:autoで文字量に応じた幅にし、見出し・データが1文字ずつ縦に折り返すのを防ぐ。 */
 #dispatchMasterPage .container-table{table-layout:auto;min-width:1300px}
 #dispatchMasterPage .container-table th,#dispatchMasterPage .container-table td{white-space:nowrap}
@@ -337,6 +340,7 @@ main:has(#dispatchMasterPage.active){max-width:1600px}
   }
 }  
 </style>
+<script src="./vendor/exceljs/exceljs.min.js"></script>
 </head>
 <body>
 <div id="authGate" class="auth-gate">
@@ -1012,6 +1016,11 @@ main:has(#dispatchMasterPage.active){max-width:1600px}
     <button type="button" onclick="masterGoNextMonth()">翌月 ▶</button>
     <button type="button" class="container-today" onclick="masterGoThisMonth()">今月</button>
     <button type="button" class="container-add" onclick="masterAddNew()">＋ 新規登録</button>
+    <span class="master-excel-group">
+      <button type="button" onclick="exportMasterDailyExcel()">Excel出力（1日）</button>
+      <input id="masterExcelDate" type="date">
+    </span>
+    <button type="button" onclick="exportMasterMonthlyExcel()">Excel出力（1か月）</button>
   </div>
   <div class="container-table-scroll">
     <table class="container-table">
@@ -2750,6 +2759,9 @@ function masterBuildRows(){
 function renderDispatchMaster(){
   const monthInput=document.getElementById("masterMonth");
   if(monthInput) monthInput.value=masterCurrentMonth;
+  // Excel出力（1日）の対象日入力欄。初期値だけローカル日付の今日を設定し、以後はユーザーの選択を上書きしない。
+  const excelDateInput=document.getElementById("masterExcelDate");
+  if(excelDateInput && !excelDateInput.value) excelDateInput.value=localDateKey();
   const rows=masterBuildRows();
   masterLastRenderedRows=rows;
   const body=document.getElementById("masterTableBody");
@@ -2939,6 +2951,202 @@ async function masterSubmitForm(){
     console.error(e);
     alert("配車マスターのFirestore保存に失敗しました。通信状態を確認してください。");
   }
+}
+
+// ===== 配車マスター Excel出力（読み取り専用。Firestoreへのread/write/deleteは追加しない） =====
+const MASTER_EXCEL_HEADERS=["日付","荷主","発地","着地","車番","乗務員","荷物","コンテナ番号","作業内容①","作業内容②","時間"];
+// dispatchRecords／containerDispatchRecordsを日付（1日）単位で絞り込む。masterBuildRows()と同じ組み立て方だが、月ではなく日付が完全一致するものだけを対象にする。
+function masterBuildRowsForDate(dateKey){
+  const generalRows=dispatchRecords
+    .filter(r=>String(r.date||"")===dateKey)
+    .map(r=>({kind:"general",record:r}));
+  const containerRows=containerDispatchRecords
+    .filter(r=>String(r.date||"")===dateKey)
+    .map(r=>({kind:"container",record:r}));
+  return generalRows.concat(containerRows).sort((a,b)=>String(a.record.date||"").localeCompare(String(b.record.date||"")));
+}
+// 配車マスター一覧と同じ項目対応（一般配車／コンテナ配車）で、Excelの11列に整形する。undefined/nullは空文字にする。
+function masterRowToExcelRow(row){
+  const r=row.record;
+  const isContainer=row.kind==="container";
+  const origin=isContainer?r.origin:r.loadPlace;
+  const destination=isContainer?r.destination:r.unloadPlace;
+  const firstAssignment=isContainer?null:dispatchDisplayAssignments(r)[0];
+  const vehicleNumber=isContainer?r.vehicleNumber:(firstAssignment?firstAssignment.vehicleNumber:"");
+  const driverName=isContainer?r.driverName:(firstAssignment?firstAssignment.driverName:"");
+  const content=isContainer?r.content:r.workType;
+  const handlingContent=isContainer?r.handlingContent:"";
+  const time=isContainer?r.time:r.arrivalTime;
+  return [r.date,r.shipper,origin,destination,vehicleNumber,driverName,r.item,r.containerNumber,content,handlingContent,time]
+    .map(v=>String(v==null?"":v));
+}
+// 配車マスターExcel専用のシートXML＋ブック一式を組み立てる（既存exportExcel系と同じ自前XLSX生成方式を再利用）。
+async function buildMasterExcelBlobWithExcelJS(rows, periodText){
+  if(typeof ExcelJS === "undefined"){
+    throw new Error("ExcelJS が読み込まれていません");
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("配車マスター");
+
+  // 1行目：タイトル
+  worksheet.mergeCells("A1:K1");
+  const titleCell = worksheet.getCell("A1");
+  titleCell.value = "TRAMO 配車マスター";
+  titleCell.font = { bold: true, size: 16 };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  worksheet.getRow(1).height = 26;
+
+  // 2行目：期間表示用
+  worksheet.mergeCells("A2:K2");
+  worksheet.getCell("A2").value = periodText || "";
+  worksheet.getCell("A2").alignment = {
+    horizontal: "center",
+    vertical: "middle"
+  };
+
+  // 3行目：空白
+  worksheet.getRow(3).height = 8;
+
+  // 4行目：見出し
+  const headerRow = worksheet.getRow(4);
+  MASTER_EXCEL_HEADERS.forEach((header, index) => {
+    headerRow.getCell(index + 1).value = header;
+  });
+
+  headerRow.font = { bold: true };
+  headerRow.alignment = {
+    horizontal: "center",
+    vertical: "middle",
+    wrapText: true
+  };
+  headerRow.height = 24;
+
+  // 5行目以降：データ
+  rows.forEach(row => {
+    worksheet.addRow(masterRowToExcelRow(row));
+  });
+
+  // 列幅
+  const widths = [13,18,16,16,16,14,18,20,16,16,10];
+  widths.forEach((width, index) => {
+    worksheet.getColumn(index + 1).width = width;
+  });
+
+  // 全セル
+  worksheet.eachRow((row, rowNumber) => {
+    row.eachCell((cell) => {
+      cell.alignment = {
+        ...cell.alignment,
+        vertical: "middle",
+        wrapText: true
+      };
+
+      if(rowNumber >= 4){
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" }
+        };
+      }
+    });
+  });
+
+  // Excel標準オートフィルター
+  const lastRow = Math.max(4, worksheet.rowCount);
+  worksheet.autoFilter = {
+    from: "A4",
+    to: `K${lastRow}`
+  };
+
+  // 上4行固定
+  worksheet.views = [{
+    state: "frozen",
+    ySplit: 4
+  }];
+
+  // 印刷設定
+  worksheet.pageSetup = {
+    paperSize: 9,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    margins: {
+      left: 0.2,
+      right: 0.2,
+      top: 0.3,
+      bottom: 0.3,
+      header: 0.1,
+      footer: 0.1
+    }
+  };
+
+  worksheet.pageSetup.printArea = `A1:K${lastRow}`;
+  worksheet.pageSetup.printTitlesRow = "1:4";
+
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  return new Blob(
+    [buffer],
+    {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    }
+  );
+}
+
+function buildMasterExcelBlob(rows){
+  const data=[MASTER_EXCEL_HEADERS,...rows.map(masterRowToExcelRow)];
+  const maxRow=data.length;
+  const lastCol=colName(MASTER_EXCEL_HEADERS.length);
+  // 列順（日付/荷主/発地/着地/車番/乗務員/荷物/コンテナ番号/作業内容①/作業内容②/時間）は変更せず、幅だけ読みやすく広げる。
+  const cols=[13,18,16,16,16,14,18,20,16,16,10];
+  const colsXml=`<cols>${cols.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")}</cols>`;
+  // worksheetのautoFilterとworkbookの_xlnm._FilterDatabaseで必ず同じ範囲を使う。
+  const autoFilterRef=`A1:${lastCol}${maxRow}`;
+  let sheetData="";
+  data.forEach((row,ri)=>{
+    const rr=ri+1;
+    sheetData+=`<row r="${rr}" ht="${rr===1?26:20}" customHeight="1">`;
+    row.forEach((v,ci)=>{
+      const sid=rr===1?2:1;
+      sheetData+=cellXml(rr,ci+1,v,sid);
+    });
+    sheetData+="</row>";
+  });
+  const stylesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="0"/><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs></styleSheet>`;
+  const sheetXmlStr=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${lastCol}${maxRow}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="20"/>${colsXml}<sheetData>${sheetData}</sheetData><autoFilter ref="${autoFilterRef}"/><pageMargins left="0.2" right="0.2" top="0.3" bottom="0.3" header="0.1" footer="0.1"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
+  const files=[
+    {name:"[Content_Types].xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>`},
+    {name:"_rels/.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:"xl/styles.xml",data:stylesXml},
+    {name:"xl/workbook.xml",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="配車マスター" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'${xmlEsc("配車マスター")}'!$A$1:$${lastCol}$${maxRow}</definedName></definedNames></workbook>`},
+    {name:"xl/_rels/workbook.xml.rels",data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:"xl/worksheets/sheet1.xml",data:sheetXmlStr}
+  ];
+  const bytes=zipStore(files);
+  return new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function downloadMasterExcelBlob(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=filename; a.style.display="none";
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{a.remove(); URL.revokeObjectURL(url);},1500);
+}
+async function exportMasterDailyExcel(){
+  const dateKey=(document.getElementById("masterExcelDate")||{}).value||localDateKey();
+  const rows=masterBuildRowsForDate(dateKey);
+  if(!rows.length){ alert(`${dateKey}の配車マスターデータはありません。`); return; }
+  const blob=await buildMasterExcelBlobWithExcelJS(rows, `対象日：${dateKey}`);
+  downloadMasterExcelBlob(blob,`配車マスター_${dateKey.replaceAll("-","")}.xlsx`);
+}
+async function exportMasterMonthlyExcel(){
+  const rows=masterBuildRows();
+  if(!rows.length){ alert(`${masterCurrentMonth}の配車マスターデータはありません。`); return; }
+  const blob=await buildMasterExcelBlobWithExcelJS(rows, `対象月：${masterCurrentMonth}`);
+  downloadMasterExcelBlob(blob,`配車マスター_${masterCurrentMonth.replaceAll("-","")}.xlsx`);
 }
 
 function escapeHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -4333,6 +4541,8 @@ if ("serviceWorker" in navigator) {
 
 </body>
 </html>
+
+
 
 
 
