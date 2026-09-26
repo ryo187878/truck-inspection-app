@@ -979,6 +979,13 @@ main:has(#dispatchMasterPage.active){max-width:1600px}
       <button type="button" class="clear" onclick="containerHistoryClearFilters()">条件クリア</button>
     </div>
   </div>
+    <div class="container-toolbar">
+    <span class="master-excel-group">
+      <button type="button" onclick="exportContainerHistoryDailyExcel()">Excel出力（1日）</button>
+      <input id="containerHistoryExcelDate" type="date">
+    </span>
+    <button type="button" onclick="exportContainerHistoryMonthlyExcel()">Excel出力（1か月）</button>
+  </div>
   <div id="containerHistoryCount" class="small" style="margin:10px 0 6px;font-weight:700"></div>
   <div class="container-table-scroll">
     <table class="container-table">
@@ -2678,6 +2685,211 @@ function renderContainerHistory(){
       <td>${escapeHtml(r.driverName||"未定")}</td>
     </tr>
   `).join("");
+}
+
+// ===== コンテナ履歴 Excel出力 =====
+const CONTAINER_HISTORY_EXCEL_HEADERS=[
+  "日付",
+  "荷主",
+  "発地",
+  "着地",
+  "着日",
+  "時間",
+  "コンテナ番号",
+  "FT",
+  "荷物",
+  "作業内容①",
+  "作業内容②",
+  "シャーシ車番",
+  "車番",
+  "乗務員"
+];
+
+function containerHistoryRowToExcelRow(r){
+  return [
+    r.date,
+    r.shipper,
+    r.origin,
+    r.destination,
+    r.arrivalDate||r.date,
+    r.time,
+    r.containerNumber,
+    r.ft,
+    r.item||"",
+    r.content,
+    r.handlingContent||"",
+    r.chassisNumber,
+    r.vehicleNumber||"未定",
+    r.driverName||"未定"
+  ].map(v=>String(v==null?"":v));
+}
+async function buildContainerHistoryExcelBlobWithExcelJS(rows, periodText){
+  if(typeof ExcelJS === "undefined"){
+    throw new Error("ExcelJS が読み込まれていません");
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("コンテナ履歴");
+
+  // 1行目：タイトル
+  worksheet.mergeCells("A1:N1");
+  const titleCell = worksheet.getCell("A1");
+  titleCell.value = "TRAMO コンテナ履歴";
+  titleCell.font = { bold: true, size: 16 };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  worksheet.getRow(1).height = 26;
+
+  // 2行目：対象日／対象月
+  worksheet.mergeCells("A2:N2");
+  worksheet.getCell("A2").value = periodText || "";
+  worksheet.getCell("A2").alignment = {
+    horizontal: "center",
+    vertical: "middle"
+  };
+
+  // 3行目：空白
+  worksheet.getRow(3).height = 8;
+
+  // 4行目：見出し
+  const headerRow = worksheet.getRow(4);
+  CONTAINER_HISTORY_EXCEL_HEADERS.forEach((header, index) => {
+    headerRow.getCell(index + 1).value = header;
+  });
+
+  headerRow.font = { bold: true };
+  headerRow.alignment = {
+    horizontal: "center",
+    vertical: "middle",
+    wrapText: true
+  };
+  headerRow.height = 24;
+
+  // 5行目以降：データ
+  rows.forEach(r => {
+    worksheet.addRow(containerHistoryRowToExcelRow(r));
+  });
+
+  // 14列の列幅
+  const widths = [13,18,16,16,13,10,20,8,18,16,16,18,16,14];
+  widths.forEach((width, index) => {
+    worksheet.getColumn(index + 1).width = width;
+  });
+
+  // セル表示・罫線
+  worksheet.eachRow((row, rowNumber) => {
+    row.eachCell((cell) => {
+      cell.alignment = {
+        ...cell.alignment,
+        vertical: "middle",
+        wrapText: true
+      };
+
+      if(rowNumber >= 4){
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" }
+        };
+      }
+    });
+  });
+
+  const lastRow = Math.max(4, worksheet.rowCount);
+
+  // Excel標準フィルター
+  worksheet.autoFilter = {
+    from: "A4",
+    to: `N${lastRow}`
+  };
+
+  // 上4行固定
+  worksheet.views = [{
+    state: "frozen",
+    ySplit: 4
+  }];
+
+  // A4横印刷・横幅1ページ
+  worksheet.pageSetup = {
+    paperSize: 9,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    margins: {
+      left: 0.2,
+      right: 0.2,
+      top: 0.3,
+      bottom: 0.3,
+      header: 0.1,
+      footer: 0.1
+    }
+  };
+
+  worksheet.pageSetup.printArea = `A1:N${lastRow}`;
+  worksheet.pageSetup.printTitlesRow = "1:4";
+
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  return new Blob(
+    [buffer],
+    {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    }
+  );
+}
+async function exportContainerHistoryDailyExcel(){
+  const dateKey=(document.getElementById("containerHistoryExcelDate")||{}).value||localDateKey();
+
+  const rows=containerDispatchRecords
+    .filter(r=>String(r.date||"")===dateKey)
+    .slice()
+    .sort((a,b)=>String(b.time||"").localeCompare(String(a.time||"")));
+
+  if(!rows.length){
+    alert(`${dateKey}のコンテナ履歴データはありません。`);
+    return;
+  }
+
+  const blob=await buildContainerHistoryExcelBlobWithExcelJS(
+    rows,
+    `対象日：${dateKey}`
+  );
+
+  downloadMasterExcelBlob(
+    blob,
+    `コンテナ履歴_${dateKey.replaceAll("-","")}.xlsx`
+  );
+}
+
+async function exportContainerHistoryMonthlyExcel(){
+  const dateInput=document.getElementById("containerHistoryExcelDate");
+  const baseDate=(dateInput&&dateInput.value)?dateInput.value:localDateKey();
+  const monthKey=baseDate.slice(0,7);
+
+  const rows=containerDispatchRecords
+    .filter(r=>String(r.date||"").slice(0,7)===monthKey)
+    .slice()
+    .sort((a,b)=>{
+      const dateCompare=String(a.date||"").localeCompare(String(b.date||""));
+      if(dateCompare!==0) return dateCompare;
+      return String(a.time||"").localeCompare(String(b.time||""));
+    });
+
+  if(!rows.length){
+    alert(`${monthKey}のコンテナ履歴データはありません。`);
+    return;
+  }
+
+  const blob=await buildContainerHistoryExcelBlobWithExcelJS(
+    rows,
+    `対象月：${monthKey}`
+  );
+
+  downloadMasterExcelBlob(
+    blob,
+    `コンテナ履歴_${monthKey.replaceAll("-","")}.xlsx`
+  );
 }
 
 // ===== 配車マスター（①dispatchRecords・②containerDispatchRecordsを共通データとして参照するだけ。データは複製しない） =====
