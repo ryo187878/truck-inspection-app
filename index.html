@@ -4070,6 +4070,7 @@ async function saveRecord(){
     alert("点検記録はこの端末には保存されましたが、Firebaseへのクラウド保存に失敗しました。\n\n次の設定を確認してください：\n・管理者ログイン\n・Firestoreのルール\n\nエラー："+(e&&e.message?e.message:e));
   }
   resetAfterSave();
+window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 /* ===== Excel export =====
