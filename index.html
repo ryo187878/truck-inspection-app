@@ -1038,6 +1038,7 @@ main:has(#dispatchMasterPage.active){max-width:1600px}
           <th>荷主</th>
           <th>発地</th>
           <th>着地</th>
+          <th class="container-col-date">着日</th>
           <th>車番</th>
           <th>乗務員</th>
           <th>荷物</th>
@@ -1073,6 +1074,10 @@ main:has(#dispatchMasterPage.active){max-width:1600px}
       <div>
         <label>着地</label>
         <input id="masterFormDestination" type="text" placeholder="例：青森">
+      </div>
+      <div>
+        <label>着日</label>
+        <input id="masterFormArrivalDate" type="date">
       </div>
       <div>
         <label>車番</label>
@@ -2213,6 +2218,39 @@ function showPage(page,btn){
   if(page==="dispatchMaster") renderDispatchMaster();
 }
 
+// ===== 荷主ごとの表示グルーピング（配車マスター／先行配車／海コン履歴・各Excel共通） =====
+// 優先順位：ヤマト→その他→西原産業→トランシス→八楠→ルート産業→宏商→善心（荷主名は完全一致で判定）。
+const SHIPPER_GROUP_PRIORITY=["ヤマト","__OTHERS__","西原産業","トランシス","八楠","ルート産業","宏商","善心"];
+// 既存の並び順（日付・時間など）を保ったまま、荷主グループ単位でまとめ直す。
+// Array.prototype.sortは安定ソートのため、同一グループ内では入力配列の相対順序がそのまま維持される。
+function sortRowsByShipperGroup(rows,getShipper){
+  const othersFirstSeen=new Map(); // 「その他」に該当する荷主名ごとの初出インデックス（配列の最初に登場した順を維持するため）
+  rows.forEach((row,i)=>{
+    const shipper=String(getShipper(row)||"");
+    if(!SHIPPER_GROUP_PRIORITY.includes(shipper) && !othersFirstSeen.has(shipper)){
+      othersFirstSeen.set(shipper,i);
+    }
+  });
+  const rankOf=(shipper)=>{
+    const idx=SHIPPER_GROUP_PRIORITY.indexOf(shipper);
+    return idx>=0?idx:SHIPPER_GROUP_PRIORITY.indexOf("__OTHERS__");
+  };
+  return rows
+    .map((row,i)=>({row,i}))
+    .sort((a,b)=>{
+      const shipperA=String(getShipper(a.row)||"");
+      const shipperB=String(getShipper(b.row)||"");
+      const rankA=rankOf(shipperA);
+      const rankB=rankOf(shipperB);
+      if(rankA!==rankB) return rankA-rankB;
+      if(rankA===SHIPPER_GROUP_PRIORITY.indexOf("__OTHERS__") && shipperA!==shipperB){
+        return othersFirstSeen.get(shipperA)-othersFirstSeen.get(shipperB);
+      }
+      return a.i-b.i; // 同一荷主内は既存の相対順序（入力配列の順）を維持
+    })
+    .map(x=>x.row);
+}
+
 // ===== ②先行配車（Firestore保存） =====
 let dispatchRecords=[];
 let dispatchCurrentMonth=localDateKey().slice(0,7);
@@ -2365,7 +2403,8 @@ function renderDispatch(){
   if(monthInput) monthInput.value=dispatchCurrentMonth;
   // ①先行配車は「今日より未来」の予定だけを表示する。当日・過去のデータはdispatchRecords／Firestoreから削除せず、配車マスター側では引き続きすべて表示する。
   const todayKey=localDateKey();
-  const rows=dispatchRecords.filter(r=>String(r.date||"").slice(0,7)===dispatchCurrentMonth && String(r.date||"")>todayKey).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const dateSortedRows=dispatchRecords.filter(r=>String(r.date||"").slice(0,7)===dispatchCurrentMonth && String(r.date||"")>todayKey).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const rows=sortRowsByShipperGroup(dateSortedRows,r=>r.shipper);
   dispatchLastRenderedRows=rows;
   const body=document.getElementById("dispatchTableBody");
   const empty=document.getElementById("dispatchEmpty");
@@ -2628,7 +2667,7 @@ function renderContainerHistory(){
 
   // ③の containerDispatchRecords を直接参照するだけで、④側にはコピーを作らない。
   const hasAnyRecord=containerDispatchRecords.length>0;
-  const rows=containerDispatchRecords
+  const dateSortedRows=containerDispatchRecords
     .filter(r=>{
       if(from && String(r.date||"")<from) return false;
       if(to && String(r.date||"")>to) return false;
@@ -2649,6 +2688,8 @@ function renderContainerHistory(){
       if(dateCompare!==0) return dateCompare;
       return String(b.time||"").localeCompare(String(a.time||""));
     });
+  // 画面は現在の日付降順・時間降順を維持したまま、その上から荷主単位でまとめる。
+  const rows=sortRowsByShipperGroup(dateSortedRows,r=>r.shipper);
 
   const countEl=document.getElementById("containerHistoryCount");
   if(countEl) countEl.textContent=`検索結果：${rows.length}件`;
@@ -2841,10 +2882,12 @@ async function buildContainerHistoryExcelBlobWithExcelJS(rows, periodText){
 async function exportContainerHistoryDailyExcel(){
   const dateKey=(document.getElementById("containerHistoryExcelDate")||{}).value||localDateKey();
 
-  const rows=containerDispatchRecords
+  const dateSortedRows=containerDispatchRecords
     .filter(r=>String(r.date||"")===dateKey)
     .slice()
     .sort((a,b)=>String(b.time||"").localeCompare(String(a.time||"")));
+  // Excelは現在の並び順を維持したまま、その上から荷主単位でまとめる。
+  const rows=sortRowsByShipperGroup(dateSortedRows,r=>r.shipper);
 
   if(!rows.length){
     alert(`${dateKey}のコンテナ履歴データはありません。`);
@@ -2867,7 +2910,7 @@ async function exportContainerHistoryMonthlyExcel(){
   const baseDate=(dateInput&&dateInput.value)?dateInput.value:localDateKey();
   const monthKey=baseDate.slice(0,7);
 
-  const rows=containerDispatchRecords
+  const dateSortedRows=containerDispatchRecords
     .filter(r=>String(r.date||"").slice(0,7)===monthKey)
     .slice()
     .sort((a,b)=>{
@@ -2875,6 +2918,8 @@ async function exportContainerHistoryMonthlyExcel(){
       if(dateCompare!==0) return dateCompare;
       return String(a.time||"").localeCompare(String(b.time||""));
     });
+  // Excelは現在の並び順を維持したまま、その上から荷主単位でまとめる。
+  const rows=sortRowsByShipperGroup(dateSortedRows,r=>r.shipper);
 
   if(!rows.length){
     alert(`${monthKey}のコンテナ履歴データはありません。`);
@@ -2966,7 +3011,8 @@ function masterBuildRows(){
   const containerRows=containerDispatchRecords
     .filter(r=>String(r.date||"").slice(0,7)===masterCurrentMonth)
     .map(r=>({kind:"container",record:r}));
-  return generalRows.concat(containerRows).sort((a,b)=>String(a.record.date||"").localeCompare(String(b.record.date||"")));
+  const dateSortedRows=generalRows.concat(containerRows).sort((a,b)=>String(a.record.date||"").localeCompare(String(b.record.date||"")));
+  return sortRowsByShipperGroup(dateSortedRows,row=>row.record.shipper);
 }
 function renderDispatchMaster(){
   const monthInput=document.getElementById("masterMonth");
@@ -2999,6 +3045,7 @@ function renderDispatchMaster(){
       <td>${escapeHtml(r.shipper||"")}</td>
       <td>${escapeHtml(origin||"")}</td>
       <td>${escapeHtml(destination||"")}</td>
+      <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.arrivalDate||r.date))}</td>
       <td>${escapeHtml(vehicleNumber)}</td>
       <td>${escapeHtml(driverName)}</td>
       <td>${escapeHtml(r.item||"")}</td>
@@ -3023,6 +3070,7 @@ function masterOpenForm(mode,row){
   document.getElementById("masterFormShipper").value=record?(record.shipper||""):"";
   document.getElementById("masterFormOrigin").value=record?(isContainer?(record.origin||""):(record.loadPlace||"")):"";
   document.getElementById("masterFormDestination").value=record?(isContainer?(record.destination||""):(record.unloadPlace||"")):"";
+  document.getElementById("masterFormArrivalDate").value=record?(record.arrivalDate||record.date):defaultDate;
   document.getElementById("masterFormItem").value=record?(record.item||""):"";
   document.getElementById("masterFormContainerNumber").value=record?(record.containerNumber||""):"";
   document.getElementById("masterFormFt").value=(record&&record.ft)?record.ft:"20";
@@ -3105,6 +3153,7 @@ async function masterSubmitForm(){
   const shipper=document.getElementById("masterFormShipper").value.trim();
   const origin=document.getElementById("masterFormOrigin").value.trim();
   const destination=document.getElementById("masterFormDestination").value.trim();
+  const arrivalDate=document.getElementById("masterFormArrivalDate").value||date;
   const item=document.getElementById("masterFormItem").value.trim();
   const time=document.getElementById("masterFormTime").value;
   const note=document.getElementById("masterFormNote").value.trim();
@@ -3119,7 +3168,7 @@ async function masterSubmitForm(){
       const record={
         ...(previous||{}),
         ...(previous?.id?{id:previous.id}:{}),
-        date, arrivalDate:date,
+        date, arrivalDate,
         shipper, origin, destination,
         vehicleNumber, driverName,
         containerNumber,
@@ -3139,7 +3188,7 @@ async function masterSubmitForm(){
       const record={
         ...(previous||{}),
         ...(previous?.id?{id:previous.id}:{}),
-        date, arrivalDate:date,
+        date, arrivalDate,
         shipper, loadPlace:origin, unloadPlace:destination,
         arrivalTime:time,
         item,
@@ -3166,7 +3215,7 @@ async function masterSubmitForm(){
 }
 
 // ===== 配車マスター Excel出力（読み取り専用。Firestoreへのread/write/deleteは追加しない） =====
-const MASTER_EXCEL_HEADERS=["日付","荷主","発地","着地","車番","乗務員","荷物","コンテナ番号","作業内容①","作業内容②","時間"];
+const MASTER_EXCEL_HEADERS=["日付","荷主","発地","着地","着日","車番","乗務員","荷物","コンテナ番号","作業内容①","作業内容②","時間"];
 // dispatchRecords／containerDispatchRecordsを日付（1日）単位で絞り込む。masterBuildRows()と同じ組み立て方だが、月ではなく日付が完全一致するものだけを対象にする。
 function masterBuildRowsForDate(dateKey){
   const generalRows=dispatchRecords
@@ -3175,9 +3224,10 @@ function masterBuildRowsForDate(dateKey){
   const containerRows=containerDispatchRecords
     .filter(r=>String(r.date||"")===dateKey)
     .map(r=>({kind:"container",record:r}));
-  return generalRows.concat(containerRows).sort((a,b)=>String(a.record.date||"").localeCompare(String(b.record.date||"")));
+  const dateSortedRows=generalRows.concat(containerRows).sort((a,b)=>String(a.record.date||"").localeCompare(String(b.record.date||"")));
+  return sortRowsByShipperGroup(dateSortedRows,row=>row.record.shipper);
 }
-// 配車マスター一覧と同じ項目対応（一般配車／コンテナ配車）で、Excelの11列に整形する。undefined/nullは空文字にする。
+// 配車マスター一覧と同じ項目対応（一般配車／コンテナ配車）で、Excelの12列に整形する。undefined/nullは空文字にする。
 function masterRowToExcelRow(row){
   const r=row.record;
   const isContainer=row.kind==="container";
@@ -3189,7 +3239,7 @@ function masterRowToExcelRow(row){
   const content=isContainer?r.content:r.workType;
   const handlingContent=isContainer?r.handlingContent:"";
   const time=isContainer?r.time:r.arrivalTime;
-  return [r.date,r.shipper,origin,destination,vehicleNumber,driverName,r.item,r.containerNumber,content,handlingContent,time]
+  return [r.date,r.shipper,origin,destination,r.arrivalDate||r.date,vehicleNumber,driverName,r.item,r.containerNumber,content,handlingContent,time]
     .map(v=>String(v==null?"":v));
 }
 // 配車マスターExcel専用のシートXML＋ブック一式を組み立てる（既存exportExcel系と同じ自前XLSX生成方式を再利用）。
@@ -3202,7 +3252,7 @@ async function buildMasterExcelBlobWithExcelJS(rows, periodText){
   const worksheet = workbook.addWorksheet("配車マスター");
 
   // 1行目：タイトル
-  worksheet.mergeCells("A1:K1");
+  worksheet.mergeCells("A1:L1");
   const titleCell = worksheet.getCell("A1");
   titleCell.value = "TRAMO 配車マスター";
   titleCell.font = { bold: true, size: 16 };
@@ -3210,7 +3260,7 @@ async function buildMasterExcelBlobWithExcelJS(rows, periodText){
   worksheet.getRow(1).height = 26;
 
   // 2行目：期間表示用
-  worksheet.mergeCells("A2:K2");
+  worksheet.mergeCells("A2:L2");
   worksheet.getCell("A2").value = periodText || "";
   worksheet.getCell("A2").alignment = {
     horizontal: "center",
@@ -3240,7 +3290,7 @@ async function buildMasterExcelBlobWithExcelJS(rows, periodText){
   });
 
   // 列幅
-  const widths = [13,18,16,16,16,14,18,20,16,16,10];
+  const widths = [13,18,16,16,16,14,18,20,16,16,16,10];
   widths.forEach((width, index) => {
     worksheet.getColumn(index + 1).width = width;
   });
@@ -3269,7 +3319,7 @@ async function buildMasterExcelBlobWithExcelJS(rows, periodText){
   const lastRow = Math.max(4, worksheet.rowCount);
   worksheet.autoFilter = {
     from: "A4",
-    to: `K${lastRow}`
+    to: `L${lastRow}`
   };
 
   // 上4行固定
@@ -3295,7 +3345,7 @@ async function buildMasterExcelBlobWithExcelJS(rows, periodText){
     }
   };
 
-  worksheet.pageSetup.printArea = `A1:K${lastRow}`;
+  worksheet.pageSetup.printArea = `A1:L${lastRow}`;
   worksheet.pageSetup.printTitlesRow = "1:4";
 
   const buffer = await workbook.xlsx.writeBuffer();
