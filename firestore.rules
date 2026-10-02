@@ -32,6 +32,11 @@ service cloud.firestore {
         && profile().role == "driver";
     }
 
+    function canEditDispatch(companyId, officeId) {
+      return isAdmin(companyId, officeId)
+        || isDriver(companyId, officeId);
+    }
+
     function hasDriverProfileFields() {
       return request.resource.data.keys().hasAll([
                "role",
@@ -320,7 +325,7 @@ service cloud.firestore {
     // ========================================
     match /companies/{companyId}/offices/{officeId}/dispatchRecords/{recordId} {
       allow read: if belongsTo(companyId, officeId);
-      allow create, update: if isAdmin(companyId, officeId)
+      allow create, update: if canEditDispatch(companyId, officeId)
                             && request.resource.data.companyId == companyId
                             && request.resource.data.officeId == officeId;
       allow delete: if isAdmin(companyId, officeId);
@@ -328,7 +333,7 @@ service cloud.firestore {
 
     match /companies/{companyId}/offices/{officeId}/containerDispatchRecords/{recordId} {
       allow read: if belongsTo(companyId, officeId);
-      allow create, update: if isAdmin(companyId, officeId)
+      allow create, update: if canEditDispatch(companyId, officeId)
                             && request.resource.data.companyId == companyId
                             && request.resource.data.officeId == officeId;
       allow delete: if isAdmin(companyId, officeId);
@@ -336,10 +341,34 @@ service cloud.firestore {
 
     match /companies/{companyId}/offices/{officeId}/cases/{caseId} {
       allow read: if belongsTo(companyId, officeId);
-      allow create, update: if isAdmin(companyId, officeId)
+      allow create, update: if canEditDispatch(companyId, officeId)
                             && request.resource.data.companyId == companyId
                             && request.resource.data.officeId == officeId;
       allow delete: if isAdmin(companyId, officeId);
+    }
+
+    match /companies/{companyId}/offices/{officeId}/counters/{counterId} {
+      allow read: if belongsTo(companyId, officeId);
+
+      allow create: if counterId == "cases"
+                    && canEditDispatch(companyId, officeId)
+                    && request.resource.data.companyId == companyId
+                    && request.resource.data.officeId == officeId
+                    && request.resource.data.lastSequence == 1;
+
+      allow update: if counterId == "cases"
+                    && canEditDispatch(companyId, officeId)
+                    && request.resource.data.companyId == companyId
+                    && request.resource.data.officeId == officeId
+                    && request.resource.data.lastSequence == resource.data.lastSequence + 1
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      "lastSequence",
+                      "updatedAt",
+                      "companyId",
+                      "officeId"
+                    ]);
+
+      allow delete: if false;
     }
 
     // ========================================
