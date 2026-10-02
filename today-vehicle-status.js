@@ -58,7 +58,9 @@
     containers.filter(validDispatch).forEach(r=>add(r.vehicleId||r.vehicleCloudId,r.vehicleNumber));
     return {
       inspected:own.filter((v,i)=>inspected.has(i)),
-      uninspected:own.filter((v,i)=>assigned.has(i)&&!inspected.has(i)),
+      // 「本日 点検記録のない車両」は配車の有無にかかわらず全登録車両から算出する。
+      // noDispatch はその内訳確認用の別グループとして保持する。
+      uninspected:own.filter((v,i)=>!inspected.has(i)),
       noDispatch:own.filter((v,i)=>!assigned.has(i)),
       registeredCount:own.length,assignedCount:assigned.size,today
     };
