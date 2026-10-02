@@ -12,7 +12,12 @@ const base={vehicles,today,companyId:'company-a',officeId:'office-main'};
 function names(values){return values.map(v=>v._cloudId);}
 test('点検済み・配車あり未点検・配車なしを正しく照合する',()=>{
  const r=build({...base,inspections:[{date:today,vehicle:vehicles[0].name},{date:today,vehicle:vehicles[2].name}],dispatches:[{date:today,vehicleNo:vehicles[0].name},{date:today,vehicleNo:vehicles[1].name}]});
- assert.deepEqual(names(r.inspected),['A','C']);assert.deepEqual(names(r.uninspected),['B']);assert.deepEqual(names(r.noDispatch),['C','D']);assert.equal(r.assignedCount,2);
+ assert.deepEqual(names(r.inspected),['A']);assert.deepEqual(names(r.uninspected),['B']);assert.deepEqual(names(r.noDispatch),['C','D']);assert.equal(r.assignedCount,2);
+ const all=[...names(r.inspected),...names(r.uninspected),...names(r.noDispatch)];assert.deepEqual(all.slice().sort(),['A','B','C','D']);assert.equal(new Set(all).size,4);
+});
+test('配車にない車両は点検済みでも本日運行なしにだけ分類する',()=>{
+ const r=build({...base,inspections:[{date:today,vehicle:vehicles[2].name}],dispatches:[{date:today,vehicleNo:vehicles[0].name}]});
+ assert.deepEqual(names(r.inspected),[]);assert.deepEqual(names(r.uninspected),['A']);assert.deepEqual(names(r.noDispatch),['B','C','D']);
 });
 test('複数台割当・海コン工程・同日複数工程を合算して重複台数を数えない',()=>{
  const r=build({...base,dispatches:[{date:today,assignments:[{vehicleNumber:vehicles[0].name},{vehicleNumber:vehicles[1].name}]},{date:today,vehicleNo:vehicles[0].name}],containers:[{date:today,vehicleNumber:vehicles[1].name},{date:today,vehicleNumber:vehicles[2].name}]});
