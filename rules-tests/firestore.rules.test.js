@@ -2043,3 +2043,48 @@ test("43. 同日・同車両・同運転者の二重登録を拒否し、別運�
     )
   );
 });
+
+test("44. 配車は管理者のみ変更でき、会社・営業所を越えられない", async () => {
+  const companyId="company-a", officeId="office-main", adminUid="dispatch-admin", driverUid="dispatch-driver", otherUid="dispatch-other";
+  await testEnv.withSecurityRulesDisabled(async context=>{
+    const db=context.firestore();
+    await setDoc(doc(db,`companies/${companyId}`),{name:"Company A"});
+    await setDoc(doc(db,`companies/${companyId}/offices/${officeId}`),{name:"Main"});
+    await setDoc(doc(db,`companies/company-b`),{name:"Company B"});
+    await setDoc(doc(db,`companies/company-b/offices/office-main`),{name:"Main"});
+    await setDoc(doc(db,`users/${adminUid}`),{role:"admin",companyId,officeId});
+    await setDoc(doc(db,`users/${driverUid}`),{role:"driver",companyId,officeId});
+    await setDoc(doc(db,`users/${otherUid}`),{role:"admin",companyId:"company-b",officeId:"office-main"});
+  });
+  const adminDb=testEnv.authenticatedContext(adminUid).firestore();
+  const driverDb=testEnv.authenticatedContext(driverUid).firestore();
+  const otherDb=testEnv.authenticatedContext(otherUid).firestore();
+  const path=`companies/${companyId}/offices/${officeId}/dispatchRecords/daily-yamato-2026-10-02-1`;
+  const data={id:"daily-yamato-2026-10-02-1",date:"2026-10-02",shipper:"ヤマト",companyId,officeId};
+  await assertSucceeds(setDoc(doc(adminDb,path),data));
+  await assertSucceeds(getDoc(doc(driverDb,path)));
+  await assertFails(setDoc(doc(driverDb,`companies/${companyId}/offices/${officeId}/dispatchRecords/driver-write`),{...data,id:"driver-write"}));
+  await assertFails(getDoc(doc(otherDb,path)));
+  await assertFails(setDoc(doc(adminDb,`companies/${companyId}/offices/${officeId}/dispatchRecords/forged`),{...data,id:"forged",companyId:"company-b"}));
+  await assertSucceeds(deleteDoc(doc(adminDb,path)));
+});
+
+test("45. 海コンと案件も管理者のみ変更でき、テナントID偽装を拒否する", async () => {
+  const companyId="company-a", officeId="office-main", adminUid="dispatch2-admin", driverUid="dispatch2-driver";
+  await testEnv.withSecurityRulesDisabled(async context=>{
+    const db=context.firestore();
+    await setDoc(doc(db,`companies/${companyId}`),{name:"Company A"});
+    await setDoc(doc(db,`companies/${companyId}/offices/${officeId}`),{name:"Main"});
+    await setDoc(doc(db,`users/${adminUid}`),{role:"admin",companyId,officeId});
+    await setDoc(doc(db,`users/${driverUid}`),{role:"driver",companyId,officeId});
+  });
+  const adminDb=testEnv.authenticatedContext(adminUid).firestore();
+  const driverDb=testEnv.authenticatedContext(driverUid).firestore();
+  for(const [collectionName,id] of [["containerDispatchRecords","container-1"],["cases","T000001"]]){
+    const path=`companies/${companyId}/offices/${officeId}/${collectionName}/${id}`;
+    await assertSucceeds(setDoc(doc(adminDb,path),{id,companyId,officeId}));
+    await assertSucceeds(getDoc(doc(driverDb,path)));
+    await assertFails(setDoc(doc(driverDb,`companies/${companyId}/offices/${officeId}/${collectionName}/driver-write`),{id:"driver-write",companyId,officeId}));
+    await assertFails(setDoc(doc(adminDb,`companies/${companyId}/offices/${officeId}/${collectionName}/forged`),{id:"forged",companyId,officeId:"office-sub"}));
+  }
+});
