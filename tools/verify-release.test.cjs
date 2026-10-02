@@ -409,6 +409,21 @@ test('区分のない既存先行予定を消さず、明示的な確定入力�
 });
 
 // 2026-10-02 バグ修正の画面回帰確認。main/testを同じ操作で確認。
+test('運転者は配車マスターの新規登録と編集を開ける',async()=>{
+ for(const file of ['index.html','test/index.html']){
+  const h=htmlHarness(file);h.context.window.firebaseProfile={role:'driver'};
+  h.run(`masterCurrentMonth='2026-10';masterAddNew();`);
+  assert.equal(h.elements.get('masterNewKindOverlay').style.display,'flex');
+  h.run(`document.getElementById('masterNewKindOverlay').style.display='none';dispatchRecords=[{id:'g1',caseNumber:'T1',branchNumber:1,date:'2026-10-02',boardStatus:'master',shipper:'荷主',loadPlace:'水戸市',unloadPlace:'笠間市 倉庫A',vehicleNo:'車A',driver:'田中'}];containerDispatchRecords=[];masterCurrentMonth='2026-10';renderDispatchMaster();`);
+  const html=h.elements.get('masterTableBody').innerHTML;
+  assert.ok(html.includes('<td class="master-col-origin">水戸市</td>'));
+  assert.ok(html.includes('<td class="master-col-destination">笠間市 倉庫A</td>'));
+  assert.ok(!html.includes('水戸市<span class="master-route-arrow">→</span>笠間市 倉庫A'));
+  await h.run('masterEditRow(0)');
+  assert.equal(h.elements.get('masterFormOverlay').style.display,'flex');
+ }
+});
+
 test('運転者は配車の編集ボタンを使え、削除ボタンは表示されない',()=>{
  for(const file of ['index.html','test/index.html']){
   const h=htmlHarness(file);h.context.window.firebaseProfile={role:'driver'};
