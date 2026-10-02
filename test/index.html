@@ -2561,7 +2561,7 @@ async function dispatchOnCaseSelectChanged(){
 
 function dispatchOpenForm(mode,record,options){
   ++dispatchCaseSelectionVersion;dispatchCaseLoading=false;
-  dispatchFormBoard=mode==="edit"?(record?.boardStatus||"master"):"advance";
+  dispatchFormBoard=mode==="edit"?(record?.boardStatus||"master"):(options?.boardStatus||"advance");
   const deleteStageBtn=document.getElementById("dispatchFormDeleteStageBtn");
   if(deleteStageBtn) deleteStageBtn.style.display=(mode==="edit" && record && window.firebaseProfile?.role==="admin")?"":"none";
   // 既存データ（stageNoを持たない旧形式）の編集だけは旧フォームを使用し、挙動を一切変えない。
@@ -2889,7 +2889,9 @@ function renderDispatch(){
   // ①先行配車は今日以降の予定を表示（当日・過去データもFirestoreに保持され配車マスターに集約表示される）
   const todayKey=TodayVehicleStatus.japanDateKey();
   const dateSortedRows=dispatchRecords
-    .filter(r=>String(r.date||"").slice(0,7)===dispatchCurrentMonth && (TodayVehicleStatus.effectiveBoard(r,todayKey)==="advance" || (!r.boardStatus && String(r.date||"")>=todayKey)))
+    // 先行配車は「明示的に advance の記録」だけを表示する。
+    // boardStatus が master / 未設定の配車マスターデータは絶対に混ぜない。
+    .filter(r=>String(r.date||"").slice(0,7)===dispatchCurrentMonth && r.boardStatus==="advance" && TodayVehicleStatus.effectiveBoard(r,todayKey)==="advance")
     .slice()
     .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   const rows=dateSortedRows.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.caseNumber||"").localeCompare(String(b.caseNumber||""))||Number(a.branchNumber||0)-Number(b.branchNumber||0));
@@ -3896,8 +3898,7 @@ function masterCreateStages(kind){
   document.getElementById("masterNewKindOverlay").style.display="none";
   const date=masterCurrentMonth===localDateKey().slice(0,7)?localDateKey():`${masterCurrentMonth}-01`;
   if(kind==="general"){
-    dispatchOpenForm("create",null);
-    dispatchFormBoard="master";
+    dispatchOpenForm("create",null,{boardStatus:"master"});
     dispatchSlotDraft.forEach(slot=>[1,2].forEach(n=>slot[`stage${n}`].date=date));
     dispatchRenderVehicleSlots();
     document.getElementById("dispatchFormTitle").textContent="配車マスターの新規登録（一般：集配・引取／配達）";
