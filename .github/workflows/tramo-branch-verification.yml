@@ -13,6 +13,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Yamato daily tests
         run: node tools/yamato-daily.test.cjs
       - name: Existing release regression
