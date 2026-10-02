@@ -139,6 +139,28 @@ test('正式版とtestでマスター新規登録が2工程入力へつながり
   assert.equal(h.elements.get('dispatchSlotOrigin_1_1').value,'笠間');assert.equal(h.run('dispatchSlotDraft.length'),2);assert.equal(h.elements.get('dispatchSlotTime_1_1').value,'09:15');
  }
 });
+test('配車マスター新規登録はboardStatusをmasterで固定し先行配車に出さない',async()=>{
+ for(const file of ['index.html','test/index.html']){
+  const h=htmlHarness(file);let capturedOptions;
+  h.run(`masterCurrentMonth='2026-10';masterAddNew();masterCreateStages('general');`);
+  assert.equal(h.run('dispatchFormBoard'),'master');
+  h.context.window.firebaseCloud.saveDispatchGeneralStages=async(info,stages,options)=>{
+    capturedOptions=options;
+    return {caseNumber:'T009999',stages:stages.map((st,i)=>({id:'m'+i,caseNumber:'T009999',branchNumber:i+1,boardStatus:'master',...st,date:st.date,vehicleNo:st.vehicleNumber,driver:st.driverName,loadPlace:st.origin,unloadPlace:st.destination}))};
+  };
+  h.elements.get('dispatchSlotCheck_1_1').checked=true;h.run('dispatchToggleSlotStage(1,1)');
+  h.elements.get('dispatchSlotDate_1_1').value='2026-10-06';
+  h.elements.get('dispatchSlotOrigin_1_1').value='水戸';
+  h.elements.get('dispatchSlotDestination_1_1').value='笠間';
+  await h.run('dispatchSubmitStageForm()');
+  assert.equal(capturedOptions.boardStatus,'master');
+  h.run(`dispatchCurrentMonth='2026-10';renderDispatch();`);
+  assert.ok(!h.elements.get('dispatchTableBody').innerHTML.includes('T009999'));
+  h.run(`masterCurrentMonth='2026-10';renderDispatchMaster();`);
+  assert.ok(h.elements.get('masterTableBody').innerHTML.includes('T009999'));
+ }
+});
+
 test('マスター表示・Excelに枝ごとの引取り／荷下ろし・着日・時刻・シャーシが出る',()=>{
  for(const f of ['index.html','test/index.html']){
   const h=htmlHarness(f);
@@ -405,11 +427,15 @@ test('終了済みの海コンは②と③に残り、マスターの通常一�
   h.run(`masterCurrentMonth='2026-09';renderDispatchMaster()`);assert.ok(!h.elements.get('masterTableBody').innerHTML.includes('PAST'));
  }
 });
-test('区分のない既存先行予定を消さず、明示的な確定入力は先行に出さない',()=>{
+test('先行配車は明示的なadvanceだけを表示し、masterと区分なしを混ぜない',()=>{
  for(const file of ['index.html','test/index.html']){
   const h=htmlHarness(file);
-  h.run(`dispatchRecords=[{id:'legacy',caseNumber:'T000001',date:'2026-10-06',shipper:'従来予定'},{id:'master',caseNumber:'T000002',date:'2026-10-06',shipper:'確定',boardStatus:'master'},{id:'advance',caseNumber:'T000003',date:'2026-10-06',shipper:'新規予定',boardStatus:'advance'}];dispatchCurrentMonth='2026-10';renderDispatch();`);
-  const text=h.elements.get('dispatchTableBody').innerHTML;assert.ok(text.includes('従来予定'));assert.ok(text.includes('新規予定'));assert.ok(!text.includes('確定'));
+  h.run(`dispatchRecords=[{id:'legacy',caseNumber:'T000001',date:'2026-10-06',shipper:'区分なし'},{id:'master',caseNumber:'T000002',date:'2026-10-06',shipper:'配車マスター',boardStatus:'master'},{id:'advance',caseNumber:'T000003',date:'2026-10-06',shipper:'先行予定',boardStatus:'advance'}];dispatchCurrentMonth='2026-10';renderDispatch();`);
+  const text=h.elements.get('dispatchTableBody').innerHTML;
+  assert.ok(text.includes('先行予定'));assert.ok(!text.includes('配車マスター'));assert.ok(!text.includes('区分なし'));
+  h.run(`masterCurrentMonth='2026-10';renderDispatchMaster();`);
+  const masterText=h.elements.get('masterTableBody').innerHTML;
+  assert.ok(masterText.includes('配車マスター'));assert.ok(masterText.includes('区分なし'));
  }
 });
 
