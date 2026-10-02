@@ -12,7 +12,7 @@ const base={vehicles,today,companyId:'company-a',officeId:'office-main'};
 function names(values){return values.map(v=>v._cloudId);}
 test('点検済み・配車あり未点検・配車なしを正しく照合する',()=>{
  const r=build({...base,inspections:[{date:today,vehicle:vehicles[0].name},{date:today,vehicle:vehicles[2].name}],dispatches:[{date:today,vehicleNo:vehicles[0].name},{date:today,vehicleNo:vehicles[1].name}]});
- assert.deepEqual(names(r.inspected),['A','C']);assert.deepEqual(names(r.uninspected),['B','D']);assert.deepEqual(names(r.noDispatch),['C','D']);assert.equal(r.assignedCount,2);
+ assert.deepEqual(names(r.inspected),['A','C']);assert.deepEqual(names(r.uninspected),['B']);assert.deepEqual(names(r.noDispatch),['C','D']);assert.equal(r.assignedCount,2);
 });
 test('複数台割当・海コン工程・同日複数工程を合算して重複台数を数えない',()=>{
  const r=build({...base,dispatches:[{date:today,assignments:[{vehicleNumber:vehicles[0].name},{vehicleNumber:vehicles[1].name}]},{date:today,vehicleNo:vehicles[0].name}],containers:[{date:today,vehicleNumber:vehicles[1].name},{date:today,vehicleNumber:vehicles[2].name}]});
@@ -23,16 +23,16 @@ test('別日・削除済み・他社・他営業所・自社マスターにな�
  assert.equal(r.assignedCount,0);assert.equal(r.noDispatch.length,4);
 });
 test('全角・空白の表記差を吸収し、ナンバー下4桁だけでは照合しない',()=>{
- const r=build({...base,dispatches:[{date:today,vehicleNo:'水戸１００　あ１２３４'},{date:today,vehicleNo:'1234'}]});assert.deepEqual(names(r.uninspected),['A','B','C','D']);
+ const r=build({...base,dispatches:[{date:today,vehicleNo:'水戸１００　あ１２３４'},{date:today,vehicleNo:'1234'}]});assert.deepEqual(names(r.uninspected),['A']);
 });
 test('車両IDがある場合はIDを優先し、不明なIDを別車両名へフォールバックしない',()=>{
- const r=build({...base,dispatches:[{date:today,vehicleId:'B',vehicleNo:vehicles[0].name},{date:today,vehicleId:'unknown',vehicleNo:vehicles[2].name}]});assert.deepEqual(names(r.uninspected),['A','B','C','D']);
+ const r=build({...base,dispatches:[{date:today,vehicleId:'B',vehicleNo:vehicles[0].name},{date:today,vehicleId:'unknown',vehicleNo:vehicles[2].name}]});assert.deepEqual(names(r.uninspected),['B']);
 });
 test('同じ表示名のマスターが複数ある場合は誤照合しない',()=>{
  const r=build({...base,vehicles:[vehicles[0],{...vehicles[0],_cloudId:'X'}],dispatches:[{date:today,vehicleNo:vehicles[0].name}]});assert.equal(r.assignedCount,0);
 });
 test('一部枝が引継ぎ済みの旧複数台データは未引継ぎ車両も残す',()=>{
- const r=build({...base,dispatches:[{id:'old',caseNumber:'T1',date:today,assignments:[{vehicleNumber:vehicles[0].name,branchNumber:1},{vehicleNumber:vehicles[1].name,branchNumber:2}]}],containers:[{date:today,sourceDispatchId:'old',sourceBranchNumber:1,caseNumber:'T1',branchNumber:1,vehicleNumber:vehicles[2].name}]});assert.deepEqual(names(r.uninspected),['A','B','C','D']);
+ const r=build({...base,dispatches:[{id:'old',caseNumber:'T1',date:today,assignments:[{vehicleNumber:vehicles[0].name,branchNumber:1},{vehicleNumber:vehicles[1].name,branchNumber:2}]}],containers:[{date:today,sourceDispatchId:'old',sourceBranchNumber:1,caseNumber:'T1',branchNumber:1,vehicleNumber:vehicles[2].name}]});assert.deepEqual(names(r.uninspected),['B','C']);
 });
 test('日本時間の午前0時で本日が切り替わる',()=>{assert.equal(japanDateKey(new Date('2026-10-01T14:59:59Z')),'2026-10-01');assert.equal(japanDateKey(new Date('2026-10-01T15:00:00Z')),'2026-10-02');});
 function database(seed={}){
@@ -157,7 +157,7 @@ test('読み込み失敗は配車なしと誤表示せず、照合UIは3つの�
  h.run('window.todayVehicleCloudState={error:true,ready:{}};renderTodayVehicleLists()');
  assert.equal(h.elements.get('todayNoDispatchCount').textContent,'　確認できません');
  h.run(`window.todayVehicleCloudState={date:'2026-10-01',companyId:'company-a',officeId:'office-main',ready:{inspections:true,dispatches:true,containers:true},inspections:[{date:'2026-10-01',vehicle:'水戸 100 あ 1234'}],dispatches:[{date:'2026-10-01',vehicleNo:'水戸 100 い 5678'}],containers:[]};renderTodayVehicleLists()`);
- assert.match(h.elements.get('todayNoInspectionCount').textContent,/3 \/ 4台/);assert.match(h.elements.get('todayNoInspectionVehicles').innerHTML,/5678/);assert.match(h.elements.get('todayNoDispatchVehicles').innerHTML,/9999/);assert.match(h.elements.get('todayNoDispatchVehicles').innerHTML,/1234/);
+ assert.match(h.elements.get('todayNoInspectionCount').textContent,/1 \/ 4台/);assert.match(h.elements.get('todayNoInspectionVehicles').innerHTML,/5678/);assert.match(h.elements.get('todayNoDispatchVehicles').innerHTML,/9999/);assert.match(h.elements.get('todayNoDispatchVehicles').innerHTML,/1234/);
 });
 test('リアルタイム照合は本日の会社パスのみ購読し、ログアウト時に全購読を解放する',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
