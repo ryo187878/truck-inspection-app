@@ -471,8 +471,8 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
       <div id="todayInspectedVehicles">本日の記録を確認しています。</div>
       <div id="todayInspectedPagination" style="margin-top:10px;text-align:center;"></div>
     </details></section>
-<section class="card"><details><summary class="section-title" style="cursor:pointer;">🔴 本日 未点検車両<span id="todayNoInspectionCount">　確認中</span></summary>
-      <div class="small" style="margin:10px 0;">本日の配車に車番があり、点検記録がない車両</div>
+<section class="card"><details><summary class="section-title" style="cursor:pointer;">🔴 本日 点検記録のない車両<span id="todayNoInspectionCount">　確認中</span></summary>
+      <div class="small" style="margin:10px 0;">本日の点検記録がない登録車両（配車の有無にかかわらず表示）</div>
       <input id="todayNoInspectionSearch" type="search" autocomplete="off" placeholder="🔍 車番を検索" oninput="window.todayNoInspectionPage=1;renderTodayVehicleLists()" style="width:100%;box-sizing:border-box;margin-bottom:10px;">
       <div id="todayNoInspectionVehicles">本日の記録を確認しています。</div>
       <div id="todayNoInspectionPagination" style="margin-top:10px;text-align:center;"></div>
@@ -1340,7 +1340,7 @@ function getLoginTenantContext(){
       renderDispatch();renderDispatchMaster();renderContainerDispatch();
     },
     async saveDispatchRecord(record, options = {}){
-      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみ配車を変更できます。");
+      if(!window.firebaseReady || !["admin","driver"].includes(window.firebaseProfile?.role)) throw new Error("配車を変更する権限がありません。");
       return await window.DispatchService.saveDispatchRecordCore({
         firestoreDb,
         runTransaction,
@@ -1352,7 +1352,7 @@ function getLoginTenantContext(){
       });
     },
     async saveDispatchGeneralStages(caseInfo, stages, options = {}){
-      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみ配車を変更できます。");
+      if(!window.firebaseReady || !["admin","driver"].includes(window.firebaseProfile?.role)) throw new Error("配車を変更する権限がありません。");
       const targetCase=String(caseInfo.caseNumber||options.targetCaseNumber||"");
       if(targetCase){
         const legacyContainer=await getDocs(query(collection(firestoreDb,CLOUD_CONTAINER_DISPATCH_COLLECTION),where("caseNumber","==",targetCase),limit(1)));
@@ -1371,7 +1371,7 @@ function getLoginTenantContext(){
       return result;
     },
     async saveContainerDispatchRecord(record, options = {}){
-      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみコンテナ配車を変更できます。");
+      if(!window.firebaseReady || !["admin","driver"].includes(window.firebaseProfile?.role)) throw new Error("コンテナ配車を変更する権限がありません。");
       return await window.DispatchService.saveContainerDispatchRecordCore({
         firestoreDb,
         runTransaction,
@@ -1383,7 +1383,7 @@ function getLoginTenantContext(){
       });
     },
     async saveContainerCaseStages(caseInfo, stages, options = {}){
-      if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみコンテナ配車を変更できます。");
+      if(!window.firebaseReady || !["admin","driver"].includes(window.firebaseProfile?.role)) throw new Error("コンテナ配車を変更する権限がありません。");
       const target=caseInfo.caseNumber||options.targetCaseNumber;
       if(target){
         const siblings=await getDocs(query(collection(firestoreDb,CLOUD_CONTAINER_DISPATCH_COLLECTION),where("caseNumber","==",target)));
@@ -1430,7 +1430,7 @@ function getLoginTenantContext(){
   }
 
   function applyRole(profile, user){
-    document.querySelectorAll(".dispatch-add,.container-add").forEach(button=>{button.style.display=profile.role==="admin"?"":"none";});
+    document.querySelectorAll(".dispatch-add,.container-add").forEach(button=>{button.style.display=["admin","driver"].includes(profile.role)?"":"none";});
     const tabs=[...document.querySelectorAll(".tramo-subnav .tab")];
     if(profile.role==="driver") {
       const allowedPages=new Set(["inspection","dispatch","container","containerHistory","dispatchMaster"]);
@@ -2898,6 +2898,7 @@ function renderDispatch(){
   if(!rows.length){ body.innerHTML=""; if(empty) empty.style.display="block"; return; }
   if(empty) empty.style.display="none";
   const isAdmin=window.firebaseProfile?.role==="admin";
+  const canEdit=["admin","driver"].includes(window.firebaseProfile?.role);
   const inheritedDispatchIds = new Set(
     (containerDispatchRecords || [])
       .filter(c => c && c.sourceDispatchId)
@@ -2928,7 +2929,7 @@ function renderDispatch(){
       <td>${assignments.map(a=>escapeHtml(a.vehicleNumber)).join("<br>")}</td>
       <td>${assignments.map(a=>escapeHtml(a.driverName)).join("<br>")}</td>
       <td class="dispatch-col-action">
-        ${isAdmin?`<button type="button" class="dispatch-edit-btn" onclick="dispatchEditRow(${i})">編集</button>`:""}
+        ${canEdit?`<button type="button" class="dispatch-edit-btn" onclick="dispatchEditRow(${i})">編集</button>`:""}
         ${showInheritBtn?`<button type="button" class="dispatch-inherit-btn" onclick="dispatchInheritToContainer(${i})">コンテナ配車へ</button>`:""}
         ${isAdmin?`<button type="button" class="dispatch-delete-btn" onclick="dispatchDeleteRow(${i})">削除</button>`:""}
       </td>
@@ -3310,6 +3311,7 @@ function renderContainerDispatch(){
   if(empty) empty.style.display="none";
 
   const isAdmin=window.firebaseProfile?.role==="admin";
+  const canEdit=["admin","driver"].includes(window.firebaseProfile?.role);
   body.innerHTML=rows.map((r,i)=>`
     <tr>
       <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td>
@@ -3328,7 +3330,7 @@ function renderContainerDispatch(){
       <td class="container-col-time">${escapeHtml(r.time||"")}</td>
       <td>${escapeHtml(r.driverName||"未定")}</td>
       <td class="container-col-action">
-        ${isAdmin?`<button type="button" class="dispatch-edit-btn" onclick="containerEditRow(${i})">編集</button>`:""}
+        ${canEdit?`<button type="button" class="dispatch-edit-btn" onclick="containerEditRow(${i})">編集</button>`:""}
         ${isAdmin?`<button type="button" class="dispatch-delete-btn" onclick="containerDeleteRow(${i})">削除</button>`:""}
       </td>
     </tr>
@@ -3785,7 +3787,7 @@ function renderDispatchMaster(){
       <td class="master-col-containerno">${escapeHtml(r.containerNumber||"")}</td>
       <td class="container-col-time">${escapeHtml(time||"")}</td>
       <td class="container-col-action">
-        ${window.firebaseProfile?.role==="admin"?`<button type="button" class="dispatch-edit-btn" onclick="masterEditRow(${i})">編集</button>`:""}
+        ${["admin","driver"].includes(window.firebaseProfile?.role)?`<button type="button" class="dispatch-edit-btn" onclick="masterEditRow(${i})">編集</button>`:""}
       </td>
     </tr>`);
   });
