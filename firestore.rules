@@ -316,6 +316,33 @@ service cloud.firestore {
     }
 
     // ========================================
+    // 配車
+    // ========================================
+    match /companies/{companyId}/offices/{officeId}/dispatchRecords/{recordId} {
+      allow read: if belongsTo(companyId, officeId);
+      allow create, update: if isAdmin(companyId, officeId)
+                            && request.resource.data.companyId == companyId
+                            && request.resource.data.officeId == officeId;
+      allow delete: if isAdmin(companyId, officeId);
+    }
+
+    match /companies/{companyId}/offices/{officeId}/containerDispatchRecords/{recordId} {
+      allow read: if belongsTo(companyId, officeId);
+      allow create, update: if isAdmin(companyId, officeId)
+                            && request.resource.data.companyId == companyId
+                            && request.resource.data.officeId == officeId;
+      allow delete: if isAdmin(companyId, officeId);
+    }
+
+    match /companies/{companyId}/offices/{officeId}/cases/{caseId} {
+      allow read: if belongsTo(companyId, officeId);
+      allow create, update: if isAdmin(companyId, officeId)
+                            && request.resource.data.companyId == companyId
+                            && request.resource.data.officeId == officeId;
+      allow delete: if isAdmin(companyId, officeId);
+    }
+
+    // ========================================
     // 車両
     // ========================================
     match /companies/{companyId}/offices/{officeId}/vehicles/{vehicleId} {
