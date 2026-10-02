@@ -414,6 +414,16 @@ test('区分のない既存先行予定を消さず、明示的な確定入力�
 });
 
 // 2026-10-02 バグ修正の画面回帰確認。main/testを同じ操作で確認。
+test('配車マスターは発地・着地分離後も14列の幅定義と日付帯colspanを保持する',()=>{
+ for(const file of ['index.html','test/index.html']){
+  const html=fs.readFileSync(path.join(root,file),'utf8');
+  assert.match(html,/<th>発地<\/th>\s*<th>着地<\/th>/);
+  assert.ok(!html.includes('<th>発地 → 着地</th>'));
+  assert.match(html,/th:nth-child\(14\).*width:5%/);
+  assert.match(html,/master-date-divider"><td colspan="14">/);
+ }
+});
+
 test('運転者は配車マスターの新規登録と編集を開ける',async()=>{
  for(const file of ['index.html','test/index.html']){
   const h=htmlHarness(file);h.context.window.firebaseProfile={role:'driver'};
