@@ -429,6 +429,19 @@ test('運転者は配車マスターの新規登録と編集を開ける',async(
  }
 });
 
+test('運転者の配車マスター新規一般と工程編集が実際の入力画面まで開く',async()=>{
+ for(const file of ['index.html','test/index.html']){
+  const h=htmlHarness(file);h.context.window.firebaseProfile={role:'driver'};
+  h.run(`masterCurrentMonth='2026-10';masterAddNew();masterCreateStages('general');`);
+  assert.equal(h.elements.get('dispatchFormOverlay').style.display,'flex');
+  h.run(`dispatchCloseForm();dispatchRecords=[{id:'stage1',caseNumber:'T9',branchNumber:1,stageNo:1,vehicleSlot:1,date:'2026-10-02',boardStatus:'master',shipper:'荷主',loadPlace:'水戸',unloadPlace:'笠間 倉庫B',vehicleNumber:'車A',driverName:'田中',workType:'引取'}];containerDispatchRecords=[];masterCurrentMonth='2026-10';renderDispatchMaster();`);
+  h.context.window.firebaseCloud.loadCaseStages=async()=>{};
+  await h.run('masterEditRow(0)');
+  assert.equal(h.elements.get('dispatchFormOverlay').style.display,'flex');
+  assert.match(h.elements.get('dispatchFormTitle').textContent,/配車マスターの編集/);
+ }
+});
+
 test('運転者は配車の編集ボタンを使え、削除ボタンは表示されない',()=>{
  for(const file of ['index.html','test/index.html']){
   const h=htmlHarness(file);h.context.window.firebaseProfile={role:'driver'};
