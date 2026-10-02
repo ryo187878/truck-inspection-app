@@ -346,6 +346,7 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
 </style>
 <script src="./vendor/exceljs/exceljs.min.js"></script>
 <script src="./dispatch-service.js"></script>
+<script src="./yamato-daily.js"></script>
 <script src="./today-vehicle-status.js"></script>
 </head>
 <body>
@@ -1461,6 +1462,16 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
     },
     async refreshDispatchBoards(){
       await ensureBoardMetadata();await promoteAdvanceRecords();
+      if(window.firebaseProfile?.role==="admin"){
+        const today=TodayVehicleStatus.japanDateKey();
+        for(const record of window.TramoYamatoDaily.buildDailyRecords(today)){
+          const ref=doc(firestoreDb,CLOUD_DISPATCH_COLLECTION,record.id);
+          await runTransaction(firestoreDb,async tx=>{
+            const snap=await tx.get(ref);
+            if(!snap.exists()) tx.set(ref,{...record,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+          });
+        }
+      }
       const g=await loadBoardRecords(CLOUD_DISPATCH_COLLECTION,true),c=await loadContainerRecords();
       dispatchRecords=g;containerDispatchRecords=c;
       renderDispatch();renderDispatchMaster();renderContainerDispatch();
@@ -1697,6 +1708,9 @@ async function syncAfterLogin(profile){
     // 管理者も現在の会社・営業所のクラウド記録だけを採用する。
     // 旧仕様のローカル→クラウド自動移行は、別会社への混入防止のため行わない。
     const cloud = await window.firebaseCloud.loadRecords();
+    // 管理者ログイン時に当日分のヤマト固定3台を作成してから配車データを読み込む。
+    // 日付またぎ時も上の30秒監視から同じ処理が呼ばれる。
+    await window.firebaseCloud.refreshDispatchBoards();
     const cloudDispatch=await window.firebaseCloud.loadDispatchRecords();
     const cloudContainerDispatch=await window.firebaseCloud.loadContainerDispatchRecords();
     dispatchRecords=cloudDispatch;containerDispatchRecords=cloudContainerDispatch;
@@ -4122,26 +4136,9 @@ function masterBuildRows(){
   return masterRowsFromRecords(dispatchRecords,containerDispatchRecords,r=>TodayVehicleStatus.active(r,TodayVehicleStatus.japanDateKey())&&String(r.date||'')<last&&TodayVehicleStatus.endDate(r)>=first);
 }
 
-// 日付→案件番号→枝番の順で並べる（同じ日付内は案件単位で工程を追いやすくし、日付の前後入れ替えは行わない）
+// 日付→荷主グループ→案件番号→枝番。ヤマト固定便は dailySlot 順。
 function sortMasterRowsByDateCaseBranch(rows){
-  return rows
-    .map((row,i)=>({row,i}))
-    .sort((a,b)=>{
-      const dateCompare=String(a.row.record.date||"").localeCompare(String(b.row.record.date||""));
-      if(dateCompare!==0) return dateCompare;
-      const caseA=String(a.row.record.caseNumber||"");
-      const caseB=String(b.row.record.caseNumber||"");
-      if(caseA!==caseB){
-        if(!caseA) return 1;
-        if(!caseB) return -1;
-        return caseA.localeCompare(caseB);
-      }
-      const branchA=a.row.targetBranchNumber!=null?Number(a.row.targetBranchNumber):0;
-      const branchB=b.row.targetBranchNumber!=null?Number(b.row.targetBranchNumber):0;
-      if(branchA!==branchB) return branchA-branchB;
-      return a.i-b.i;
-    })
-    .map(x=>x.row);
+  return window.TramoYamatoDaily.sortMasterRows(rows);
 }
 
 function renderDispatchMaster(){
@@ -4181,8 +4178,8 @@ function renderDispatchMaster(){
       prevGroupKey=null;
     }
 
-    // 2. 同じ日付内は案件番号（枝番なし）でグループ化し、案件が変わる境界だけ太線で区切る（荷主名ではまとめない）
-    const groupKey=r.caseNumber?`case:${r.caseNumber}`:`norec:${row.kind}:${r.id||i}`;
+    // 2. 同じ日付内は荷主単位でまとめ、荷主が変わる境界を太線で区切る
+    const groupKey=`shipper:${String(r.shipper||"")}`;
     const isGroupStart=groupKey!==prevGroupKey;
     prevGroupKey=groupKey;
 
