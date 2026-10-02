@@ -1708,6 +1708,9 @@ async function syncAfterLogin(profile){
     // 管理者も現在の会社・営業所のクラウド記録だけを採用する。
     // 旧仕様のローカル→クラウド自動移行は、別会社への混入防止のため行わない。
     const cloud = await window.firebaseCloud.loadRecords();
+    // 管理者ログイン時に当日分のヤマト固定3台を作成してから配車データを読み込む。
+    // 日付またぎ時も上の30秒監視から同じ処理が呼ばれる。
+    await window.firebaseCloud.refreshDispatchBoards();
     const cloudDispatch=await window.firebaseCloud.loadDispatchRecords();
     const cloudContainerDispatch=await window.firebaseCloud.loadContainerDispatchRecords();
     dispatchRecords=cloudDispatch;containerDispatchRecords=cloudContainerDispatch;
@@ -4133,7 +4136,7 @@ function masterBuildRows(){
   return masterRowsFromRecords(dispatchRecords,containerDispatchRecords,r=>TodayVehicleStatus.active(r,TodayVehicleStatus.japanDateKey())&&String(r.date||'')<last&&TodayVehicleStatus.endDate(r)>=first);
 }
 
-// 日付→荷主グループ→案件番号→枝番。ヤマト固定便は 11/刈屋 → 6528/髙野 → 33/若菜。
+// 日付→荷主グループ→案件番号→枝番。ヤマト固定便は dailySlot 順。
 function sortMasterRowsByDateCaseBranch(rows){
   return window.TramoYamatoDaily.sortMasterRows(rows);
 }
