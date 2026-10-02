@@ -424,6 +424,26 @@ test('配車マスターは発地・着地分離後も14列の幅定義と日付
  }
 });
 
+test('管理者の配車マスターは編集と削除を表示し、運転者には削除を出さない',()=>{
+ for(const file of ['index.html','test/index.html']){
+  const admin=htmlHarness(file);admin.context.window.firebaseProfile={role:'admin'};
+  admin.run(`dispatchRecords=[{id:'g1',caseNumber:'T1',branchNumber:1,date:'2026-10-02',boardStatus:'master',shipper:'荷主',loadPlace:'水戸',unloadPlace:'笠間',vehicleNo:'車A',driver:'田中'}];containerDispatchRecords=[];masterCurrentMonth='2026-10';renderDispatchMaster();`);
+  const adminHtml=admin.elements.get('masterTableBody').innerHTML;
+  assert.ok(adminHtml.includes('masterEditRow(0)'));assert.ok(adminHtml.includes('masterDeleteRow(0)'));
+  const driver=htmlHarness(file);driver.context.window.firebaseProfile={role:'driver'};
+  driver.run(`dispatchRecords=[{id:'g1',caseNumber:'T1',branchNumber:1,date:'2026-10-02',boardStatus:'master',shipper:'荷主',loadPlace:'水戸',unloadPlace:'笠間',vehicleNo:'車A',driver:'田中'}];containerDispatchRecords=[];masterCurrentMonth='2026-10';renderDispatchMaster();`);
+  const driverHtml=driver.elements.get('masterTableBody').innerHTML;
+  assert.ok(driverHtml.includes('masterEditRow(0)'));assert.ok(!driverHtml.includes('masterDeleteRow(0)'));
+ }
+});
+
+test('運転者は関数を直接呼んでも配車マスターを削除できない',async()=>{
+ const h=htmlHarness('index.html');h.context.window.firebaseProfile={role:'driver'};let deleted=false;
+ h.context.window.firebaseCloud.deleteDispatchRecord=async()=>{deleted=true;};
+ h.run(`dispatchRecords=[{id:'g1',caseNumber:'T1',branchNumber:1,date:'2026-10-02',boardStatus:'master',shipper:'荷主'}];containerDispatchRecords=[];masterCurrentMonth='2026-10';renderDispatchMaster();`);
+ assert.equal(await h.run('masterDeleteRow(0)'),false);assert.equal(deleted,false);
+});
+
 test('運転者は配車マスターの新規登録と編集を開ける',async()=>{
  for(const file of ['index.html','test/index.html']){
   const h=htmlHarness(file);h.context.window.firebaseProfile={role:'driver'};
