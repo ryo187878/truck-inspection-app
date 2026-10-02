@@ -24,3 +24,23 @@ assert.deepEqual(kosho.map(x=>[x.record.caseNumber,x.targetBranchNumber]),[["T00
 const tomorrow=Y.sortMasterRows([row("善心","A",1,{date:"2026-10-03"}),row("ヤマト","",1,{dailySlot:1})]);
 assert.equal(tomorrow[0].record.date,d);
 console.log("Yamato daily/group sort: 9/9 PASS");
+
+const mixedDates=[
+ row("善心","T9",1,{date:"2026-10-03"}),
+ row("宏商","T2",2,{date:"2026-10-02"}),
+ row("ヤマト","",1,{date:"2026-10-03",dailySlot:2}),
+ row("ヤマト","",1,{date:"2026-10-02",dailySlot:3}),
+ row("宏商","T2",1,{date:"2026-10-02"}),
+ row("ヤマト","",1,{date:"2026-10-02",dailySlot:1}),
+ row("ヤマト","",1,{date:"2026-10-02",dailySlot:2})
+];
+const mixedSorted=Y.sortMasterRows(mixedDates);
+assert.deepEqual(mixedSorted.slice(0,5).map(x=>[x.record.date,x.record.shipper,x.record.dailySlot||0,x.targetBranchNumber]),[
+ ["2026-10-02","ヤマト",1,1],["2026-10-02","ヤマト",2,1],["2026-10-02","ヤマト",3,1],
+ ["2026-10-02","宏商",0,1],["2026-10-02","宏商",0,2]
+]);
+const otherRows=Y.sortMasterRows([row("B社","B2",1),row("A社","A1",1),row("B社","B1",1),row("善心","Z",1)]);
+assert.deepEqual(otherRows.map(x=>x.record.shipper),["B社","B社","A社","善心"]);
+assert.deepEqual(otherRows.filter(x=>x.record.shipper==="B社").map(x=>x.record.caseNumber),["B1","B2"]);
+assert.equal(Y.dailyId("2026-10-03",1),"daily-yamato-2026-10-03-1");
+console.log("Yamato extended ordering/id tests: PASS");
