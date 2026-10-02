@@ -4,9 +4,9 @@ const d="2026-10-02";
 const defaults=Y.buildDailyRecords(d);
 assert.equal(defaults.length,3);
 assert.deepEqual(defaults.map(x=>[x.id,x.vehicleNo,x.driver]),[
- ["daily-yamato-2026-10-02-1","11番","刈屋"],
- ["daily-yamato-2026-10-02-2","6528","髙野"],
- ["daily-yamato-2026-10-02-3","33","若菜"]
+ ["daily-yamato-2026-10-02-1","水戸136い11","刈屋"],
+ ["daily-yamato-2026-10-02-2","水戸100か6528","髙野"],
+ ["daily-yamato-2026-10-02-3","水戸138あ33","若菜"]
 ]);
 assert.equal(new Set(defaults.map(x=>x.id)).size,3);
 assert.deepEqual(Y.buildDailyRecords(d),defaults);
