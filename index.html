@@ -730,7 +730,8 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
           <th class="container-col-date">日付</th>
           <th>案件</th>
           <th>荷主</th>
-          <th>発地 → 着地</th>
+          <th>発地</th>
+          <th>着地</th>
           <th class="container-col-date">着日</th>
           <th>車番</th>
           <th>乗務員</th>
@@ -4175,7 +4176,7 @@ function renderDispatchMaster(){
 
     // 1. 日付が変わる位置に区切り帯を挿入（その日の配車をすぐ確認できるように）
     if(date!==prevDate){
-      htmlParts.push(`<tr class="master-date-divider"><td colspan="13">${escapeHtml(formatDateBannerLabel(date))}</td></tr>`);
+      htmlParts.push(`<tr class="master-date-divider"><td colspan="14">${escapeHtml(formatDateBannerLabel(date))}</td></tr>`);
       prevDate=date;
       prevGroupKey=null;
     }
@@ -4198,7 +4199,8 @@ function renderDispatchMaster(){
       <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td>
       <td class="master-col-case"><span class="master-kind-tag ${isContainer?"master-kind-container":"master-kind-general"}">${isContainer?"コンテナ":"一般"}</span>${caseBadge}</td>
       <td>${escapeHtml(r.shipper||"")}</td>
-      <td class="master-col-route">${escapeHtml(origin||"")}${origin||destination?'<span class="master-route-arrow">→</span>':""}${escapeHtml(destination||"")}</td>
+      <td class="master-col-origin">${escapeHtml(origin||"")}</td>
+      <td class="master-col-destination">${escapeHtml(destination||"")}</td>
       <td class="container-col-date">${escapeHtml(dispatchFormatDate(!isContainer&&r.stageNo!=null?(r.arrivalDate??r.date):(r.arrivalDate||r.date)))}</td>
       <td>${escapeHtml(vehicleNumber)}</td>
       <td>${escapeHtml(driverName)}</td>
@@ -4304,7 +4306,7 @@ function masterCloseForm(){
   masterEditingTargetBranch=null;
 }
 function masterAddNew(){
-  if(window.firebaseProfile?.role!=="admin") return;
+  if(!["admin","driver"].includes(window.firebaseProfile?.role)) return;
   document.getElementById("masterNewKindOverlay").style.display="flex";
 }
 function masterCreateStages(kind){
@@ -4324,7 +4326,7 @@ function masterCreateStages(kind){
 }
 async function masterEditRow(i){
   const row=masterLastRenderedRows[i];
-  if(!row || window.firebaseProfile?.role!=="admin") return;
+  if(!row || !["admin","driver"].includes(window.firebaseProfile?.role)) return;
   if(window.firebaseCloud.loadCaseStages){try{await window.firebaseCloud.loadCaseStages(row.record.caseNumber);}catch(e){alert("案件を取得できません："+e.message);return;}}
   if(row.kind==="general" && row.record.stageNo!=null){
     dispatchOpenForm("edit",row.record);
