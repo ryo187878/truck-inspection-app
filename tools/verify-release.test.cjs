@@ -115,7 +115,7 @@ function htmlHarness(file){
  const masterVehicles=structuredClone(vehicles);
  const context=vm.createContext({console,Date,Intl,crypto:require('node:crypto').webcrypto,setTimeout,clearTimeout,
   document:{getElementById:id=>elements.get(id)||null,querySelectorAll:()=>[]},
-  window:{TodayVehicleStatus:{...require('../today-vehicle-status.js'),japanDateKey:()=>today},firebaseProfile:{role:'admin'},firebaseReady:true,confirm:()=>true,firebaseCloud:{}},
+  window:{TodayVehicleStatus:{...require('../today-vehicle-status.js'),japanDateKey:()=>today},TramoYamatoDaily:require('../yamato-daily.js'),firebaseProfile:{role:'admin'},firebaseReady:true,confirm:()=>true,firebaseCloud:{}},
   localDateKey:()=>today,escapeHtml:v=>String(v??''),escapeAttr:v=>String(v??''),getMaster:key=>key==='truck_vehicles'?masterVehicles:['田中','鈴木','佐藤'],defaultVehicles:[],defaultDrivers:[],alert:message=>{throw new Error(message);},renderMasters:()=>{},TodayVehicleStatus:{...require('../today-vehicle-status.js'),japanDateKey:()=>today}
  });
  const start=html.indexOf('// ===== 荷主ごとの表示グルーピング');const end=html.indexOf('function renderRecords(',start);
