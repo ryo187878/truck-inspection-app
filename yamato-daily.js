@@ -6,9 +6,9 @@
   "use strict";
   const SHIPPER_PRIORITY=["ヤマト","__OTHERS__","西原産業","トランシス","八楠","ルート産業","宏商","善心"];
   const YAMATO_SLOTS=[
-    {slot:1,vehicleNumber:"11番",driverName:"刈屋"},
-    {slot:2,vehicleNumber:"6528",driverName:"髙野"},
-    {slot:3,vehicleNumber:"33",driverName:"若菜"}
+    {slot:1,vehicleNumber:"水戸136い11",driverName:"刈屋"},
+    {slot:2,vehicleNumber:"水戸100か6528",driverName:"髙野"},
+    {slot:3,vehicleNumber:"水戸138あ33",driverName:"若菜"}
   ];
   function dailyId(date,slot){return "daily-yamato-"+String(date)+"-"+Number(slot);}
   function buildDailyRecords(date){
