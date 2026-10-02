@@ -306,6 +306,39 @@ test('海コン共通シャーシは全工程で一致し、訂正と後から�
  const before=structuredClone(db.records);await assert.rejects(saveC({caseNumber:first.caseNumber,chassisNumber:'bad'},[{...first.stages[0]}],{otherExistingStageIds:['missing']}),/同じ案件/);assert.deepEqual(db.records,before);
 });
 
+test('監査: 先行予定は前日までは先行に残り、当日0時からマスターになる',()=>{
+ const t=require('../today-vehicle-status.js');
+ assert.equal(t.effectiveBoard({boardStatus:'advance',date:'2026-10-06'},'2026-10-05'),'advance');
+ assert.equal(t.effectiveBoard({boardStatus:'advance',date:'2026-10-06'},'2026-10-06'),'master');
+});
+
+test('監査: 先行画面と配車マスターに同じ明示区分レコードを二重表示しない',()=>{
+ for(const file of ['index.html','test/index.html']){
+  const h=htmlHarness(file);
+  h.run(`dispatchRecords=[{id:'m',caseNumber:'TM',date:'2026-10-06',shipper:'MASTER_ONLY',boardStatus:'master'},{id:'a',caseNumber:'TA',date:'2026-10-10',shipper:'ADVANCE_ONLY',boardStatus:'advance'}];containerDispatchRecords=[];dispatchCurrentMonth='2026-10';masterCurrentMonth='2026-10';renderDispatch();renderDispatchMaster();`);
+  const advance=h.elements.get('dispatchTableBody').innerHTML,master=h.elements.get('masterTableBody').innerHTML;
+  assert.ok(advance.includes('ADVANCE_ONLY'));assert.ok(!advance.includes('MASTER_ONLY'));
+  assert.ok(master.includes('MASTER_ONLY'));assert.ok(!master.includes('ADVANCE_ONLY'));
+ }
+});
+
+test('監査: 先行新規はadvance、配車マスター新規はmasterでフォームを開始する',()=>{
+ for(const file of ['index.html','test/index.html']){
+  const h=htmlHarness(file);
+  h.run(`dispatchAddNew();`);assert.equal(h.run('dispatchFormBoard'),'advance');h.run('dispatchCloseForm()');
+  h.run(`masterCurrentMonth='2026-10';masterAddNew();masterCreateStages('general');`);assert.equal(h.run('dispatchFormBoard'),'master');
+ }
+});
+
+test('監査: 区分なし旧データは先行には出さずマスター側で確認できる',()=>{
+ for(const file of ['index.html','test/index.html']){
+  const h=htmlHarness(file);
+  h.run(`dispatchRecords=[{id:'legacy',caseNumber:'TL',date:'2026-10-10',shipper:'LEGACY_ONLY'}];containerDispatchRecords=[];dispatchCurrentMonth='2026-10';masterCurrentMonth='2026-10';renderDispatch();renderDispatchMaster();`);
+  assert.ok(!h.elements.get('dispatchTableBody').innerHTML.includes('LEGACY_ONLY'));
+  assert.ok(h.elements.get('masterTableBody').innerHTML.includes('LEGACY_ONLY'));
+ }
+});
+
 test('先行は前日からマスターになり、直入力のマスターは先行に入らない',()=>{
  const t=require('../today-vehicle-status.js');
  assert.equal(t.effectiveBoard({boardStatus:'advance',date:'2026-10-06'},'2026-10-04'),'advance');
