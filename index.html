@@ -289,8 +289,9 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
 #dispatchMasterPage .container-table tbody tr.master-case-start td{border-top:2px solid #8aa0bf}
 #dispatchMasterPage .master-col-case,#dispatchMasterPage .master-col-origin,#dispatchMasterPage .master-col-destination{text-align:left}
 #dispatchMasterPage .master-sub-line{font-size:12px;color:#5a6472;margin-top:3px}
-#dispatchMasterPage .container-col-action{min-width:72px}
-#dispatchMasterPage .container-col-action .dispatch-edit-btn{width:100%}
+#dispatchMasterPage .container-col-action{min-width:90px}
+#dispatchMasterPage .master-action-buttons{display:grid;gap:4px}
+#dispatchMasterPage .master-action-buttons button{width:100%}
 /* 日付が変わる位置の区切り帯（その日の配車をすぐ確認できるようにする） */
 #dispatchMasterPage .container-table tbody tr.master-date-divider td{background:#17365d;color:#fff;font-weight:800;font-size:14px;text-align:left;padding:8px 10px;border-color:#17365d}
 
@@ -4210,7 +4211,10 @@ function renderDispatchMaster(){
       <td class="master-col-containerno">${escapeHtml(r.containerNumber||"")}</td>
       <td class="container-col-time">${escapeHtml(time||"")}</td>
       <td class="container-col-action">
-        ${["admin","driver"].includes(window.firebaseProfile?.role)?`<button type="button" class="dispatch-edit-btn" onclick="masterEditRow(${i})">編集</button>`:""}
+        <div class="master-action-buttons">
+          ${["admin","driver"].includes(window.firebaseProfile?.role)?`<button type="button" class="dispatch-edit-btn" onclick="masterEditRow(${i})">編集</button>`:""}
+          ${window.firebaseProfile?.role==="admin"?`<button type="button" class="dispatch-delete-btn" onclick="masterDeleteRow(${i})">削除</button>`:""}
+        </div>
       </td>
     </tr>`);
   });
@@ -4348,6 +4352,7 @@ async function masterDeleteCurrentRow(){
 }
 
 async function masterDeleteRow(i){
+  if(window.firebaseProfile?.role!=="admin") return false;
   const row=masterLastRenderedRows[i];
   if(!row || !row.record || !row.record.id) return false;
   const isContainer=row.kind==="container";
