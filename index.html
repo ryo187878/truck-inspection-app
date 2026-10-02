@@ -4175,8 +4175,8 @@ function renderDispatchMaster(){
       prevGroupKey=null;
     }
 
-    // 2. 同じ日付内は案件番号（枝番なし）でグループ化し、案件が変わる境界だけ太線で区切る（荷主名ではまとめない）
-    const groupKey=r.caseNumber?`case:${r.caseNumber}`:`norec:${row.kind}:${r.id||i}`;
+    // 2. 同じ日付内は荷主単位でまとめ、荷主が変わる境界を太線で区切る
+    const groupKey=`shipper:${String(r.shipper||"")}`;
     const isGroupStart=groupKey!==prevGroupKey;
     prevGroupKey=groupKey;
 
