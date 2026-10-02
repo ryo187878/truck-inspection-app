@@ -202,7 +202,7 @@ test('積み地・降ろし地が空欄の一般配車はマスターとExcelで
  for(const file of ['index.html','test/index.html']){
   const h=htmlHarness(file);
   h.run(`dispatchRecords=[{id:'yamato',caseNumber:'T000008',branchNumber:1,stageNo:2,vehicleSlot:1,date:'2026-10-01',shipper:'ヤマト',workType:'荷下ろし'}];masterCurrentMonth='2026-10';renderDispatchMaster();`);
-  assert.ok(h.elements.get('masterTableBody').innerHTML.includes('<td class="master-col-route"></td>'));
+  assert.ok(h.elements.get('masterTableBody').innerHTML.includes('<td class="master-col-origin"></td>'));assert.ok(h.elements.get('masterTableBody').innerHTML.includes('<td class="master-col-destination"></td>'));
   const row=JSON.parse(h.run('JSON.stringify(masterRowToExcelRow(masterBuildRows()[0]))'));
   assert.equal(row[4],'');assert.equal(row[5],'');
  }
@@ -295,7 +295,7 @@ test('当日完結と日をまたぐ配車は終了日の翌日0時に非表示�
 });
 test('前日から運行中の車両を翌日の未点検に含め、未来の先行車両と終了車両を除く',()=>{
  const r=build({...base,today:'2026-10-03',dispatches:[{date:'2026-10-02',arrivalDate:'2026-10-03',boardStatus:'master',vehicleNo:vehicles[0].name},{date:'2026-10-06',boardStatus:'advance',vehicleNo:vehicles[1].name},{date:'2026-10-02',vehicleNo:vehicles[2].name}],containers:[{date:'2026-10-02',arrivalDate:'2026-10-03',vehicleNumber:vehicles[0].name}]});
- assert.deepEqual(names(r.uninspected),['A','B','C','D']);assert.equal(r.assignedCount,1);assert.deepEqual(names(r.noDispatch),['B','C','D']);
+ assert.deepEqual(names(r.uninspected),['A']);assert.equal(r.assignedCount,1);assert.deepEqual(names(r.noDispatch),['B','C','D']);
 });
 test('先行からマスターへ移しても記録ID・採番・枝・担当者を変えず、二重移動しない',async()=>{
  const db=database();const first=await svc.saveDispatchGeneralStagesCore({...db,companyId:'company-a',officeId:'office-main',caseInfo:{shipper:'予定'},stages:[stage(1,1,'2026-10-06')],options:{boardStatus:'advance'}});
