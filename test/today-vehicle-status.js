@@ -57,10 +57,11 @@
     });
     containers.filter(validDispatch).forEach(r=>add(r.vehicleId||r.vehicleCloudId,r.vehicleNumber));
     return {
-      inspected:own.filter((v,i)=>inspected.has(i)),
-      // 「本日 点検記録のない車両」は配車の有無にかかわらず全登録車両から算出する。
-      // noDispatch はその内訳確認用の別グループとして保持する。
-      uninspected:own.filter((v,i)=>!inspected.has(i)),
+      // 配車版を基準に3分類する。配車にない車両は noDispatch にだけ出す。
+      inspected:own.filter((v,i)=>assigned.has(i)&&inspected.has(i)),
+      // 本日の配車に入っている車両のうち、点検記録がない車両だけを表示する。
+      // 配車にない車両は noDispatch（本日運行のない車両）にだけ出す。
+      uninspected:own.filter((v,i)=>assigned.has(i)&&!inspected.has(i)),
       noDispatch:own.filter((v,i)=>!assigned.has(i)),
       registeredCount:own.length,assignedCount:assigned.size,today
     };

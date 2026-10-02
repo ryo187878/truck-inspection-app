@@ -264,19 +264,20 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
 #dispatchMasterPage .container-table th,#dispatchMasterPage .container-table td{white-space:normal;overflow-wrap:break-word;padding:7px 8px;font-size:14px;line-height:1.4;vertical-align:middle}
 #dispatchMasterPage .container-table th.container-col-date,#dispatchMasterPage .container-table td.container-col-date,
 #dispatchMasterPage .container-table th.container-col-time,#dispatchMasterPage .container-table td.container-col-time{white-space:nowrap}
-#dispatchMasterPage .container-table th:nth-child(1),#dispatchMasterPage .container-table td:nth-child(1){width:6%}
-#dispatchMasterPage .container-table th:nth-child(2),#dispatchMasterPage .container-table td:nth-child(2){width:10%}
+#dispatchMasterPage .container-table th:nth-child(1),#dispatchMasterPage .container-table td:nth-child(1){width:5%}
+#dispatchMasterPage .container-table th:nth-child(2),#dispatchMasterPage .container-table td:nth-child(2){width:8%}
 #dispatchMasterPage .container-table th:nth-child(3),#dispatchMasterPage .container-table td:nth-child(3){width:7%}
-#dispatchMasterPage .container-table th:nth-child(4),#dispatchMasterPage .container-table td:nth-child(4){width:10%}
-#dispatchMasterPage .container-table th:nth-child(5),#dispatchMasterPage .container-table td:nth-child(5){width:6%}
-#dispatchMasterPage .container-table th:nth-child(6),#dispatchMasterPage .container-table td:nth-child(6){width:8%}
-#dispatchMasterPage .container-table th:nth-child(7),#dispatchMasterPage .container-table td:nth-child(7){width:7%}
-#dispatchMasterPage .container-table th:nth-child(8),#dispatchMasterPage .container-table td:nth-child(8){width:8%}
+#dispatchMasterPage .container-table th:nth-child(4),#dispatchMasterPage .container-table td:nth-child(4){width:9%}
+#dispatchMasterPage .container-table th:nth-child(5),#dispatchMasterPage .container-table td:nth-child(5){width:13%}
+#dispatchMasterPage .container-table th:nth-child(6),#dispatchMasterPage .container-table td:nth-child(6){width:5%}
+#dispatchMasterPage .container-table th:nth-child(7),#dispatchMasterPage .container-table td:nth-child(7){width:8%}
+#dispatchMasterPage .container-table th:nth-child(8),#dispatchMasterPage .container-table td:nth-child(8){width:7%}
 #dispatchMasterPage .container-table th:nth-child(9),#dispatchMasterPage .container-table td:nth-child(9){width:7%}
-#dispatchMasterPage .container-table th:nth-child(10),#dispatchMasterPage .container-table td:nth-child(10){width:7%}
-#dispatchMasterPage .container-table th:nth-child(11),#dispatchMasterPage .container-table td:nth-child(11){width:13%}
-#dispatchMasterPage .container-table th:nth-child(12),#dispatchMasterPage .container-table td:nth-child(12){width:5%}
-#dispatchMasterPage .container-table th:nth-child(13),#dispatchMasterPage .container-table td:nth-child(13){width:6%}
+#dispatchMasterPage .container-table th:nth-child(10),#dispatchMasterPage .container-table td:nth-child(10){width:6%}
+#dispatchMasterPage .container-table th:nth-child(11),#dispatchMasterPage .container-table td:nth-child(11){width:7%}
+#dispatchMasterPage .container-table th:nth-child(12),#dispatchMasterPage .container-table td:nth-child(12){width:9%}
+#dispatchMasterPage .container-table th:nth-child(13),#dispatchMasterPage .container-table td:nth-child(13){width:4%}
+#dispatchMasterPage .container-table th:nth-child(14),#dispatchMasterPage .container-table td:nth-child(14){width:5%}
 #dispatchMasterPage .master-col-chassis,#dispatchMasterPage .master-col-containerno{font-variant-numeric:tabular-nums}
 #dispatchMasterPage .master-kind-tag{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:800;margin-right:5px;vertical-align:middle;white-space:nowrap}
 #dispatchMasterPage .master-kind-general{background:#e2eafc;color:#1d3557}
@@ -286,8 +287,7 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
 #dispatchMasterPage .container-table tbody tr.master-row-container td:first-child{box-shadow:inset 4px 0 0 #52b788}
 /* 同じ日付内で案件が変わる境界に太い上線を引き、案件単位のまとまりを分かりやすくする */
 #dispatchMasterPage .container-table tbody tr.master-case-start td{border-top:2px solid #8aa0bf}
-#dispatchMasterPage .master-col-case,#dispatchMasterPage .master-col-route{text-align:left}
-#dispatchMasterPage .master-route-arrow{color:#8a93a3;font-weight:700;margin:0 4px}
+#dispatchMasterPage .master-col-case,#dispatchMasterPage .master-col-origin,#dispatchMasterPage .master-col-destination{text-align:left}
 #dispatchMasterPage .master-sub-line{font-size:12px;color:#5a6472;margin-top:3px}
 #dispatchMasterPage .container-col-action{min-width:72px}
 #dispatchMasterPage .container-col-action .dispatch-edit-btn{width:100%}
@@ -534,7 +534,7 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
       <div id="todayInspectedPagination" style="margin-top:10px;text-align:center;"></div>
     </details></section>
 <section class="card"><details><summary class="section-title" style="cursor:pointer;">🔴 本日 点検記録のない車両<span id="todayNoInspectionCount">　確認中</span></summary>
-      <div class="small" style="margin:10px 0;">本日の点検記録がない登録車両（配車の有無にかかわらず表示）</div>
+      <div class="small" style="margin:10px 0;">本日の配車に車番があり、点検記録がない車両</div>
       <input id="todayNoInspectionSearch" type="search" autocomplete="off" placeholder="🔍 車番を検索" oninput="window.todayNoInspectionPage=1;renderTodayVehicleLists()" style="width:100%;box-sizing:border-box;margin-bottom:10px;">
       <div id="todayNoInspectionVehicles">本日の記録を確認しています。</div>
       <div id="todayNoInspectionPagination" style="margin-top:10px;text-align:center;"></div>
@@ -730,7 +730,8 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
           <th class="container-col-date">日付</th>
           <th>案件</th>
           <th>荷主</th>
-          <th>発地 → 着地</th>
+          <th>発地</th>
+          <th>着地</th>
           <th class="container-col-date">着日</th>
           <th>車番</th>
           <th>乗務員</th>
@@ -4175,7 +4176,7 @@ function renderDispatchMaster(){
 
     // 1. 日付が変わる位置に区切り帯を挿入（その日の配車をすぐ確認できるように）
     if(date!==prevDate){
-      htmlParts.push(`<tr class="master-date-divider"><td colspan="13">${escapeHtml(formatDateBannerLabel(date))}</td></tr>`);
+      htmlParts.push(`<tr class="master-date-divider"><td colspan="14">${escapeHtml(formatDateBannerLabel(date))}</td></tr>`);
       prevDate=date;
       prevGroupKey=null;
     }
@@ -4198,7 +4199,8 @@ function renderDispatchMaster(){
       <td class="container-col-date">${escapeHtml(dispatchFormatDate(r.date))}</td>
       <td class="master-col-case"><span class="master-kind-tag ${isContainer?"master-kind-container":"master-kind-general"}">${isContainer?"コンテナ":"一般"}</span>${caseBadge}</td>
       <td>${escapeHtml(r.shipper||"")}</td>
-      <td class="master-col-route">${escapeHtml(origin||"")}${origin||destination?'<span class="master-route-arrow">→</span>':""}${escapeHtml(destination||"")}</td>
+      <td class="master-col-origin">${escapeHtml(origin||"")}</td>
+      <td class="master-col-destination">${escapeHtml(destination||"")}</td>
       <td class="container-col-date">${escapeHtml(dispatchFormatDate(!isContainer&&r.stageNo!=null?(r.arrivalDate??r.date):(r.arrivalDate||r.date)))}</td>
       <td>${escapeHtml(vehicleNumber)}</td>
       <td>${escapeHtml(driverName)}</td>
@@ -4304,7 +4306,7 @@ function masterCloseForm(){
   masterEditingTargetBranch=null;
 }
 function masterAddNew(){
-  if(window.firebaseProfile?.role!=="admin") return;
+  if(!["admin","driver"].includes(window.firebaseProfile?.role)) return;
   document.getElementById("masterNewKindOverlay").style.display="flex";
 }
 function masterCreateStages(kind){
@@ -4324,7 +4326,7 @@ function masterCreateStages(kind){
 }
 async function masterEditRow(i){
   const row=masterLastRenderedRows[i];
-  if(!row || window.firebaseProfile?.role!=="admin") return;
+  if(!row || !["admin","driver"].includes(window.firebaseProfile?.role)) return;
   if(window.firebaseCloud.loadCaseStages){try{await window.firebaseCloud.loadCaseStages(row.record.caseNumber);}catch(e){alert("案件を取得できません："+e.message);return;}}
   if(row.kind==="general" && row.record.stageNo!=null){
     dispatchOpenForm("edit",row.record);

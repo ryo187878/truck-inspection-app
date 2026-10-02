@@ -12,7 +12,12 @@ const base={vehicles,today,companyId:'company-a',officeId:'office-main'};
 function names(values){return values.map(v=>v._cloudId);}
 test('点検済み・配車あり未点検・配車なしを正しく照合する',()=>{
  const r=build({...base,inspections:[{date:today,vehicle:vehicles[0].name},{date:today,vehicle:vehicles[2].name}],dispatches:[{date:today,vehicleNo:vehicles[0].name},{date:today,vehicleNo:vehicles[1].name}]});
- assert.deepEqual(names(r.inspected),['A','C']);assert.deepEqual(names(r.uninspected),['B','D']);assert.deepEqual(names(r.noDispatch),['C','D']);assert.equal(r.assignedCount,2);
+ assert.deepEqual(names(r.inspected),['A']);assert.deepEqual(names(r.uninspected),['B']);assert.deepEqual(names(r.noDispatch),['C','D']);assert.equal(r.assignedCount,2);
+ const all=[...names(r.inspected),...names(r.uninspected),...names(r.noDispatch)];assert.deepEqual(all.slice().sort(),['A','B','C','D']);assert.equal(new Set(all).size,4);
+});
+test('配車にない車両は点検済みでも本日運行なしにだけ分類する',()=>{
+ const r=build({...base,inspections:[{date:today,vehicle:vehicles[2].name}],dispatches:[{date:today,vehicleNo:vehicles[0].name}]});
+ assert.deepEqual(names(r.inspected),[]);assert.deepEqual(names(r.uninspected),['A']);assert.deepEqual(names(r.noDispatch),['B','C','D']);
 });
 test('複数台割当・海コン工程・同日複数工程を合算して重複台数を数えない',()=>{
  const r=build({...base,dispatches:[{date:today,assignments:[{vehicleNumber:vehicles[0].name},{vehicleNumber:vehicles[1].name}]},{date:today,vehicleNo:vehicles[0].name}],containers:[{date:today,vehicleNumber:vehicles[1].name},{date:today,vehicleNumber:vehicles[2].name}]});
@@ -23,16 +28,16 @@ test('別日・削除済み・他社・他営業所・自社マスターにな�
  assert.equal(r.assignedCount,0);assert.equal(r.noDispatch.length,4);
 });
 test('全角・空白の表記差を吸収し、ナンバー下4桁だけでは照合しない',()=>{
- const r=build({...base,dispatches:[{date:today,vehicleNo:'水戸１００　あ１２３４'},{date:today,vehicleNo:'1234'}]});assert.deepEqual(names(r.uninspected),['A','B','C','D']);
+ const r=build({...base,dispatches:[{date:today,vehicleNo:'水戸１００　あ１２３４'},{date:today,vehicleNo:'1234'}]});assert.deepEqual(names(r.uninspected),['A']);
 });
 test('車両IDがある場合はIDを優先し、不明なIDを別車両名へフォールバックしない',()=>{
- const r=build({...base,dispatches:[{date:today,vehicleId:'B',vehicleNo:vehicles[0].name},{date:today,vehicleId:'unknown',vehicleNo:vehicles[2].name}]});assert.deepEqual(names(r.uninspected),['A','B','C','D']);
+ const r=build({...base,dispatches:[{date:today,vehicleId:'B',vehicleNo:vehicles[0].name},{date:today,vehicleId:'unknown',vehicleNo:vehicles[2].name}]});assert.deepEqual(names(r.uninspected),['B']);
 });
 test('同じ表示名のマスターが複数ある場合は誤照合しない',()=>{
  const r=build({...base,vehicles:[vehicles[0],{...vehicles[0],_cloudId:'X'}],dispatches:[{date:today,vehicleNo:vehicles[0].name}]});assert.equal(r.assignedCount,0);
 });
 test('一部枝が引継ぎ済みの旧複数台データは未引継ぎ車両も残す',()=>{
- const r=build({...base,dispatches:[{id:'old',caseNumber:'T1',date:today,assignments:[{vehicleNumber:vehicles[0].name,branchNumber:1},{vehicleNumber:vehicles[1].name,branchNumber:2}]}],containers:[{date:today,sourceDispatchId:'old',sourceBranchNumber:1,caseNumber:'T1',branchNumber:1,vehicleNumber:vehicles[2].name}]});assert.deepEqual(names(r.uninspected),['A','B','C','D']);
+ const r=build({...base,dispatches:[{id:'old',caseNumber:'T1',date:today,assignments:[{vehicleNumber:vehicles[0].name,branchNumber:1},{vehicleNumber:vehicles[1].name,branchNumber:2}]}],containers:[{date:today,sourceDispatchId:'old',sourceBranchNumber:1,caseNumber:'T1',branchNumber:1,vehicleNumber:vehicles[2].name}]});assert.deepEqual(names(r.uninspected),['B','C']);
 });
 test('日本時間の午前0時で本日が切り替わる',()=>{assert.equal(japanDateKey(new Date('2026-10-01T14:59:59Z')),'2026-10-01');assert.equal(japanDateKey(new Date('2026-10-01T15:00:00Z')),'2026-10-02');});
 function database(seed={}){
@@ -157,7 +162,7 @@ test('読み込み失敗は配車なしと誤表示せず、照合UIは3つの�
  h.run('window.todayVehicleCloudState={error:true,ready:{}};renderTodayVehicleLists()');
  assert.equal(h.elements.get('todayNoDispatchCount').textContent,'　確認できません');
  h.run(`window.todayVehicleCloudState={date:'2026-10-01',companyId:'company-a',officeId:'office-main',ready:{inspections:true,dispatches:true,containers:true},inspections:[{date:'2026-10-01',vehicle:'水戸 100 あ 1234'}],dispatches:[{date:'2026-10-01',vehicleNo:'水戸 100 い 5678'}],containers:[]};renderTodayVehicleLists()`);
- assert.match(h.elements.get('todayNoInspectionCount').textContent,/3 \/ 4台/);assert.match(h.elements.get('todayNoInspectionVehicles').innerHTML,/5678/);assert.match(h.elements.get('todayNoDispatchVehicles').innerHTML,/9999/);assert.match(h.elements.get('todayNoDispatchVehicles').innerHTML,/1234/);
+ assert.match(h.elements.get('todayNoInspectionCount').textContent,/1 \/ 4台/);assert.match(h.elements.get('todayNoInspectionVehicles').innerHTML,/5678/);assert.match(h.elements.get('todayNoDispatchVehicles').innerHTML,/9999/);assert.match(h.elements.get('todayNoDispatchVehicles').innerHTML,/1234/);
 });
 test('リアルタイム照合は本日の会社パスのみ購読し、ログアウト時に全購読を解放する',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
@@ -202,7 +207,7 @@ test('積み地・降ろし地が空欄の一般配車はマスターとExcelで
  for(const file of ['index.html','test/index.html']){
   const h=htmlHarness(file);
   h.run(`dispatchRecords=[{id:'yamato',caseNumber:'T000008',branchNumber:1,stageNo:2,vehicleSlot:1,date:'2026-10-01',shipper:'ヤマト',workType:'荷下ろし'}];masterCurrentMonth='2026-10';renderDispatchMaster();`);
-  assert.ok(h.elements.get('masterTableBody').innerHTML.includes('<td class="master-col-route"></td>'));
+  assert.ok(h.elements.get('masterTableBody').innerHTML.includes('<td class="master-col-origin"></td>'));assert.ok(h.elements.get('masterTableBody').innerHTML.includes('<td class="master-col-destination"></td>'));
   const row=JSON.parse(h.run('JSON.stringify(masterRowToExcelRow(masterBuildRows()[0]))'));
   assert.equal(row[4],'');assert.equal(row[5],'');
  }
@@ -295,7 +300,7 @@ test('当日完結と日をまたぐ配車は終了日の翌日0時に非表示�
 });
 test('前日から運行中の車両を翌日の未点検に含め、未来の先行車両と終了車両を除く',()=>{
  const r=build({...base,today:'2026-10-03',dispatches:[{date:'2026-10-02',arrivalDate:'2026-10-03',boardStatus:'master',vehicleNo:vehicles[0].name},{date:'2026-10-06',boardStatus:'advance',vehicleNo:vehicles[1].name},{date:'2026-10-02',vehicleNo:vehicles[2].name}],containers:[{date:'2026-10-02',arrivalDate:'2026-10-03',vehicleNumber:vehicles[0].name}]});
- assert.deepEqual(names(r.uninspected),['A','B','C','D']);assert.equal(r.assignedCount,1);assert.deepEqual(names(r.noDispatch),['B','C','D']);
+ assert.deepEqual(names(r.uninspected),['A']);assert.equal(r.assignedCount,1);assert.deepEqual(names(r.noDispatch),['B','C','D']);
 });
 test('先行からマスターへ移しても記録ID・採番・枝・担当者を変えず、二重移動しない',async()=>{
  const db=database();const first=await svc.saveDispatchGeneralStagesCore({...db,companyId:'company-a',officeId:'office-main',caseInfo:{shipper:'予定'},stages:[stage(1,1,'2026-10-06')],options:{boardStatus:'advance'}});
@@ -409,6 +414,44 @@ test('区分のない既存先行予定を消さず、明示的な確定入力�
 });
 
 // 2026-10-02 バグ修正の画面回帰確認。main/testを同じ操作で確認。
+test('配車マスターは発地・着地分離後も14列の幅定義と日付帯colspanを保持する',()=>{
+ for(const file of ['index.html','test/index.html']){
+  const html=fs.readFileSync(path.join(root,file),'utf8');
+  assert.match(html,/<th>発地<\/th>\s*<th>着地<\/th>/);
+  assert.ok(!html.includes('<th>発地 → 着地</th>'));
+  assert.match(html,/th:nth-child\(14\).*width:5%/);
+  assert.match(html,/master-date-divider"><td colspan="14">/);
+ }
+});
+
+test('運転者は配車マスターの新規登録と編集を開ける',async()=>{
+ for(const file of ['index.html','test/index.html']){
+  const h=htmlHarness(file);h.context.window.firebaseProfile={role:'driver'};
+  h.run(`masterCurrentMonth='2026-10';masterAddNew();`);
+  assert.equal(h.elements.get('masterNewKindOverlay').style.display,'flex');
+  h.run(`document.getElementById('masterNewKindOverlay').style.display='none';dispatchRecords=[{id:'g1',caseNumber:'T1',branchNumber:1,date:'2026-10-02',boardStatus:'master',shipper:'荷主',loadPlace:'水戸市',unloadPlace:'笠間市 倉庫A',vehicleNo:'車A',driver:'田中'}];containerDispatchRecords=[];masterCurrentMonth='2026-10';renderDispatchMaster();`);
+  const html=h.elements.get('masterTableBody').innerHTML;
+  assert.ok(html.includes('<td class="master-col-origin">水戸市</td>'));
+  assert.ok(html.includes('<td class="master-col-destination">笠間市 倉庫A</td>'));
+  assert.ok(!html.includes('水戸市<span class="master-route-arrow">→</span>笠間市 倉庫A'));
+  await h.run('masterEditRow(0)');
+  assert.equal(h.elements.get('masterFormOverlay').style.display,'flex');
+ }
+});
+
+test('運転者の配車マスター新規一般と工程編集が実際の入力画面まで開く',async()=>{
+ for(const file of ['index.html','test/index.html']){
+  const h=htmlHarness(file);h.context.window.firebaseProfile={role:'driver'};
+  h.run(`masterCurrentMonth='2026-10';masterAddNew();masterCreateStages('general');`);
+  assert.equal(h.elements.get('dispatchFormOverlay').style.display,'flex');
+  h.run(`dispatchCloseForm();dispatchRecords=[{id:'stage1',caseNumber:'T9',branchNumber:1,stageNo:1,vehicleSlot:1,date:'2026-10-02',boardStatus:'master',shipper:'荷主',loadPlace:'水戸',unloadPlace:'笠間 倉庫B',vehicleNumber:'車A',driverName:'田中',workType:'引取'}];containerDispatchRecords=[];masterCurrentMonth='2026-10';renderDispatchMaster();`);
+  h.context.window.firebaseCloud.loadCaseStages=async()=>{};
+  await h.run('masterEditRow(0)');
+  assert.equal(h.elements.get('dispatchFormOverlay').style.display,'flex');
+  assert.match(h.elements.get('dispatchFormTitle').textContent,/配車マスターの編集/);
+ }
+});
+
 test('運転者は配車の編集ボタンを使え、削除ボタンは表示されない',()=>{
  for(const file of ['index.html','test/index.html']){
   const h=htmlHarness(file);h.context.window.firebaseProfile={role:'driver'};
