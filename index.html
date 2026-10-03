@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ja">
 <head>
 <link rel="manifest" href="./manifest.json">
@@ -4328,7 +4328,7 @@ async function masterEditRow(i){
   const row=masterLastRenderedRows[i];
   if(!row || !["admin","driver"].includes(window.firebaseProfile?.role)) return;
   if(window.firebaseCloud.loadCaseStages){try{await window.firebaseCloud.loadCaseStages(row.record.caseNumber);}catch(e){alert("案件を取得できません："+e.message);return;}}
-  if(row.kind==="general" && row.record.stageNo!=null){
+  if(row.kind==="general"){
     dispatchOpenForm("edit",row.record);
     document.getElementById("dispatchFormTitle").textContent="配車マスターの編集（集配・引取／配達）";
   }else if(row.kind==="container" && row.record.stageNo!=null){
