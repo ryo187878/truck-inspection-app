@@ -717,7 +717,9 @@
         }
       }
       const reserved=await reserveStageSlots({transaction,doc,firestoreDb,recordsPath:dispatchRecordsColPath,caseNumber:finalCaseNumber,caseData:caseSnap?.exists()?caseSnap.data():null,stages,recordIds,otherIds:options.otherExistingStageIds,kind:'general'});
-      nextBranch=Math.max(nextBranch,maxBranch+1);
+      // nextBranch が過去の不整合で先行していても、履歴上の最大枝番 + 1 から発行する。
+      // 削除済み枝番は maxBranch に残るため再利用されない。
+      nextBranch=maxBranch+1;
       // 枝番割り当て：既存の枝番を持つ工程はそのまま維持し、新規の工程だけ新しい枝番を発行する
       const sortedStages = stages.slice().sort((a, b) => {
         const slotDiff = (Number(a.vehicleSlot) || 0) - (Number(b.vehicleSlot) || 0);
