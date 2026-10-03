@@ -305,6 +305,7 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
 </style>
 <script src="../vendor/exceljs/exceljs.min.js"></script>
 <script src="./dispatch-service.js"></script>
+<script src="../yamato-daily.js"></script>
 <script src="./today-vehicle-status.js"></script>
 </head>
 <body>
@@ -1336,6 +1337,17 @@ function getLoginTenantContext(){
     },
     async refreshDispatchBoards(){
       await ensureBoardMetadata();await promoteAdvanceRecords();
+      if(window.firebaseProfile?.role==="admin"){
+        const today=TodayVehicleStatus.japanDateKey();
+        for(const record of window.TramoYamatoDaily.buildDailyRecords(today)){
+          const ref=doc(firestoreDb,CLOUD_DISPATCH_COLLECTION,record.id);
+          const snap=await getDoc(ref);
+          if(!snap.exists() || !snap.data()?.caseNumber){
+            const targetRecord=snap.exists()?{...snap.data(),id:record.id}:record;
+            await window.firebaseCloud.saveDispatchRecord(targetRecord);
+          }
+        }
+      }
       const g=await loadBoardRecords(CLOUD_DISPATCH_COLLECTION,true),c=await loadContainerRecords();
       dispatchRecords=g;containerDispatchRecords=c;
       renderDispatch();renderDispatchMaster();renderContainerDispatch();

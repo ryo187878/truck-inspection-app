@@ -1467,10 +1467,11 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
         const today=TodayVehicleStatus.japanDateKey();
         for(const record of window.TramoYamatoDaily.buildDailyRecords(today)){
           const ref=doc(firestoreDb,CLOUD_DISPATCH_COLLECTION,record.id);
-          await runTransaction(firestoreDb,async tx=>{
-            const snap=await tx.get(ref);
-            if(!snap.exists()) tx.set(ref,{...record,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
-          });
+          const snap=await getDoc(ref);
+          if(!snap.exists() || !snap.data()?.caseNumber){
+            const targetRecord=snap.exists()?{...snap.data(),id:record.id}:record;
+            await window.firebaseCloud.saveDispatchRecord(targetRecord);
+          }
         }
       }
       const g=await loadBoardRecords(CLOUD_DISPATCH_COLLECTION,true),c=await loadContainerRecords();
