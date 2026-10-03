@@ -701,8 +701,10 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
     <span class="master-excel-group">
       <button type="button" onclick="exportMasterDailyExcel()">Excel出力（1日）</button>
       <input id="masterExcelDate" type="date" autocomplete="off">
+      <button type="button" onclick="exportMasterDailyCsv()">CSV出力（1日）</button>
     </span>
     <button type="button" onclick="exportMasterMonthlyExcel()">Excel出力（1か月）</button>
+    <button type="button" onclick="exportMasterMonthlyCsv()">CSV出力（1か月）</button>
   </div>
   <details class="case-form-group" id="masterHistoryPanel">
     <summary style="cursor:pointer;font-weight:700">過去の配車を検索</summary>
@@ -719,6 +721,7 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
       <button type="button" id="masterHistoryMore" onclick="masterSearchHistory(true)" style="display:none">続きを取得</button>
       <button type="button" onclick="masterExitHistory()">通常一覧に戻る</button>
       <button type="button" onclick="exportMasterSearchExcel()">検索結果をExcel出力</button>
+      <button type="button" onclick="exportMasterSearchCsv()">検索結果をCSV出力</button>
     </div>
     <div class="small" id="masterHistoryStatus">期間を指定して検索します。日付欄を基準に取得します。</div>
   </details>
@@ -4121,8 +4124,7 @@ function masterExitHistory(){masterResetHistoryView();renderDispatchMaster();}
 async function exportMasterSearchExcel(){
   if(!masterHistoryMode||!masterLastRenderedRows.length){alert('先に過去の配車を検索してください。');return;}
   try{
-    const records=await window.firebaseCloud.loadAllBoardHistory(masterHistoryQuery.from,masterHistoryQuery.to,'all');
-    const rows=masterRowsFromRecords(records.general,records.container).filter(row=>masterHistoryMatches(row));
+    const rows=(await loadMasterExportRows(masterHistoryQuery.from,masterHistoryQuery.to,true)).filter(row=>masterHistoryMatches(row));
     const blob=await buildMasterExcelBlobWithExcelJS(rows,'検索結果：'+masterHistoryQuery.from+'～'+masterHistoryQuery.to);
     downloadMasterExcelBlob(blob,'配車マスター_検索結果.xlsx');
   }catch(e){alert('検索結果を出力できません：'+e.message);}
@@ -4505,6 +4507,7 @@ async function masterSubmitForm(){
 
 // ===== 配車マスター Excel出力 =====
 const MASTER_EXCEL_HEADERS=["日付","番号","区分","荷主","発地","着地","着日","車番","乗務員","荷物","シャーシ車番","コンテナ番号","作業内容①","作業内容②","時間"];
+const MASTER_CSV_HEADERS=["index","company_id","office_id","record_id","case_number","branch_number","category","vehicle_slot","stage_no","work_type","date","arrival_date","time","shipper","item","origin","destination","vehicle_number","driver_name","chassis_number","container_number","ft","handling_content","note","board_status","dispatch_end_date"];
 
 function masterBuildRowsForDate(dateKey){
   return masterRowsFromRecords(dispatchRecords,containerDispatchRecords,r=>String(r.date||'')===dateKey);
@@ -4527,6 +4530,94 @@ function masterRowToExcelRow(row){
     .map(v=>String(v==null?"":v));
 }
 
+function masterRowToCsvRow(row,index){
+  const r=row.record;
+  const isContainer=row.kind==="container";
+
+  const origin=isContainer?(r.origin||""):(r.loadPlace||"");
+  const destination=isContainer?(r.destination||""):(r.unloadPlace||"");
+  const vehicleNumber=isContainer
+    ?(r.vehicleNumber||"")
+    :(row.displayAssign?.vehicleNumber||"");
+  const driverName=isContainer
+    ?(r.driverName||"")
+    :(row.displayAssign?.driverName||"");
+
+  const branchNumber=row.targetBranchNumber!=null
+    ?row.targetBranchNumber
+    :(r.branchNumber??"");
+
+  const workType=isContainer
+    ?(r.content||"")
+    :(r.workType||"");
+
+  const dispatchEndDate=r.dispatchEndDate||
+    (typeof TodayVehicleStatus!=="undefined"
+      ?TodayVehicleStatus.endDate(r)
+      :"");
+
+  return [
+    index,
+    r.companyId||window.firebaseProfile?.companyId||"",
+    r.officeId||window.firebaseProfile?.officeId||"",
+    r.id||"",
+    r.caseNumber||"",
+    branchNumber,
+    isContainer?"container":"general",
+    isContainer?"":(r.vehicleSlot??""),
+    r.stageNo??"",
+    workType,
+    r.date||"",
+    r.arrivalDate||"",
+    isContainer?(r.time||""):(r.time||r.arrivalTime||""),
+    r.shipper||"",
+    r.item||"",
+    origin,
+    destination,
+    vehicleNumber,
+    driverName,
+    isContainer?(r.chassisNumber||""):"",
+    isContainer?(r.containerNumber||""):"",
+    isContainer?(r.ft||""):"",
+    isContainer?(r.handlingContent||""):"",
+    r.note||"",
+    r.boardStatus||"",
+    dispatchEndDate
+  ].map(v=>String(v==null?"":v));
+}
+
+function masterCsvEscape(value){
+  const text=String(value==null?"":value);
+  return /[",\r\n]/.test(text)
+    ?`"${text.replace(/"/g,'""')}"`
+    :text;
+}
+
+function buildMasterCsvBlob(rows){
+  const lines=[
+    MASTER_CSV_HEADERS,
+    ...rows.map((row,index)=>masterRowToCsvRow(row,index))
+  ].map(cols=>cols.map(masterCsvEscape).join(","));
+
+  return new Blob(
+    ["\uFEFF"+lines.join("\r\n")+"\r\n"],
+    {type:"text/csv;charset=utf-8"}
+  );
+}
+
+function downloadMasterCsvBlob(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=filename;
+  a.style.display="none";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{
+    a.remove();
+    URL.revokeObjectURL(url);
+  },1500);
+}
 async function buildMasterExcelBlobWithExcelJS(rows, periodText){
   if(typeof ExcelJS === "undefined") throw new Error("ExcelJS が読み込まれていません");
   const workbook = new ExcelJS.Workbook();
@@ -4591,22 +4682,107 @@ function downloadMasterExcelBlob(blob,filename){
   setTimeout(()=>{a.remove(); URL.revokeObjectURL(url);},1500);
 }
 
+async function loadMasterExportRows(from,to,includeAll=false){
+  const data=includeAll
+    ?await window.firebaseCloud.loadAllBoardHistory(from,to,'all')
+    :await window.firebaseCloud.loadAllBoardHistory(from,to);
+
+  return masterRowsFromRecords(data.general,data.container);
+}
+
+function masterMonthlyExportRange(){
+  const from=masterCurrentMonth+'-01';
+  const next=new Date(dispatchShiftMonth(masterCurrentMonth,1)+'-01T00:00:00Z');
+  next.setUTCDate(next.getUTCDate()-1);
+
+  return {
+    from,
+    to:next.toISOString().slice(0,10)
+  };
+}
 async function exportMasterDailyExcel(){
   const dateKey=document.getElementById('masterExcelDate')?.value||localDateKey();
   try{
-    const data=await window.firebaseCloud.loadAllBoardHistory(dateKey,dateKey);
-    const rows=masterRowsFromRecords(data.general,data.container);
+    const rows=await loadMasterExportRows(dateKey,dateKey);
     if(!rows.length){alert(`${dateKey}の配車マスターデータはありません。`);return;}
     const blob=await buildMasterExcelBlobWithExcelJS(rows,`対象日：${dateKey}`);downloadMasterExcelBlob(blob,`配車マスター_${dateKey.replaceAll('-','')}.xlsx`);
   }catch(e){alert('Excel出力のデータを取得できません：'+e.message);}
 }
 async function exportMasterMonthlyExcel(){
-  const from=masterCurrentMonth+'-01';const next=new Date(dispatchShiftMonth(masterCurrentMonth,1)+'-01T00:00:00Z');next.setUTCDate(next.getUTCDate()-1);const to=next.toISOString().slice(0,10);
+  const {from,to}=masterMonthlyExportRange();
   try{
-    const data=await window.firebaseCloud.loadAllBoardHistory(from,to);const rows=masterRowsFromRecords(data.general,data.container);
+    const rows=await loadMasterExportRows(from,to);
     if(!rows.length){alert(`${masterCurrentMonth}の配車マスターデータはありません。`);return;}
     const blob=await buildMasterExcelBlobWithExcelJS(rows,`対象月：${masterCurrentMonth}`);downloadMasterExcelBlob(blob,`配車マスター_${masterCurrentMonth.replaceAll('-','')}.xlsx`);
   }catch(e){alert('Excel出力のデータを取得できません：'+e.message);}
+}
+async function exportMasterDailyCsv(){
+  const dateKey=document.getElementById('masterExcelDate')?.value||localDateKey();
+
+  try{
+    const rows=await loadMasterExportRows(dateKey,dateKey);
+
+    if(!rows.length){
+      alert(`${dateKey}の配車マスターデータはありません。`);
+      return;
+    }
+
+    downloadMasterCsvBlob(
+      buildMasterCsvBlob(rows),
+      `配車マスター_${dateKey.replaceAll('-','')}.csv`
+    );
+  }catch(e){
+    alert('CSV出力のデータを取得できません：'+e.message);
+  }
+}
+
+async function exportMasterMonthlyCsv(){
+  const {from,to}=masterMonthlyExportRange();
+
+  try{
+    const rows=await loadMasterExportRows(from,to);
+
+    if(!rows.length){
+      alert(`${masterCurrentMonth}の配車マスターデータはありません。`);
+      return;
+    }
+
+    downloadMasterCsvBlob(
+      buildMasterCsvBlob(rows),
+      `配車マスター_${masterCurrentMonth.replaceAll('-','')}.csv`
+    );
+  }catch(e){
+    alert('CSV出力のデータを取得できません：'+e.message);
+  }
+}
+
+async function exportMasterSearchCsv(){
+  if(!masterHistoryMode||!masterLastRenderedRows.length){
+    alert('先に過去の配車を検索してください。');
+    return;
+  }
+
+  try{
+    const rows=(
+      await loadMasterExportRows(
+        masterHistoryQuery.from,
+        masterHistoryQuery.to,
+        true
+      )
+    ).filter(row=>masterHistoryMatches(row));
+
+    if(!rows.length){
+      alert('CSV出力対象の配車マスターデータはありません。');
+      return;
+    }
+
+    downloadMasterCsvBlob(
+      buildMasterCsvBlob(rows),
+      '配車マスター_検索結果.csv'
+    );
+  }catch(e){
+    alert('検索結果をCSV出力できません：'+e.message);
+  }
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function escapeAttr(s){return s.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
