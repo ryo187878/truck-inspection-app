@@ -320,6 +320,29 @@
         const reserved=await reserveStageSlots({transaction,doc,firestoreDb,recordsPath:containerRecordsColPath,caseNumber:finalCaseNumber,caseData:caseSnap?.exists()?caseSnap.data():null,stages,recordIds,otherIds:options.otherExistingStageIds,kind:'container'});
         // ソート：工程番号順 (stageNo 1 -> 2 -> 3)
         const sortedStages = stages.slice().sort((a, b) => (Number(a.stageNo) || 0) - (Number(b.stageNo) || 0));
+        const assignmentKey=st=>{
+          const vehicle=String(st?.vehicleNumber||"").trim();
+          const driver=String(st?.driverName||"").trim();
+          return vehicle && driver ? `${vehicle}\u0000${driver}` : "";
+        };
+        const branchByAssignment=new Map();
+        for(const data of reserved.others.values()){
+          const branch=Number(data?.branchNumber);
+          const key=assignmentKey(data);
+          if(Number.isInteger(branch) && branch>0){
+            maxBranch=Math.max(maxBranch,branch);
+            nextBranch=Math.max(nextBranch,branch+1);
+            const current=key ? branchByAssignment.get(key) : null;
+            if(key && (current==null || branch<current)) branchByAssignment.set(key,branch);
+          }
+        }
+        for(const data of existingStageData.values()){
+          const branch=Number(data?.branchNumber);
+          if(Number.isInteger(branch) && branch>0){
+            maxBranch=Math.max(maxBranch,branch);
+            nextBranch=Math.max(nextBranch,branch+1);
+          }
+        }
 
         // 枝番割り当て
         // 1. 既存の枝番を持っている工程、または引継ぎ指定された工程を先に決定
@@ -341,6 +364,22 @@
           }
 
           if(previous) sourceBranchNumber=previous.sourceBranchNumber??null;
+          if(previous && branch!=null){
+            const key=assignmentKey(st);
+            const sameAssignmentBranch=key ? branchByAssignment.get(key) : null;
+            const assignmentChanged=key!==assignmentKey(previous);
+            const conflictsCurrentBranch=[...reserved.others.values()].some(data=>{
+              if(Number(data?.branchNumber)!==branch) return false;
+              const otherKey=assignmentKey(data);
+              return !key || !otherKey || otherKey!==key;
+            }) || (assignmentChanged && sortedStages.some(other=>{
+              if(other===st || Number(other?.branchNumber)!==branch) return false;
+              const otherKey=assignmentKey(other);
+              return !key || !otherKey || otherKey!==key;
+            }));
+            if(sameAssignmentBranch!=null && sameAssignmentBranch!==branch) branch=sameAssignmentBranch;
+            else if(conflictsCurrentBranch) branch=null;
+          }
           if(!previous && branch!=null && !isInherited) throw new Error("新規工程には既存の枝番を指定できません。");
           if (branch != null) {
             if (isInherited && !previous) {
@@ -374,20 +413,56 @@
               maxBranch = Math.max(maxBranch, branch);
               nextBranch = Math.max(nextBranch, branch + 1);
             }
+            const key=assignmentKey(st);
+            if(key && !branchByAssignment.has(key)) branchByAssignment.set(key,branch);
             processedStages.push({ ...st, branchNumber: branch, sourceDispatchId, sourceBranchNumber });
           } else {
             processedStages.push({ ...st, branchNumber: null, sourceDispatchId, sourceBranchNumber });
           }
         }
 
-        // 2. 新規の工程に nextBranch を割り当て
+        // 2. 新規工程は同じ車番＋乗務員なら現在有効な枝番を共有し、異なる組み合わせだけ新しい枝番を発行する
+        nextBranch=Math.max(nextBranch,maxBranch+1);
         for (const st of processedStages) {
           if (st.branchNumber == null) {
-            st.branchNumber = nextBranch;
-            nextBranch++;
-            maxBranch = Math.max(maxBranch, st.branchNumber);
+            const key=assignmentKey(st);
+            const sameAssignmentBranch=key ? branchByAssignment.get(key) : null;
+            if(sameAssignmentBranch!=null){
+              st.branchNumber=sameAssignmentBranch;
+            }else{
+              st.branchNumber = nextBranch;
+              nextBranch++;
+              maxBranch = Math.max(maxBranch, st.branchNumber);
+              if(key) branchByAssignment.set(key,st.branchNumber);
+            }
           }
         }
+
+        // 海コン枝番は「現在の車番＋乗務員グループ」を工程順に 1,2,3... で採番する。
+        // 同じ組み合わせは同じ枝番、未入力は同一グループ扱いしない。
+        const processedEntries=processedStages.map(st=>{
+          const sourceIndex=stages.findIndex(source=>source===st || Number(source.stageNo)===Number(st.stageNo));
+          return {id:String(recordIds[sourceIndex]),stage:st};
+        });
+        const activeEntries=[
+          ...[...reserved.others.entries()].map(([id,data])=>({id:String(id),stage:{...data}})),
+          ...processedEntries
+        ].sort((a,b)=>(Number(a.stage.stageNo)||0)-(Number(b.stage.stageNo)||0));
+        const normalizedBranchByAssignment=new Map();
+        const normalizedBranchById=new Map();
+        let normalizedNextBranch=1;
+        for(const entry of activeEntries){
+          const key=assignmentKey(entry.stage);
+          let branch=key ? normalizedBranchByAssignment.get(key) : null;
+          if(branch==null){
+            branch=normalizedNextBranch++;
+            if(key) normalizedBranchByAssignment.set(key,branch);
+          }
+          normalizedBranchById.set(entry.id,branch);
+        }
+        processedEntries.forEach(entry=>{ entry.stage.branchNumber=normalizedBranchById.get(entry.id); });
+        maxBranch=Math.max(0,normalizedNextBranch-1);
+        nextBranch=normalizedNextBranch;
 
         const chassisNumber=String(caseInfo.chassisNumber != null ? caseInfo.chassisNumber : (caseSnap?.exists() && caseSnap.data().chassisNumber != null ? caseSnap.data().chassisNumber : (processedStages.find(st=>st.chassisNumber)?.chassisNumber||""))).trim();
         // 案件ドキュメントの保存 / 更新
@@ -464,6 +539,7 @@
           for (const otherId of options.otherExistingStageIds) {
             const otherRef = doc(firestoreDb, `${containerRecordsColPath}/${otherId}`);
             transaction.set(otherRef, cleanUndefined({
+              branchNumber: normalizedBranchById.get(String(otherId)),
               chassisNumber,
               shipper: String(caseInfo.shipper || "").trim(),
               containerNumber: String(caseInfo.containerNumber || "").trim(),
@@ -478,7 +554,8 @@
         return {
           caseNumber: finalCaseNumber,
           caseInfo: casePayload,
-          stages: savedStageRecords
+          stages: savedStageRecords,
+          branchUpdates:[...normalizedBranchById.entries()].map(([id,branchNumber])=>({id,branchNumber}))
         };
       });
     }
@@ -660,7 +737,7 @@
     for(const st of stages){
       if(![1,2].includes(Number(st.stageNo)) || !Number.isInteger(Number(st.vehicleSlot)) || Number(st.vehicleSlot)<1) throw new Error("工程・台数枠・日付を確認してください。");
       validateDispatchDates(st.date, st.arrivalDate);
-      if(st.workType!=null && !(Number(st.stageNo)===1?["集配","引取"]:["配達"]).includes(st.workType)) throw new Error("作業内容を確認してください。");
+      if(st.workType!=null && !(Number(st.stageNo)===1?["集配","引取","配達"]:["集荷","配達"]).includes(st.workType)) throw new Error("作業内容を確認してください。");
       if(st.arrivalDate && !/^\d{4}-\d{2}-\d{2}$/.test(String(st.arrivalDate))) throw new Error("着日を確認してください。");
       const key=`${st.vehicleSlot}:${st.stageNo}`;
       if(slots.has(key)) throw new Error("同じ車両枠の同じ工程を重複登録できません。");
@@ -783,6 +860,7 @@
           loadPlace: st.origin || "",
           unloadPlace: st.destination || "",
           vehicleNo: st.vehicleNumber || "",
+          chassisNumber: st.chassisNumber || "",
           driver: st.driverName || "",
           time: st.time || "",
           note: st.note || "",

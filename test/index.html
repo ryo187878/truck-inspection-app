@@ -2199,7 +2199,7 @@ function getContainerCaseOptionsHtml(selectedCaseNumber, selectedSourceDispatchI
   });
 
   if (containerCasesMap.size > 0) {
-    html += `<optgroup label="既存海コン案件に追加（工程追加・新枝番発行）">`;
+    html += `<optgroup label="既存海コン案件に追加（工程追加・枝番自動判定）">`;
     const sortedContainerCases = [...containerCasesMap.values()].sort((a,b)=>String(b.caseNumber||"").localeCompare(String(a.caseNumber||"")));
     sortedContainerCases.forEach(c => {
       const isSel = (c.caseNumber === selectedCaseNumber && !singleDispatches.some(sd => sd.caseNumber === selectedCaseNumber));
@@ -2267,7 +2267,7 @@ async function containerOnCaseSelectChanged(){
   } else if (optType === "add-stage") {
     // 既存海コン案件に新しい工程を追加（共通情報を引き継ぎ、未登録の工程のみチェック可能にする）
     const existingStages = (containerDispatchRecords || []).filter(c => c && c.caseNumber === caseNumber);
-    if (descEl) descEl.textContent = `海コン案件 ${caseNumber} に次工程を追加します（新しい枝番が発行されます）。`;
+    if (descEl) descEl.textContent = `海コン案件 ${caseNumber} に次工程を追加します（同じ車番・乗務員は同じ枝番、異なる場合は新しい枝番）。`;
     containerExistingStageIds={};
     existingStages.forEach(st=>{
       const sNo=Number(st.stageNo)>=1 && Number(st.stageNo)<=3 ? Number(st.stageNo) : null;
@@ -2411,7 +2411,7 @@ function dispatchRenderAssignmentRowsLegacy(){
 }
 
 // ===== ①先行配車：新形式（①引取り／②荷下ろし ×台数）入力フォーム =====
-const DISPATCH_STAGE_META={1:{name:"集配・引取"},2:{name:"配達（担当者・車両が変わる場合）"}};
+const DISPATCH_STAGE_META={1:{name:"集配・引取・配達"},2:{name:"集荷・配達（担当者・車両が変わる場合）"}};
 let dispatchFormBoard="advance";
 let dispatchFormMode="stage"; // "stage"（新規・新形式編集）｜"legacy"（既存の旧形式データ編集専用）
 let dispatchEditingRecordId="";
@@ -2420,8 +2420,8 @@ let dispatchExistingStageIds={}; // {"slot_stage": recordId} 同一案件内の�
 
 function dispatchMakeEmptySlot(){
   return {
-    stage1:{workType:"集配",overrides:{},checked:false,locked:false,readonly:false,date:"",arrivalDate:"",origin:"",destination:"",vehicleNumber:"",driverName:"",time:"",note:"",id:null,branchNumber:null},
-    stage2:{workType:"配達",overrides:{},checked:false,locked:false,readonly:false,date:"",arrivalDate:"",origin:"",destination:"",vehicleNumber:"",driverName:"",time:"",note:"",id:null,branchNumber:null}
+    stage1:{workType:"集配",overrides:{},checked:false,locked:false,readonly:false,date:"",arrivalDate:"",origin:"",destination:"",vehicleNumber:"",chassisNumber:"",driverName:"",time:"",note:"",id:null,branchNumber:null},
+    stage2:{workType:"配達",overrides:{},checked:false,locked:false,readonly:false,date:"",arrivalDate:"",origin:"",destination:"",vehicleNumber:"",chassisNumber:"",driverName:"",time:"",note:"",id:null,branchNumber:null}
   };
 }
 function dispatchPopulateSlotVehicleSelect(s,stageNo,currentValue){
@@ -2447,12 +2447,13 @@ function dispatchRenderVehicleSlots(){
       return `<div class="container-stage-block">
         <label class="container-stage-check"><input type="checkbox" id="dispatchSlotCheck_${s}_${stageNo}" autocomplete="off" ${st.checked?"checked":""} ${st.locked?"disabled":""} onchange="dispatchToggleSlotStage(${s},${stageNo})"> ${stageNo===1?"①":"②"}${meta.name}</label>
         <div id="dispatchSlotFields_${s}_${stageNo}" class="grid container-stage-fields" style="display:${st.checked?"grid":"none"}">
-          <div><label>作業内容</label>${stageNo===1?`<select id="dispatchSlotWorkType_${s}_1" autocomplete="off" ${st.readonly?"disabled":""}><option value="集配" ${st.workType==="集配"?"selected":""}>集配</option><option value="引取" ${st.workType==="引取"?"selected":""}>引取</option></select>`:'<input value="配達" autocomplete="off" readonly>'}</div>
+          <div><label>作業内容</label><select id="dispatchSlotWorkType_${s}_${stageNo}" autocomplete="off" ${st.readonly?"disabled":""}>${(stageNo===1?["集配","引取","配達"]:["集荷","配達"]).map(v=>`<option value="${v}" ${st.workType===v?"selected":""}>${v}</option>`).join("")}</select></div>
           <div><label>日付</label><input id="dispatchSlotDate_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'date')" type="date" autocomplete="off" value="${escapeAttr(st.date||"")}" ${st.readonly?"disabled":""}></div>
           <div><label>着日</label><input id="dispatchSlotArrivalDate_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'arrivalDate')" type="date" autocomplete="off" value="${escapeAttr(st.arrivalDate||"")}" ${st.readonly?"disabled":""}><small>任意・未入力なら空欄のまま表示します</small></div>
           <div><label>発地</label><input id="dispatchSlotOrigin_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'origin')" type="text" autocomplete="off" value="${escapeAttr(st.origin||"")}" ${st.readonly?"disabled":""}></div>
           <div><label>着地</label><input id="dispatchSlotDestination_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'destination')" type="text" autocomplete="off" value="${escapeAttr(st.destination||"")}" ${st.readonly?"disabled":""}></div>
           <div><label>車番</label><select id="dispatchSlotVehicle_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'vehicleNumber')" autocomplete="off" ${st.readonly?"disabled":""}></select></div>
+          <div><label>シャーシ車番</label><input id="dispatchSlotChassis_${s}_${stageNo}" type="text" autocomplete="off" value="${escapeAttr(st.chassisNumber||"")}" ${st.readonly?"disabled":""}></div>
           <div><label>乗務員</label><select id="dispatchSlotDriver_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'driverName')" autocomplete="off" ${st.readonly?"disabled":""}></select></div>
           <div><label>時間</label><input id="dispatchSlotTime_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'time')" type="time" autocomplete="off" value="${escapeAttr(st.time||"")}" ${st.readonly?"disabled":""}></div>
           <div style="grid-column:1/-1"><label>備考</label><input id="dispatchSlotNote_${s}_${stageNo}" type="text" autocomplete="off" value="${escapeAttr(st.note||"")}" ${st.readonly?"disabled":""}></div>
@@ -2464,6 +2465,7 @@ function dispatchRenderVehicleSlots(){
   dispatchSlotDraft.forEach((slot,idx)=>{
     const s=idx+1;
     document.getElementById(`dispatchSlotWorkType_${s}_1`).value=slot.stage1.workType||"集配";
+    document.getElementById(`dispatchSlotWorkType_${s}_2`).value=slot.stage2.workType||"配達";
     [1,2].forEach(stageNo=>{
       const st=slot[`stage${stageNo}`];
       dispatchPopulateSlotVehicleSelect(s,stageNo,st.vehicleNumber);
@@ -2502,12 +2504,13 @@ function dispatchCaptureSlotDraftFromDom(){
       const st=slot[`stage${stageNo}`];
       const cb=document.getElementById(`dispatchSlotCheck_${s}_${stageNo}`);
       if(cb) st.checked=cb.checked;
-      if(stageNo===1){const workType=get(`dispatchSlotWorkType_${s}_1`);if(workType!==undefined) st.workType=workType;}
+      const workType=get(`dispatchSlotWorkType_${s}_${stageNo}`);if(workType!==undefined) st.workType=workType;
       const date=get(`dispatchSlotDate_${s}_${stageNo}`); if(date!==undefined) st.date=date;
       const arrivalDate=get(`dispatchSlotArrivalDate_${s}_${stageNo}`); if(arrivalDate!==undefined) st.arrivalDate=arrivalDate;
       const origin=get(`dispatchSlotOrigin_${s}_${stageNo}`); if(origin!==undefined) st.origin=origin;
       const destination=get(`dispatchSlotDestination_${s}_${stageNo}`); if(destination!==undefined) st.destination=destination;
       const vehicleNumber=get(`dispatchSlotVehicle_${s}_${stageNo}`); if(vehicleNumber!==undefined) st.vehicleNumber=vehicleNumber;
+      const chassisNumber=get(`dispatchSlotChassis_${s}_${stageNo}`); if(chassisNumber!==undefined) st.chassisNumber=chassisNumber;
       const driverName=get(`dispatchSlotDriver_${s}_${stageNo}`); if(driverName!==undefined) st.driverName=driverName;
       const time=get(`dispatchSlotTime_${s}_${stageNo}`); if(time!==undefined) st.time=time;
       const note=get(`dispatchSlotNote_${s}_${stageNo}`); if(note!==undefined) st.note=note;
@@ -2558,7 +2561,7 @@ async function dispatchOnCaseSelectChanged(){
     const stageNo=Number(r.stageNo);
     if(!dispatchSlotDraft[slotIdx] || (stageNo!==1 && stageNo!==2)) return;
     const st=dispatchSlotDraft[slotIdx][`stage${stageNo}`];
-    Object.assign(st,{workType:stageNo===2?"配達":(["引取","引取り"].includes(r.workType||r.stageName)?"引取":"集配"),checked:true,locked:true,readonly:true,date:r.date||"",arrivalDate:r.arrivalDate??"",origin:r.loadPlace||"",destination:r.unloadPlace||"",vehicleNumber:r.vehicleNo||"",driverName:r.driver||"",time:r.time||"",note:r.note||"",id:r.id,branchNumber:r.branchNumber});
+    Object.assign(st,{workType:stageNo===1?(["引取","引取り"].includes(r.workType||r.stageName)?"引取":((r.workType||r.stageName)==="配達"?"配達":"集配")):((r.workType||r.stageName)==="集荷"?"集荷":"配達"),checked:true,locked:true,readonly:true,date:r.date||"",arrivalDate:r.arrivalDate??"",origin:r.loadPlace||"",destination:r.unloadPlace||"",vehicleNumber:r.vehicleNo||"",chassisNumber:r.chassisNumber||"",driverName:r.driver||"",time:r.time||"",note:r.note||"",id:r.id,branchNumber:r.branchNumber});
     dispatchExistingStageIds[`${slotIdx+1}_${stageNo}`]=r.id;
   });
   const last=siblings[siblings.length-1];
@@ -2637,7 +2640,7 @@ function dispatchOpenStageForm(mode,record,options){
         workType:stageNo===2?"配達":(["引取","引取り"].includes(r.workType||r.stageName)?"引取":"集配"),
         checked:true, locked:true, readonly:!isEditingTarget,
         date:r.date||"", arrivalDate:r.arrivalDate??"", origin:r.loadPlace||"", destination:r.unloadPlace||"",
-        vehicleNumber:r.vehicleNo||"", driverName:r.driver||"", time:r.time||"", note:r.note||"",
+        vehicleNumber:r.vehicleNo||"", chassisNumber:r.chassisNumber||"", driverName:r.driver||"", time:r.time||"", note:r.note||"",
         id:r.id, branchNumber:r.branchNumber
       });
       if(!isEditingTarget) dispatchExistingStageIds[`${slotIdx+1}_${stageNo}`]=r.id;
@@ -2777,13 +2780,14 @@ async function dispatchSubmitStageForm(){
         ...(st.id?{id:st.id}:{}),
         vehicleSlot:s,
         stageNo,
-        stageName:stageNo===2?"配達":st.workType,
-        workType:stageNo===2?"配達":st.workType,
+        stageName:st.workType,
+        workType:st.workType,
         date:st.date,
         arrivalDate:st.arrivalDate||"",
         origin:(st.origin||"").trim(),
         destination:(st.destination||"").trim(),
         vehicleNumber:st.vehicleNumber||"",
+        chassisNumber:(st.chassisNumber||"").trim(),
         driverName:st.driverName||"",
         time:st.time||"",
         note:(st.note||"").trim(),
@@ -3284,6 +3288,10 @@ async function containerSubmitForm(){
       const idx=containerDispatchRecords.findIndex(r=>String(r.id||"")===String(saved.id));
       if(idx>=0) containerDispatchRecords[idx]=saved; else containerDispatchRecords.push(saved);
     });
+    (result.branchUpdates||[]).forEach(update=>{
+      const row=containerDispatchRecords.find(r=>String(r.id||"")===String(update.id));
+      if(row) row.branchNumber=update.branchNumber;
+    });
 
     if(result.caseNumber && !caseRecords.some(c=>c.caseNumber===result.caseNumber)){
       caseRecords.push({ caseNumber: result.caseNumber, shipper, createdAt: new Date().toISOString() });
@@ -3311,7 +3319,7 @@ function renderContainerDispatch(){
   const dateSortedRows=containerDispatchRecords
     .filter(r=>String(r.date||"").slice(0,7)===containerCurrentMonth)
     .slice()
-    .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    .sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.caseNumber||"").localeCompare(String(b.caseNumber||""))||(Number(a.stageNo)||0)-(Number(b.stageNo)||0));
   const rows=sortRowsByShipperGroup(dateSortedRows,r=>r.shipper);
   containerLastRenderedRows=rows;
 
@@ -3799,7 +3807,7 @@ function renderDispatchMaster(){
       <td>${escapeHtml(driverName)}</td>
       <td>${escapeHtml(content||"")}${handlingContent?`<div class="master-sub-line">${escapeHtml(handlingContent)}</div>`:""}</td>
       <td>${escapeHtml(r.item||"")}</td>
-      <td class="master-col-chassis">${escapeHtml(isContainer?(r.chassisNumber||""):"")}</td>
+      <td class="master-col-chassis">${escapeHtml((r.chassisNumber||""))}</td>
       <td class="master-col-containerno">${escapeHtml(r.containerNumber||"")}</td>
       <td class="container-col-time">${escapeHtml(time||"")}</td>
       <td class="container-col-action">
@@ -4112,7 +4120,7 @@ function masterRowToExcelRow(row){
   const driverName=isContainer?(r.driverName||""):(row.displayAssign?.driverName||"");
   const content=isContainer?r.content:r.workType;
   const handlingContent=isContainer?r.handlingContent:"";
-  const chassisNumber=isContainer?(r.chassisNumber||""):"";
+  const chassisNumber=(r.chassisNumber||"");
   const time=isContainer?r.time:(r.time||r.arrivalTime);
   const caseDisplay=r.caseNumber ? (row.targetBranchNumber ? `${r.caseNumber}-${row.targetBranchNumber}` : r.caseNumber) : "";
 
@@ -4166,7 +4174,7 @@ function masterRowToCsvRow(row,index){
     destination,
     vehicleNumber,
     driverName,
-    isContainer?(r.chassisNumber||""):"",
+    (r.chassisNumber||""),
     isContainer?(r.containerNumber||""):"",
     isContainer?(r.ft||""):"",
     isContainer?(r.handlingContent||""):"",
