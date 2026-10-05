@@ -303,7 +303,7 @@ test('前日から運行中の車両を翌日の未点検に含め、未来の�
  assert.deepEqual(names(r.uninspected),['A']);assert.equal(r.assignedCount,1);assert.deepEqual(names(r.noDispatch),['B','C','D']);
 });
 test('先行からマスターへ移しても記録ID・採番・枝・担当者を変えず、二重移動しない',async()=>{
- const db=database();const first=await svc.saveDispatchGeneralStagesCore({...db,companyId:'company-a',officeId:'office-main',caseInfo:{shipper:'予定'},stages:[stage(1,1,'2026-10-06')],options:{boardStatus:'advance'}});
+ const db=database();const first=await svc.saveDispatchGeneralStagesCore({...db,companyId:'company-a',officeId:'office-main',caseInfo:{shipper:'予定'},stages:[stage(1,1,'2026-10-06')],options:{boardStatus:'advance',today:'2026-10-04'}});
  const r=first.stages[0],before=structuredClone(db.records);
  assert.equal(r.boardQueryKey,'advance|2026-10-06');
  const args={...db,companyId:'company-a',officeId:'office-main',recordId:r.id};
