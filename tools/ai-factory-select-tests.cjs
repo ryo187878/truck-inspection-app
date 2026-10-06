@@ -56,16 +56,22 @@ function inferAxes({explicitAxes=[],changedFiles=[],failureText=''}={}){
 }
 
 function buildTargetedPlan(axisIds){
-  const targets=new Map();
+  const byFile=new Map();
   for(const id of axisIds){
     const axis=AXIS_BY_ID.get(id);
     if(!axis) throw new Error('Unknown axis: '+id);
     for(const target of axis.testTargets){
-      const key=target.file+'\u0000'+target.namePattern;
-      targets.set(key,{...target,axes:[...(targets.get(key)?.axes||[]),id]});
+      const current=byFile.get(target.file)||{file:target.file,patterns:new Set(),axes:new Set()};
+      current.patterns.add(target.namePattern||'.*');
+      current.axes.add(id);
+      byFile.set(target.file,current);
     }
   }
-  return [...targets.values()].sort((a,b)=>(a.file+a.namePattern).localeCompare(b.file+b.namePattern));
+  return [...byFile.values()].map(entry=>{
+    const patterns=[...entry.patterns];
+    const namePattern=patterns.includes('.*')?'.*':patterns.map(p=>'(?:'+p+')').join('|');
+    return {file:entry.file,namePattern,axes:[...entry.axes].sort()};
+  }).sort((a,b)=>a.file.localeCompare(b.file));
 }
 
 function targetToCommand(target){
@@ -81,7 +87,10 @@ function makePlan(input={}){
   const axes=inferAxes(input);
   const fallback=axes.length===0;
   const targeted=fallback
-    ? [{file:'tools/*.test.cjs',namePattern:'.*',axes:['safe.full-regression-fallback']}]
+    ? require('node:fs').readdirSync(path.resolve(__dirname))
+        .filter(name=>name.endsWith('.test.cjs'))
+        .sort()
+        .map(name=>({file:'tools/'+name,namePattern:'.*',axes:['safe.full-regression-fallback']}))
     : buildTargetedPlan(axes);
   return {
     axes,
