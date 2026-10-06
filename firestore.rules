@@ -62,6 +62,50 @@ service cloud.firestore {
              && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/registrationRequests/$(userId)).data.status == "pending";
     }
 
+    function validRegistrationRequestPayload(companyId, officeId, userId) {
+      return loggedIn()
+        && request.auth.uid == userId
+        && exists(/databases/$(database)/documents/companies/$(companyId))
+        && exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId))
+        && request.resource.data.companyId == companyId
+        && request.resource.data.officeId == officeId
+        && request.resource.data.role == "driver"
+        && request.resource.data.status == "pending"
+        && request.resource.data.keys().hasAll(["inviteId"])
+        && request.resource.data.keys().hasOnly([
+          "displayName",
+          "loginId",
+          "role",
+          "companyId",
+          "officeId",
+          "status",
+          "createdAt",
+          "inviteId"
+        ])
+        && exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId));
+    }
+
+    function validFixedRegistrationInvite(companyId, officeId, inviteId) {
+      let invite = get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(inviteId)).data;
+      return invite.companyId == companyId
+        && invite.officeId == officeId
+        && invite.status == "active"
+        && invite.get("mode", "") == "fixed";
+    }
+
+    function validLegacyRegistrationInvite(companyId, officeId, inviteId) {
+      let invite = get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(inviteId)).data;
+      let after = getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(inviteId)).data;
+      return invite.companyId == companyId
+        && invite.officeId == officeId
+        && invite.status == "active"
+        && invite.get("mode", "") != "fixed"
+        && invite.keys().hasAll(["expiresAt"])
+        && invite.expiresAt > request.time
+        && after.status == "used"
+        && after.usedBy == request.auth.uid;
+    }
+
     // ========================================
     // 招待
     // ========================================
@@ -284,58 +328,20 @@ service cloud.firestore {
     match /companies/{companyId}/offices/{officeId}/registrationRequests/{userId} {
 
       // 現行固定QR。invite自体は消費せず、再発行でrevokedになるまで複数人が申請できる。
-      allow create: if loggedIn()
-                    && request.auth.uid == userId
-                    && exists(/databases/$(database)/documents/companies/$(companyId))
-                    && exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId))
-                    && request.resource.data.companyId == companyId
-                    && request.resource.data.officeId == officeId
-                    && request.resource.data.role == "driver"
-                    && request.resource.data.status == "pending"
-                    && request.resource.data.keys().hasAll(["inviteId"])
-                    && request.resource.data.keys().hasOnly([
-                      "displayName",
-                      "loginId",
-                      "role",
-                      "companyId",
-                      "officeId",
-                      "status",
-                      "createdAt",
-                      "inviteId"
-                    ])
-                    && exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId))
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.companyId == companyId
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.officeId == officeId
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "active"
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.mode == "fixed";
+      allow create: if validRegistrationRequestPayload(companyId, officeId, userId)
+                    && validFixedRegistrationInvite(
+                      companyId,
+                      officeId,
+                      request.resource.data.inviteId
+                    );
 
       // 旧24時間・一回性QR互換。申請と同一Batchでinviteをusedへ遷移させる。
-      allow create: if loggedIn()
-                    && request.auth.uid == userId
-                    && exists(/databases/$(database)/documents/companies/$(companyId))
-                    && exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId))
-                    && request.resource.data.companyId == companyId
-                    && request.resource.data.officeId == officeId
-                    && request.resource.data.role == "driver"
-                    && request.resource.data.status == "pending"
-                    && request.resource.data.keys().hasAll(["inviteId"])
-                    && request.resource.data.keys().hasOnly([
-                      "displayName",
-                      "loginId",
-                      "role",
-                      "companyId",
-                      "officeId",
-                      "status",
-                      "createdAt",
-                      "inviteId"
-                    ])
-                    && exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId))
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.companyId == companyId
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.officeId == officeId
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "active"
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.expiresAt > request.time
-                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "used"
-                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.usedBy == request.auth.uid;
+      allow create: if validRegistrationRequestPayload(companyId, officeId, userId)
+                    && validLegacyRegistrationInvite(
+                      companyId,
+                      officeId,
+                      request.resource.data.inviteId
+                    );
 
       allow read: if (loggedIn() && request.auth.uid == userId)
                   || isAdmin(companyId, officeId);
