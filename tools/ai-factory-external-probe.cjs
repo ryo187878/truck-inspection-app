@@ -56,7 +56,7 @@ async function probeBooking(base='http://127.0.0.1:3000'){
   const increased=Number.isFinite(beforeSeats)&&Number.isFinite(afterSeats)&&afterSeats>beforeSeats;
   return {
     externalApp:'rizbud/express-sqlite-booking-system',
-    axisId:'resource.capacity-conservation',
+    axisId:'resource.consumption-sign-invariant',
     outcome:(booking.status<400&&increased)?'detected':'validated',
     evidenceId:'EXT-BOOKING-CAPACITY-20261006',
     observation:{eventId,beforeSeats,bookingStatus:booking.status,afterSeats,increased,bookingResponse:booking.body}
