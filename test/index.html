@@ -2420,8 +2420,8 @@ let dispatchExistingStageIds={}; // {"slot_stage": recordId} 同一案件内の�
 
 function dispatchMakeEmptySlot(){
   return {
-    stage1:{workType:"集配",overrides:{},checked:false,locked:false,readonly:false,date:"",arrivalDate:"",origin:"",destination:"",vehicleNumber:"",chassisNumber:"",driverName:"",time:"",note:"",id:null,branchNumber:null},
-    stage2:{workType:"配達",overrides:{},checked:false,locked:false,readonly:false,date:"",arrivalDate:"",origin:"",destination:"",vehicleNumber:"",chassisNumber:"",driverName:"",time:"",note:"",id:null,branchNumber:null}
+    stage1:{workType:"集配",overrides:{},checked:false,locked:false,readonly:false,date:"",arrivalDate:"",origin:"",destination:"",vehicleNumber:"",driverName:"",time:"",note:"",id:null,branchNumber:null},
+    stage2:{workType:"配達",overrides:{},checked:false,locked:false,readonly:false,date:"",arrivalDate:"",origin:"",destination:"",vehicleNumber:"",driverName:"",time:"",note:"",id:null,branchNumber:null}
   };
 }
 function dispatchPopulateSlotVehicleSelect(s,stageNo,currentValue){
@@ -2447,13 +2447,12 @@ function dispatchRenderVehicleSlots(){
       return `<div class="container-stage-block">
         <label class="container-stage-check"><input type="checkbox" id="dispatchSlotCheck_${s}_${stageNo}" autocomplete="off" ${st.checked?"checked":""} ${st.locked?"disabled":""} onchange="dispatchToggleSlotStage(${s},${stageNo})"> ${stageNo===1?"①":"②"}${meta.name}</label>
         <div id="dispatchSlotFields_${s}_${stageNo}" class="grid container-stage-fields" style="display:${st.checked?"grid":"none"}">
-          <div><label>作業内容</label><select id="dispatchSlotWorkType_${s}_${stageNo}" autocomplete="off" ${st.readonly?"disabled":""}>${(stageNo===1?["集配","引取","配達"]:["集荷","配達"]).map(v=>`<option value="${v}" ${st.workType===v?"selected":""}>${v}</option>`).join("")}</select></div>
+          <div><label>作業内容</label>${stageNo===1?`<select id="dispatchSlotWorkType_${s}_1" autocomplete="off" ${st.readonly?"disabled":""}><option value="集配" ${st.workType==="集配"?"selected":""}>集配</option><option value="引取" ${st.workType==="引取"?"selected":""}>引取</option></select>`:'<input value="配達" autocomplete="off" readonly>'}</div>
           <div><label>日付</label><input id="dispatchSlotDate_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'date')" type="date" autocomplete="off" value="${escapeAttr(st.date||"")}" ${st.readonly?"disabled":""}></div>
           <div><label>着日</label><input id="dispatchSlotArrivalDate_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'arrivalDate')" type="date" autocomplete="off" value="${escapeAttr(st.arrivalDate||"")}" ${st.readonly?"disabled":""}><small>任意・未入力なら空欄のまま表示します</small></div>
           <div><label>発地</label><input id="dispatchSlotOrigin_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'origin')" type="text" autocomplete="off" value="${escapeAttr(st.origin||"")}" ${st.readonly?"disabled":""}></div>
           <div><label>着地</label><input id="dispatchSlotDestination_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'destination')" type="text" autocomplete="off" value="${escapeAttr(st.destination||"")}" ${st.readonly?"disabled":""}></div>
           <div><label>車番</label><select id="dispatchSlotVehicle_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'vehicleNumber')" autocomplete="off" ${st.readonly?"disabled":""}></select></div>
-          <div><label>シャーシ車番</label><input id="dispatchSlotChassis_${s}_${stageNo}" type="text" autocomplete="off" value="${escapeAttr(st.chassisNumber||"")}" ${st.readonly?"disabled":""}></div>
           <div><label>乗務員</label><select id="dispatchSlotDriver_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'driverName')" autocomplete="off" ${st.readonly?"disabled":""}></select></div>
           <div><label>時間</label><input id="dispatchSlotTime_${s}_${stageNo}" onchange="dispatchOnLinkedField(${s},${stageNo},'time')" type="time" autocomplete="off" value="${escapeAttr(st.time||"")}" ${st.readonly?"disabled":""}></div>
           <div style="grid-column:1/-1"><label>備考</label><input id="dispatchSlotNote_${s}_${stageNo}" type="text" autocomplete="off" value="${escapeAttr(st.note||"")}" ${st.readonly?"disabled":""}></div>
@@ -2465,7 +2464,6 @@ function dispatchRenderVehicleSlots(){
   dispatchSlotDraft.forEach((slot,idx)=>{
     const s=idx+1;
     document.getElementById(`dispatchSlotWorkType_${s}_1`).value=slot.stage1.workType||"集配";
-    document.getElementById(`dispatchSlotWorkType_${s}_2`).value=slot.stage2.workType||"配達";
     [1,2].forEach(stageNo=>{
       const st=slot[`stage${stageNo}`];
       dispatchPopulateSlotVehicleSelect(s,stageNo,st.vehicleNumber);
@@ -2504,13 +2502,12 @@ function dispatchCaptureSlotDraftFromDom(){
       const st=slot[`stage${stageNo}`];
       const cb=document.getElementById(`dispatchSlotCheck_${s}_${stageNo}`);
       if(cb) st.checked=cb.checked;
-      const workType=get(`dispatchSlotWorkType_${s}_${stageNo}`);if(workType!==undefined) st.workType=workType;
+      if(stageNo===1){const workType=get(`dispatchSlotWorkType_${s}_1`);if(workType!==undefined) st.workType=workType;}
       const date=get(`dispatchSlotDate_${s}_${stageNo}`); if(date!==undefined) st.date=date;
       const arrivalDate=get(`dispatchSlotArrivalDate_${s}_${stageNo}`); if(arrivalDate!==undefined) st.arrivalDate=arrivalDate;
       const origin=get(`dispatchSlotOrigin_${s}_${stageNo}`); if(origin!==undefined) st.origin=origin;
       const destination=get(`dispatchSlotDestination_${s}_${stageNo}`); if(destination!==undefined) st.destination=destination;
       const vehicleNumber=get(`dispatchSlotVehicle_${s}_${stageNo}`); if(vehicleNumber!==undefined) st.vehicleNumber=vehicleNumber;
-      const chassisNumber=get(`dispatchSlotChassis_${s}_${stageNo}`); if(chassisNumber!==undefined) st.chassisNumber=chassisNumber;
       const driverName=get(`dispatchSlotDriver_${s}_${stageNo}`); if(driverName!==undefined) st.driverName=driverName;
       const time=get(`dispatchSlotTime_${s}_${stageNo}`); if(time!==undefined) st.time=time;
       const note=get(`dispatchSlotNote_${s}_${stageNo}`); if(note!==undefined) st.note=note;
