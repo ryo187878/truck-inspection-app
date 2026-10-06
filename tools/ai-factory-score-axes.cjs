@@ -139,7 +139,8 @@ if(require.main===module){
     'dispatch.branch-normalization',
     'promotion.shared-dna',
     'auth.context-isolation',
-    'impact.test-selection'
+    'impact.test-selection',
+    'axis.effectiveness-scoring'
   ];
   try{
     const result=selectEffectiveInheritedAxes(axisIds);
