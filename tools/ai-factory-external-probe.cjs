@@ -17,7 +17,7 @@ async function probeInventory(base='http://127.0.0.1:3000'){
   const persisted=Array.isArray(list.body)&&list.body.some(x=>Number(x.quantity)<0||Number(x.price)<0);
   return {
     externalApp:'TheCandyLoop/inventory-management-crud',
-    axisId:'inventory.nonnegative-domain',
+    axisId:'boundary.server-domain-enforcement',
     outcome:(negative.status<400&&persisted)?'detected':'validated',
     evidenceId:'EXT-INVENTORY-NONNEGATIVE-20261006',
     observation:{createStatus:negative.status,persistedNegative:persisted,response:negative.body}
@@ -40,7 +40,7 @@ async function probeBooking(base='http://127.0.0.1:3000'){
   const eventId=created.body?.data?.id;
   if(!eventId) return {
     externalApp:'rizbud/express-sqlite-booking-system',
-    axisId:'resource.capacity-conservation',
+    axisId:'resource.consumption-sign-invariant',
     outcome:'inconclusive',
     evidenceId:'EXT-BOOKING-CAPACITY-20261006',
     observation:{eventCreate:created}
