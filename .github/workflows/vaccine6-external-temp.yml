@@ -27,6 +27,11 @@ jobs:
           ref: 02edad46d1d59a9d95b64722a88e00b1ffe5c408
           path: external/booking
 
+      - name: Use Node 20 for external app compatibility
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Generate inventory candidate axes
         working-directory: ai-factory
         run: |
