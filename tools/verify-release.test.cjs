@@ -507,3 +507,38 @@ for(const file of ['index.html','test/index.html']){
   assert.equal(vm.runInContext('requireItem18',ctx),false);assert.equal(vm.runInContext('Object.keys(results).length',ctx),0);assert.equal(fields.get('vehicleSelect').value,'');assert.equal(fields.get('shakenConfirm').checked,false);
  });
 }
+
+
+test('Vaccine1: mainとtestは単一のdispatch coreを参照する',()=>{
+ const main=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const testHtml=fs.readFileSync(path.join(root,'test/index.html'),'utf8');
+ assert.ok(main.includes('<script src="./dispatch-service.js"></script>'));
+ assert.ok(testHtml.includes('<script src="../dispatch-service.js"></script>'));
+ assert.equal(testHtml.includes('<script src="./dispatch-service.js"></script>'),false);
+ assert.equal(fs.existsSync(path.join(root,'test/dispatch-service.js')),false);
+});
+
+test('Vaccine1: 海コン枝番は車番と乗務員の組合せ単位で正規化する',async()=>{
+ async function branches(pairs){
+  const db=database();
+  const result=await svc.saveContainerCaseStagesCore({
+   ...db,
+   companyId:'company-a',
+   officeId:'office-main',
+   caseInfo:{shipper:'枝番テスト',containerNumber:'TEST001',ft:'40'},
+   stages:pairs.map(([vehicleNumber,driverName],i)=>({
+    stageNo:i+1,
+    date:today,
+    vehicleNumber,
+    driverName,
+    time:['08:00','10:00','14:00'][i]
+   })),
+   options:{otherExistingStageIds:[]}
+  });
+  return result.stages.map(s=>s.branchNumber);
+ }
+ assert.deepEqual(await branches([['A','D1'],['A','D1'],['A','D1']]),[1,1,1]);
+ assert.deepEqual(await branches([['A','D1'],['A','D1'],['B','D2']]),[1,1,2]);
+ assert.deepEqual(await branches([['A','D1'],['B','D2'],['A','D1']]),[1,2,1]);
+ assert.deepEqual(await branches([['A','D1'],['B','D2'],['C','D3']]),[1,2,3]);
+});
