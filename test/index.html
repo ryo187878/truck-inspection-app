@@ -304,6 +304,7 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
 #containerHistoryPage .container-table th,#containerHistoryPage .container-table td{white-space:nowrap;font-size:12.5px;padding:7px 5px}
 </style>
 <script src="../vendor/exceljs/exceljs.min.js"></script>
+<script src="../auth-context.js"></script>
 <script src="../dispatch-service.js"></script>
 <script src="../yamato-daily.js"></script>
 <script src="../today-vehicle-status.js"></script>
@@ -1027,40 +1028,16 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
   let CLOUD_CASE_COUNTER_DOC = "";
   let CLOUD_CASES_COLLECTION = "";
 
-  const TENANT_CONTEXT_KEY = "truck_registration_tenant_v1";
-const LOGIN_TENANT_CONTEXT_KEY = "truck_login_tenant_v1";
-function saveLoginTenantContext(companyId, officeId){
-  companyId=String(companyId||"").trim();
-  officeId=String(officeId||"").trim();
+  const TENANT_CONTEXT_KEY = window.TramoAuthContext.REGISTRATION_CONTEXT_KEY;
+  const LOGIN_TENANT_CONTEXT_KEY = window.TramoAuthContext.LOGIN_CONTEXT_KEY;
 
-  if(!companyId || !officeId || companyId.includes("/") || officeId.includes("/")) return;
+  function saveLoginTenantContext(companyId,officeId){
+    return window.TramoAuthContext.saveLoginContext(localStorage,companyId,officeId);
+  }
+  function getLoginTenantContext(){
+    return window.TramoAuthContext.getLoginContext(localStorage);
+  }
 
-  localStorage.setItem(
-    LOGIN_TENANT_CONTEXT_KEY,
-    JSON.stringify({companyId,officeId})
-  );
-}
-function getLoginTenantContext(){
-  try{
-    const saved=JSON.parse(
-      localStorage.getItem(LOGIN_TENANT_CONTEXT_KEY)||"null"
-    );
-
-    if(
-      saved?.companyId &&
-      saved?.officeId &&
-      !String(saved.companyId).includes("/") &&
-      !String(saved.officeId).includes("/")
-    ){
-      return {
-        companyId:String(saved.companyId).trim(),
-        officeId:String(saved.officeId).trim()
-      };
-    }
-  }catch(e){}
-
-  return null;
-}
   function sanitizeLoginPart(value){
     return String(value||"").trim().toLowerCase().replace(/[^a-z0-9._-]/g,"");
   }
@@ -1073,26 +1050,17 @@ function getLoginTenantContext(){
   }
 
   function getTenantContext(){
-    const params=new URLSearchParams(location.search);
-    const companyId=String(params.get("company")||"").trim();
-    const officeId=String(params.get("office")||"").trim();
-    const inviteId=String(params.get("invite")||"").trim();
-    if(companyId && officeId && inviteId
-      && !companyId.includes("/")
-      && !officeId.includes("/")
-      && !inviteId.includes("/")){
-      const ctx={companyId,officeId,inviteId};
-      localStorage.setItem(TENANT_CONTEXT_KEY, JSON.stringify(ctx));
-     saveLoginTenantContext(companyId,officeId); 
-      return ctx;
-    }
-    try{
-      const saved=JSON.parse(localStorage.getItem(TENANT_CONTEXT_KEY)||"null");
-      if(saved && saved.companyId && saved.officeId && saved.inviteId) return saved;
-    }catch(e){}
-     return null;
+    const captured=window.TramoAuthContext.captureRegistrationContext(localStorage,location.search);
+    return captured || window.TramoAuthContext.getRegistrationContext(localStorage);
   }
-
+  function completeRegistrationTenantContext(ctx){
+    const login=window.TramoAuthContext.completeRegistration(localStorage,ctx);
+    if(login && window.history?.replaceState){
+      try{history.replaceState(null,"",window.TramoAuthContext.cleanRegistrationUrl(location));}catch(_e){}
+    }
+    return login;
+  }
+  window.TramoAuthContext.migrateLegacyRegistrationContext(localStorage,location.search);
   function registrationCollectionPath(companyId,officeId){
     return `companies/${companyId}/offices/${officeId}/registrationRequests`;
   }
@@ -1613,7 +1581,7 @@ async function syncAfterLogin(profile){
   const registerButton=document.getElementById("registerButton");
   const registerError=document.getElementById("registerError");
   const registerTenant=document.getElementById("registerTenant");
-  const tenantContext=getTenantContext();
+  let tenantContext=getTenantContext();
 const isStandalone=
   window.matchMedia("(display-mode: standalone)").matches ||
   window.navigator.standalone === true;
@@ -1663,7 +1631,7 @@ const isStandalone=
 
     let authEmail=loginValue;
     if(!loginValue.includes("@")){
-      const ctx=getTenantContext() || getLoginTenantContext();
+      const ctx=getLoginTenantContext();
       if(!ctx){
         authError.textContent="個人IDでログインする場合は、会社専用QRコードから開いてください。";
         return;
@@ -1733,6 +1701,9 @@ const isStandalone=
       });
       await batch.commit();
       batchCommitted=true;
+      completeRegistrationTenantContext(tenantContext);
+      tenantContext=null;
+      showRegisterButton.style.display="none";
       await signOut(firebaseAuth);
       document.getElementById("registerName").value="";
       document.getElementById("registerLoginId").value="";
@@ -1775,6 +1746,7 @@ const isStandalone=
     try{
       cloudStatus("☁️ Firebase：権限確認中…");
       const profile=await loadUserProfile(user);
+      saveLoginTenantContext(profile.companyId,profile.officeId);
       setCloudTenant(profile);
       window.firebaseUser=user; window.firebaseReady=true; window.firebaseProfile=profile;
       window.firebaseCloud.status="接続済み";
@@ -1789,7 +1761,7 @@ const isStandalone=
       stopTodayVehicleWatch();
       if(boardDayTimer){clearInterval(boardDayTimer);boardDayTimer=null;}
       let msg=e?.message||"権限を確認できませんでした。";
-      const ctx=getTenantContext();
+      const ctx=getLoginTenantContext() || getTenantContext();
       if(ctx && user){
         try{
           const reqSnap=await getDoc(doc(firestoreDb, registrationCollectionPath(ctx.companyId,ctx.officeId), user.uid));
