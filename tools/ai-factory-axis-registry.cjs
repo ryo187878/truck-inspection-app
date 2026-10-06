@@ -126,6 +126,29 @@ const AXES=[
       {file:'tools/ai-factory-generate-axis.test.cjs',namePattern:'.*'}
     ]
   }
+,
+  {
+    axisId:'boundary.server-domain-enforcement',
+    label:'クライアント制約のサーバー境界強制',
+    generationIntroduced:81,
+    inheritedFrom:['axis.candidate-generation','auth.context-isolation','promotion.shared-dna','impact.test-selection'],
+    changedPaths:[],
+    failurePatterns:['server domain enforcement','client constraint bypass','lower bound validation','api boundary'],
+    testTargets:[
+      {file:'tools/ai-factory-external-evidence.test.cjs',namePattern:'在庫|境界強制|external inventory'}
+    ]
+  },
+  {
+    axisId:'resource.consumption-sign-invariant',
+    label:'資源消費量の正数不変条件',
+    generationIntroduced:81,
+    inheritedFrom:['axis.candidate-generation','auth.context-isolation','promotion.shared-dna','impact.test-selection'],
+    changedPaths:[],
+    failurePatterns:['consumption sign invariant','negative consumption','capacity increase','resource conservation'],
+    testTargets:[
+      {file:'tools/ai-factory-external-evidence.test.cjs',namePattern:'予約|消費量|external booking'}
+    ]
+  }
 ];
 
 const AXIS_BY_ID=new Map(AXES.map(axis=>[axis.axisId,axis]));
