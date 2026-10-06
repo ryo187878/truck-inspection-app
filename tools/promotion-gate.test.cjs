@@ -12,6 +12,7 @@ function html(refs,variant='same'){
     ? 'function dispatchMakeEmptySlot(){ return {stage1:{chassisNumber:""}}; }'
     : 'function dispatchMakeEmptySlot(){ return {stage1:{}}; }';
   return [
+    '<script src="'+refs.auth+'"></script>',
     '<script src="'+refs.dispatch+'"></script>',
     '<script src="'+refs.today+'"></script>',
     '<script src="'+refs.yamato+'"></script>',
@@ -27,15 +28,18 @@ function html(refs,variant='same'){
 function fixture({drift=false,duplicateToday=false,testTodayRef='../today-vehicle-status.js',testExtra='' }={}){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'tramo-promotion-gate-'));
   fs.mkdirSync(path.join(root,'test'),{recursive:true});
+  fs.writeFileSync(path.join(root,'auth-context.js'),'module.exports={};');
   fs.writeFileSync(path.join(root,'dispatch-service.js'),'module.exports={};');
   fs.writeFileSync(path.join(root,'today-vehicle-status.js'),'module.exports={};');
   fs.writeFileSync(path.join(root,'yamato-daily.js'),'module.exports={};');
   fs.writeFileSync(path.join(root,'index.html'),html({
+    auth:'./auth-context.js',
     dispatch:'./dispatch-service.js',
     today:'./today-vehicle-status.js',
     yamato:'./yamato-daily.js'
   }));
   fs.writeFileSync(path.join(root,'test','index.html'),html({
+    auth:'../auth-context.js',
     dispatch:'../dispatch-service.js',
     today:testTodayRef,
     yamato:'../yamato-daily.js'
@@ -83,4 +87,13 @@ test('Gateは判定だけを行い自動昇格処理を持たない',()=>{
   assert.equal(source.includes('copyFileSync'),false);
   assert.equal(source.includes('renameSync'),false);
   assert.equal(source.includes('writeFileSync'),false);
+});
+
+
+test('auth context共有coreをtest内コピーへ分裂させたらSTOP',()=>{
+  const root=fixture();
+  fs.writeFileSync(path.join(root,'test','auth-context.js'),'module.exports={};');
+  const result=gate.evaluatePromotionGate(root);
+  assert.equal(result.pass,false);
+  assert.ok(result.issues.some(x=>x.code==='DUPLICATE_SHARED_FILE'&&x.name==='auth-context'));
 });
