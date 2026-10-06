@@ -542,3 +542,40 @@ test('Vaccine1: 海コン枝番は車番と乗務員の組合せ単位で正規�
  assert.deepEqual(await branches([['A','D1'],['B','D2'],['A','D1']]),[1,2,1]);
  assert.deepEqual(await branches([['A','D1'],['B','D2'],['C','D3']]),[1,2,3]);
 });
+
+
+test('Vaccine2: 固定QR発行はmode=fixedで、再発行はactive inviteを全件失効する',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const start=html.indexOf('    async getOrCreateDriverInvite(){');
+ const end=html.indexOf('    async loadRegistrationRequests(){',start);
+ assert.ok(start>=0&&end>start);
+ const block=html.slice(start,end);
+ assert.ok(block.includes('mode:"fixed"'));
+ assert.ok(block.includes('where("status","==","active")'));
+ assert.equal(block.includes('where("status","==","active"), limit(1)'),false);
+ assert.ok(block.includes('for(const oldDoc of activeSnap.docs)'));
+ assert.ok(block.includes('status:"revoked"'));
+ assert.ok(block.includes('revokedBy:window.firebaseUser.uid'));
+});
+
+test('Vaccine2: main/testの登録申請は固定QRを消費せずpending申請だけを作る',()=>{
+ for(const file of ['index.html','test/index.html']){
+  const html=fs.readFileSync(path.join(root,file),'utf8');
+  const start=html.indexOf('  registerButton.addEventListener("click"');
+  const end=html.indexOf('  document.getElementById("logoutButton")',start);
+  assert.ok(start>=0&&end>start,file+' register flow missing');
+  const block=html.slice(start,end);
+  assert.ok(block.includes('status:"pending"'),file+' pending request missing');
+  assert.ok(block.includes('inviteId'),file+' inviteId missing');
+  assert.equal(block.includes('status:"used"'),false,file+' must not consume fixed invite');
+  assert.equal(block.includes('usedBy:uid'),false,file+' must not bind fixed invite to one user');
+ }
+});
+
+test('Vaccine2: Firestore Rulesは固定QR再利用と旧一回性QR互換を両方保持する',()=>{
+ const rules=fs.readFileSync(path.join(root,'firestore.rules'),'utf8');
+ assert.ok(rules.includes('request.resource.data.mode == "fixed"'));
+ assert.ok(rules.includes('resource.data.mode == "fixed"'));
+ assert.ok(rules.includes('現行の固定QR: 再発行で失効するまで何人でも申請可能'));
+ assert.ok(rules.includes('旧24時間・一回性QR: 申請と同一Batchでusedへ遷移'));
+});
