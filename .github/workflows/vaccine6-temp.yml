@@ -1,0 +1,67 @@
+name: Vaccine 6 novelty and external validation
+on:
+  push:
+    branches:
+      - ai-factory/vaccine6-axis-generation-external-20261006
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: G71-G80 novelty generation antibody
+        run: node --test tools/ai-factory-generate-axes.test.cjs
+
+      - name: Full AI FACTORY and TRAMO regression
+        run: node --test tools/*.test.cjs
+
+      - name: Promotion Gate
+        run: node tools/promotion-gate.cjs
+
+      - name: Clone external inventory app
+        run: git clone --depth 1 https://github.com/TheCandyLoop/inventory-management-crud.git /tmp/ext-inventory
+
+      - name: Generate inventory validation axes
+        run: node tools/ai-factory-generate-axes.cjs --scan /tmp/ext-inventory --name TheCandyLoop/inventory-management-crud --json
+
+      - name: Start inventory app
+        run: |
+          cd /tmp/ext-inventory
+          npm ci
+          nohup npm start >/tmp/inventory.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/api/products >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/inventory.log
+          exit 1
+
+      - name: Probe inventory generated axis
+        run: node tools/ai-factory-external-probe.cjs inventory http://127.0.0.1:3000
+
+      - name: Stop inventory app
+        if: always()
+        run: pkill -f "node server.js" || true
+
+      - name: Clone external booking app
+        run: git clone --depth 1 https://github.com/rizbud/express-sqlite-booking-system.git /tmp/ext-booking
+
+      - name: Generate booking validation axes
+        run: node tools/ai-factory-generate-axes.cjs --scan /tmp/ext-booking --name rizbud/express-sqlite-booking-system --json
+
+      - name: Start booking app
+        run: |
+          cd /tmp/ext-booking
+          npm ci
+          npm run build
+          APP_PORT=3001 nohup node dist/index.js >/tmp/booking.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3001/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/booking.log
+          exit 1
+
+      - name: Probe booking generated axis
+        run: node tools/ai-factory-external-probe.cjs booking http://127.0.0.1:3001
