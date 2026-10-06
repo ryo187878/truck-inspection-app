@@ -328,12 +328,12 @@ service cloud.firestore {
     match /companies/{companyId}/offices/{officeId}/registrationRequests/{userId} {
 
       // 現行固定QR。invite自体は消費せず、再発行でrevokedになるまで複数人が申請できる。
-      allow create: if validRegistrationRequestPayload(companyId, officeId, userId)
-                    && validFixedRegistrationInvite(
+      allow create: if debug(validRegistrationRequestPayload(companyId, officeId, userId))
+                    && debug(validFixedRegistrationInvite(
                       companyId,
                       officeId,
                       request.resource.data.inviteId
-                    );
+                    ));
 
       // 旧24時間・一回性QR互換。申請と同一Batchでinviteをusedへ遷移させる。
       allow create: if validRegistrationRequestPayload(companyId, officeId, userId)
