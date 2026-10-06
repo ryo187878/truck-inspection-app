@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 
 const SHARED_FILES=[
+  {name:'auth-context',root:'auth-context.js',mainRef:'./auth-context.js',testRef:'../auth-context.js',testCopy:'test/auth-context.js'},
   {name:'dispatch-service',root:'dispatch-service.js',mainRef:'./dispatch-service.js',testRef:'../dispatch-service.js',testCopy:'test/dispatch-service.js'},
   {name:'today-vehicle-status',root:'today-vehicle-status.js',mainRef:'./today-vehicle-status.js',testRef:'../today-vehicle-status.js',testCopy:'test/today-vehicle-status.js'},
   {name:'yamato-daily',root:'yamato-daily.js',mainRef:'./yamato-daily.js',testRef:'../yamato-daily.js',testCopy:'test/yamato-daily.js'}
