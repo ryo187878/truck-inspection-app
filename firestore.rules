@@ -125,7 +125,7 @@ service cloud.firestore {
       allow update: if (
                       // 旧24時間・一回性QRの消費
                       loggedIn()
-                      && !resource.data.keys().hasAll(["mode"])
+                      && resource.data.get("mode", "") != "fixed"
                       && resource.data.status == "active"
                       && resource.data.companyId == companyId
                       && resource.data.officeId == officeId
@@ -152,7 +152,7 @@ service cloud.firestore {
                     ) || (
                       // 旧24時間・一回性QRを管理者が失効
                       isAdmin(companyId, officeId)
-                      && !resource.data.keys().hasAll(["mode"])
+                      && resource.data.get("mode", "") != "fixed"
                       && resource.data.status == "active"
                       && resource.data.companyId == companyId
                       && resource.data.officeId == officeId
@@ -186,8 +186,8 @@ service cloud.firestore {
                     ) || (
                       // 固定QRは再発行時に管理者だけが失効できる
                       isAdmin(companyId, officeId)
-                      && resource.data.keys().hasAll(["mode"])
-                      && resource.data.mode == "fixed"
+                      && resource.data.get("mode", "") == "fixed"
+
                       && resource.data.status == "active"
                       && resource.data.companyId == companyId
                       && resource.data.officeId == officeId
@@ -309,15 +309,15 @@ service cloud.firestore {
                     && (
                       (
                         // 現行の固定QR: 再発行で失効するまで何人でも申請可能
-                        get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.keys().hasAll(["mode"])
-                        && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.mode == "fixed"
+                        get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.get("mode", "") == "fixed"
+
                         && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.revokedAt == null
                         && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.revokedBy == null
                       )
                       ||
                       (
                         // 旧24時間・一回性QR: 申請と同一Batchでusedへ遷移
-                        !get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.keys().hasAll(["mode"])
+                        get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.get("mode", "") != "fixed"
                         && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.expiresAt > request.time
                         && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "used"
                         && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.usedBy == request.auth.uid
