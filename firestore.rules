@@ -283,6 +283,7 @@ service cloud.firestore {
     // ========================================
     match /companies/{companyId}/offices/{officeId}/registrationRequests/{userId} {
 
+      // 現行固定QR。invite自体は消費せず、再発行でrevokedになるまで複数人が申請できる。
       allow create: if loggedIn()
                     && request.auth.uid == userId
                     && exists(/databases/$(database)/documents/companies/$(companyId))
@@ -306,23 +307,37 @@ service cloud.firestore {
                     && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.companyId == companyId
                     && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.officeId == officeId
                     && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "active"
-                    && (
-                      (
-                        // 現行の固定QR: 再発行で失効するまで何人でも申請可能
-                        get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.get("mode", "") == "fixed"
+                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.mode == "fixed"
+                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.revokedAt == null
+                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.revokedBy == null;
 
-                        && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.revokedAt == null
-                        && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.revokedBy == null
-                      )
-                      ||
-                      (
-                        // 旧24時間・一回性QR: 申請と同一Batchでusedへ遷移
-                        get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.get("mode", "") != "fixed"
-                        && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.expiresAt > request.time
-                        && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "used"
-                        && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.usedBy == request.auth.uid
-                      )
-                    );
+      // 旧24時間・一回性QR互換。申請と同一Batchでinviteをusedへ遷移させる。
+      allow create: if loggedIn()
+                    && request.auth.uid == userId
+                    && exists(/databases/$(database)/documents/companies/$(companyId))
+                    && exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId))
+                    && request.resource.data.companyId == companyId
+                    && request.resource.data.officeId == officeId
+                    && request.resource.data.role == "driver"
+                    && request.resource.data.status == "pending"
+                    && request.resource.data.keys().hasAll(["inviteId"])
+                    && request.resource.data.keys().hasOnly([
+                      "displayName",
+                      "loginId",
+                      "role",
+                      "companyId",
+                      "officeId",
+                      "status",
+                      "createdAt",
+                      "inviteId"
+                    ])
+                    && exists(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId))
+                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.companyId == companyId
+                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.officeId == officeId
+                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "active"
+                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.expiresAt > request.time
+                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "used"
+                    && getAfter(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.usedBy == request.auth.uid;
 
       allow read: if (loggedIn() && request.auth.uid == userId)
                   || isAdmin(companyId, officeId);
