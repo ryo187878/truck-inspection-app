@@ -162,6 +162,29 @@ const EVIDENCE_LEDGER=[
     executionCostMs:null,
     source:'Vaccine4 94/94 full regression retained Yamato daily tests'
   }
+,
+  {
+    evidenceId:'V005-SCORING-ANTIBODY',
+    axisId:'axis.effectiveness-scoring',
+    generation:61,
+    outcome:'validated',
+    issueCount:0,
+    evidenceStrength:94,
+    residualRisk:10,
+    executionCostMs:null,
+    source:'Vaccine5 G61-G70 scoring antibody 12/12 PASS'
+  },
+  {
+    evidenceId:'V005-SCORING-SPIRAL',
+    axisId:'axis.effectiveness-scoring',
+    generation:70,
+    outcome:'validated',
+    issueCount:0,
+    evidenceStrength:96,
+    residualRisk:8,
+    executionCostMs:null,
+    source:'Vaccine5 full regression 106/106 PASS and Promotion Gate PASS'
+  }
 ];
 
 function validateEvidenceEvent(event){
