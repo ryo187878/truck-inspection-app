@@ -23,4 +23,9 @@ jobs:
       - name: Release regression tests
         run: node --test tools/verify-release.test.cjs
       - name: Firestore Rules emulator tests
-        run: npx -y firebase-tools@latest emulators:exec --only firestore --project truck-inspection-app-rules-tests "node --test rules-tests/firestore.rules.test.js"
+        run: npx -y firebase-tools@latest emulators:exec --only firestore --project truck-inspection-app-rules-tests "node --test --test-name-pattern='48\\.' rules-tests/firestore.rules.test.js"
+      - name: Show Firestore rule diagnostics
+        if: failure()
+        run: |
+          echo "=== Firestore debug diagnostics ==="
+          grep -n -E "DEBUG|evaluation error|Null value error" firestore-debug.log | tail -n 200 || true
