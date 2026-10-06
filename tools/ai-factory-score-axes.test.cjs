@@ -6,9 +6,11 @@ const {AXIS_BY_ID,validateRegistry}=require('./ai-factory-axis-registry.cjs');
 const {EVIDENCE_LEDGER,validateLedger}=require('./ai-factory-evidence-ledger.cjs');
 const scorer=require('./ai-factory-score-axes.cjs');
 
+let fixtureSeq=0;
 function event(overrides={}){
+  fixtureSeq+=1;
   return {
-    evidenceId:'E-'+Math.random().toString(16).slice(2),
+    evidenceId:'E-'+fixtureSeq,
     axisId:'change.diff-purity',
     generation:61,
     outcome:'validated',
