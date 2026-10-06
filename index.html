@@ -345,6 +345,7 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
 }  
 </style>
 <script src="./vendor/exceljs/exceljs.min.js"></script>
+<script src="./auth-context.js"></script>
 <script src="./dispatch-service.js"></script>
 <script src="./yamato-daily.js"></script>
 <script src="./today-vehicle-status.js"></script>
@@ -1189,7 +1190,15 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
   let CLOUD_DISPATCH_COLLECTION = "";
   let CLOUD_CONTAINER_DISPATCH_COLLECTION = "";
   let CLOUD_CASES_COLLECTION = "";
-  const TENANT_CONTEXT_KEY = "truck_registration_tenant_v1";
+  const TENANT_CONTEXT_KEY = window.TramoAuthContext.REGISTRATION_CONTEXT_KEY;
+  const LOGIN_TENANT_CONTEXT_KEY = window.TramoAuthContext.LOGIN_CONTEXT_KEY;
+
+  function saveLoginTenantContext(companyId,officeId){
+    return window.TramoAuthContext.saveLoginContext(localStorage,companyId,officeId);
+  }
+  function getLoginTenantContext(){
+    return window.TramoAuthContext.getLoginContext(localStorage);
+  }
 
   function sanitizeLoginPart(value){
     return String(value||"").trim().toLowerCase().replace(/[^a-z0-9._-]/g,"");
@@ -1197,22 +1206,19 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
   function makeInternalEmail(companyId, officeId, loginId){
     return `${sanitizeLoginPart(loginId)}.${sanitizeLoginPart(officeId)}.${sanitizeLoginPart(companyId)}@truck-inspection.invalid`;
   }
+
   function getTenantContext(){
-    const params=new URLSearchParams(location.search);
-    const companyId=String(params.get("company")||"").trim();
-    const officeId=String(params.get("office")||"").trim();
-    const inviteId=String(params.get("invite")||"").trim();
-    if(companyId && officeId && inviteId && !companyId.includes("/") && !officeId.includes("/") && !inviteId.includes("/")){
-      const ctx={companyId,officeId,inviteId};
-      localStorage.setItem(TENANT_CONTEXT_KEY,JSON.stringify(ctx));
-      return ctx;
-    }
-    try{
-      const saved=JSON.parse(localStorage.getItem(TENANT_CONTEXT_KEY)||"null");
-      if(saved?.companyId && saved?.officeId && saved?.inviteId) return saved;
-    }catch(e){}
-    return null;
+    const captured=window.TramoAuthContext.captureRegistrationContext(localStorage,location.search);
+    return captured || window.TramoAuthContext.getRegistrationContext(localStorage);
   }
+  function completeRegistrationTenantContext(ctx){
+    const login=window.TramoAuthContext.completeRegistration(localStorage,ctx);
+    if(login && window.history?.replaceState){
+      try{history.replaceState(null,"",window.TramoAuthContext.cleanRegistrationUrl(location));}catch(_e){}
+    }
+    return login;
+  }
+  window.TramoAuthContext.migrateLegacyRegistrationContext(localStorage,location.search);
   function registrationCollectionPath(companyId,officeId){
     return `companies/${companyId}/offices/${officeId}/registrationRequests`;
   }
@@ -1754,7 +1760,7 @@ async function syncAfterLogin(profile){
   const registerButton=document.getElementById("registerButton");
   const registerError=document.getElementById("registerError");
   const registerTenant=document.getElementById("registerTenant");
-  const tenantContext=getTenantContext();
+  let tenantContext=getTenantContext();
 
   function hasRegistrationQrParams(){
     const params=new URLSearchParams(location.search);
@@ -1763,7 +1769,7 @@ async function syncAfterLogin(profile){
       && !!String(params.get("office")||"").trim()
       && !!String(params.get("invite")||"").trim();
   }
-  const registrationQrAccess=hasRegistrationQrParams();
+  let registrationQrAccess=hasRegistrationQrParams();
   let forcedSignOutForRegistration=false;
   let explicitLoginInProgress=false;
 
@@ -1791,7 +1797,7 @@ async function syncAfterLogin(profile){
     if(!loginValue||!password){authError.textContent="ログインID（またはメールアドレス）とパスワードを入力してください。";return;}
     let authEmail=loginValue;
     if(!loginValue.includes("@")){
-      const ctx=getTenantContext();
+      const ctx=getLoginTenantContext();
       if(!ctx){authError.textContent="個人IDでログインする場合は会社専用QRコードから開いてください。";return;}
       const normalized=sanitizeLoginPart(loginValue);
       if(normalized.length<3){authError.textContent="ログインIDを確認してください。";return;}
@@ -1822,7 +1828,12 @@ async function syncAfterLogin(profile){
       const cred=await createUserWithEmailAndPassword(firebaseAuth,internalEmail,password);createdUser=cred.user;
       const {companyId,officeId,inviteId}=tenantContext, uid=cred.user.uid;
       await setDoc(doc(firestoreDb,registrationCollectionPath(companyId,officeId),uid),{displayName,loginId,role:"driver",companyId,officeId,status:"pending",createdAt:new Date().toISOString(),inviteId});
-      batchCommitted=true;await signOut(firebaseAuth);
+      batchCommitted=true;
+      completeRegistrationTenantContext(tenantContext);
+      tenantContext=null;
+      registrationQrAccess=false;
+      showRegisterButton.style.display="none";
+      await signOut(firebaseAuth);
       ["registerName","registerLoginId","registerPassword","registerPassword2"].forEach(id=>document.getElementById(id).value="");
       showLoginPanel("登録申請を送信しました。管理者の承認後、このIDでログインできます。");
     }catch(e){
@@ -1856,6 +1867,7 @@ async function syncAfterLogin(profile){
     try{
       cloudStatus("☁️ Firebase：権限確認中…");
       const profile=await loadUserProfile(user);
+      saveLoginTenantContext(profile.companyId,profile.officeId);
       setCloudTenant(profile);
       window.firebaseUser=user; window.firebaseReady=true; window.firebaseProfile=profile;
       window.firebaseCloud.status="接続済み";
@@ -1870,7 +1882,7 @@ async function syncAfterLogin(profile){
       stopTodayVehicleWatch();
       if(boardDayTimer){clearInterval(boardDayTimer);boardDayTimer=null;}
       let msg=e?.message||"権限を確認できませんでした。";
-      const ctx=getTenantContext();
+      const ctx=getLoginTenantContext() || getTenantContext();
       if(ctx && user){
         try{
           const reqSnap=await getDoc(doc(firestoreDb,registrationCollectionPath(ctx.companyId,ctx.officeId),user.uid));
