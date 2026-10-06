@@ -1,0 +1,21 @@
+name: Vaccine 5 spiral validation
+on:
+  push:
+    branches:
+      - ai-factory/vaccine5-axis-effectiveness-20261006
+
+jobs:
+  spiral:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: G61-G70 Evidence scoring spiral
+        run: node --test tools/ai-factory-score-axes.test.cjs
+      - name: Current generation inherited-axis impact plan
+        run: node tools/ai-factory-select-tests.cjs --failure "axis score effectiveness 継承候補" --run
+      - name: Real Evidence ranking
+        run: node tools/ai-factory-score-axes.cjs
+      - name: Full TRAMO regression
+        run: node --test tools/*.test.cjs
+      - name: Promotion Gate
+        run: node tools/promotion-gate.cjs
