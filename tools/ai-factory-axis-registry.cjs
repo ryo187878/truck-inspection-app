@@ -126,18 +126,6 @@ const AXES=[
       {file:'tools/ai-factory-generate-axis.test.cjs',namePattern:'.*'}
     ]
   }
-,
-  {
-    axisId:'axis.novelty-generation',
-    label:'新規検証軸候補生成・メタ検証',
-    generationIntroduced:71,
-    inheritedFrom:['axis.effectiveness-scoring','impact.test-selection','promotion.shared-dna'],
-    changedPaths:['tools/ai-factory-risk-ontology.cjs','tools/ai-factory-generate-axes.cjs'],
-    failurePatterns:['novel axis','新規軸','axis generation','未知リスク','重複検証'],
-    testTargets:[
-      {file:'tools/ai-factory-generate-axes.test.cjs',namePattern:'.*'}
-    ]
-  }
 ];
 
 const AXIS_BY_ID=new Map(AXES.map(axis=>[axis.axisId,axis]));
