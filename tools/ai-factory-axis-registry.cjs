@@ -102,6 +102,18 @@ const AXES=[
       {file:'tools/ai-factory-select-tests.test.cjs',namePattern:'.*'}
     ]
   }
+,
+  {
+    axisId:'axis.effectiveness-scoring',
+    label:'Evidenceベース検証軸有効度',
+    generationIntroduced:61,
+    inheritedFrom:['impact.test-selection','promotion.shared-dna','auth.context-isolation','change.diff-purity'],
+    changedPaths:['tools/ai-factory-evidence-ledger.cjs','tools/ai-factory-score-axes.cjs'],
+    failurePatterns:['effectiveness','有効度','evidence score','axis score','継承候補'],
+    testTargets:[
+      {file:'tools/ai-factory-score-axes.test.cjs',namePattern:'.*'}
+    ]
+  }
 ];
 
 const AXIS_BY_ID=new Map(AXES.map(axis=>[axis.axisId,axis]));
