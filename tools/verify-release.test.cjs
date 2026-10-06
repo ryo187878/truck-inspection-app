@@ -575,7 +575,8 @@ test('Vaccine2: main/testの登録申請は固定QRを消費せずpending申請�
 test('Vaccine2: Firestore Rulesは固定QR再利用と旧一回性QR互換を両方保持する',()=>{
  const rules=fs.readFileSync(path.join(root,'firestore.rules'),'utf8');
  assert.ok(rules.includes('request.resource.data.mode == "fixed"'));
- assert.ok(rules.includes('resource.data.mode == "fixed"'));
- assert.ok(rules.includes('現行の固定QR: 再発行で失効するまで何人でも申請可能'));
- assert.ok(rules.includes('旧24時間・一回性QR: 申請と同一Batchでusedへ遷移'));
+ assert.ok(rules.includes('.data.mode == "fixed"'));
+ assert.ok(rules.includes('.data.expiresAt > request.time'));
+ assert.ok(rules.includes('.data.status == "used"'));
+ assert.ok(rules.includes('.data.usedBy == request.auth.uid'));
 });
