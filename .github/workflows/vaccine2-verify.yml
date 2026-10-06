@@ -1,0 +1,22 @@
+name: Vaccine 2 Verify
+
+on:
+  push:
+    branches:
+      - ai-factory/vaccine2-fixed-qr-contract-20261006
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Release regression tests
+        run: node --test tools/verify-release.test.cjs
+      - name: Firestore Rules emulator tests
+        run: npx -y firebase-tools@latest emulators:exec --only firestore --project truck-inspection-app-rules-tests "node --test rules-tests/firestore.rules.test.js"
