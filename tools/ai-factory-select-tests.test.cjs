@@ -59,8 +59,8 @@ test('yamato-daily変更はヤマト軸と共有DNA防御を同時に選ぶ',()=
 test('影響を推定できない場合は何も省略せず全回帰へフォールバックする',()=>{
   const plan=selector.makePlan({changedFiles:['unknown/new-feature.txt']});
   assert.equal(plan.fallback,true);
-  assert.equal(plan.targeted.length,1);
-  assert.equal(plan.targeted[0].file,'tools/*.test.cjs');
+  assert.ok(plan.targeted.length>=4);
+  assert.ok(plan.targeted.every(x=>x.file.endsWith('.test.cjs')));
 });
 
 test('狙い撃ちテストを選んでもmain昇格前の全回帰は常に必須',()=>{
@@ -89,4 +89,14 @@ test('実行計画はshell文字列ではなくcommandとargsを分離して生�
     assert.ok(Array.isArray(target.exec.args));
     assert.equal(target.exec.args.includes('&&'),false);
   }
+});
+
+
+test('同一テストファイルを複数軸が要求しても1回の実行計画へ統合する',()=>{
+  const plan=selector.makePlan({changedFiles:['auth-context.js']});
+  const promotion=plan.targeted.filter(x=>x.file==='tools/promotion-gate.test.cjs');
+  assert.equal(promotion.length,1);
+  assert.ok(promotion[0].axes.includes('auth.context-isolation'));
+  assert.ok(promotion[0].axes.includes('promotion.shared-dna'));
+  assert.ok(promotion[0].axes.includes('change.diff-purity'));
 });
