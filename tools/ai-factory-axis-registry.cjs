@@ -116,6 +116,18 @@ const AXES=[
   }
 ,
   {
+    axisId:'axis.candidate-generation',
+    label:'新規検証軸候補生成・メタ検証',
+    generationIntroduced:71,
+    inheritedFrom:['axis.effectiveness-scoring','impact.test-selection','promotion.shared-dna'],
+    changedPaths:['tools/ai-factory-generate-axis.cjs','tools/ai-factory-generate-axis.test.cjs'],
+    failurePatterns:['new validation axis','新規検証軸','axis candidate','novel axis','meta validation'],
+    testTargets:[
+      {file:'tools/ai-factory-generate-axis.test.cjs',namePattern:'.*'}
+    ]
+  }
+,
+  {
     axisId:'axis.novelty-generation',
     label:'新規検証軸候補生成・メタ検証',
     generationIntroduced:71,
