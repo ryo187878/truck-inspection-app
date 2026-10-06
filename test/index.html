@@ -1712,8 +1712,7 @@ const isStandalone=
       const uid=cred.user.uid;
       const { companyId, officeId, inviteId } = tenantContext;
       const reqPath=registrationCollectionPath(companyId,officeId);
-      const batch=writeBatch(firestoreDb);
-      batch.set(doc(firestoreDb, reqPath, uid), {
+      await setDoc(doc(firestoreDb, reqPath, uid), {
         displayName,
         loginId,
         role:"driver",
@@ -1723,15 +1722,6 @@ const isStandalone=
         createdAt:new Date().toISOString(),
         inviteId
       });
-      batch.update(doc(
-        firestoreDb,
-        `companies/${companyId}/offices/${officeId}/invites/${inviteId}`
-      ), {
-        status:"used",
-        usedAt:serverTimestamp(),
-        usedBy:uid
-      });
-      await batch.commit();
       batchCommitted=true;
       await signOut(firebaseAuth);
       document.getElementById("registerName").value="";
