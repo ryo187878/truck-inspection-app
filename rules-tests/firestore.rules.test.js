@@ -2110,3 +2110,91 @@ test("46. 案件採番カウンターは運転者も1ずつ進められるが、
   await assertFails(setDoc(doc(driverDb,`companies/${companyId}/offices/${officeId}/counters/forged`),{lastSequence:1,companyId:"company-b",officeId}));
   await assertFails(deleteDoc(ref));
 });
+
+
+test("47. adminは再利用可能な固定QR inviteを作成できる", async () => {
+  const adminUid="fixed-qr-admin", companyId="company-a", officeId="office-main", inviteId="fixed-qr-47";
+  await testEnv.withSecurityRulesDisabled(async context=>{
+    const db=context.firestore();
+    await setDoc(doc(db,`companies/${companyId}`),{name:"Company A"});
+    await setDoc(doc(db,`companies/${companyId}/offices/${officeId}`),{name:"Main"});
+    await setDoc(doc(db,`users/${adminUid}`),{role:"admin",companyId,officeId,displayName:"Admin",loginId:"fixed-qr-admin"});
+  });
+  const db=testEnv.authenticatedContext(adminUid).firestore();
+  await assertSucceeds(setDoc(doc(db,`companies/${companyId}/offices/${officeId}/invites/${inviteId}`),{
+    companyId,officeId,mode:"fixed",status:"active",
+    createdAt:Timestamp.fromMillis(Date.now()),createdBy:adminUid,
+    revokedAt:null,revokedBy:null
+  }));
+});
+
+test("48. 同じ固定QRを複数の未承認driverが順番に使って申請できる", async () => {
+  const companyId="company-a", officeId="office-main", adminUid="fixed-qr-multi-admin", inviteId="fixed-qr-48";
+  const driverUids=["fixed-qr-driver-a","fixed-qr-driver-b"];
+  await testEnv.withSecurityRulesDisabled(async context=>{
+    const db=context.firestore();
+    await setDoc(doc(db,`companies/${companyId}`),{name:"Company A"});
+    await setDoc(doc(db,`companies/${companyId}/offices/${officeId}`),{name:"Main"});
+    await setDoc(doc(db,`users/${adminUid}`),{role:"admin",companyId,officeId});
+    await setDoc(doc(db,`companies/${companyId}/offices/${officeId}/invites/${inviteId}`),{
+      companyId,officeId,mode:"fixed",status:"active",
+      createdAt:Timestamp.fromMillis(Date.now()),createdBy:adminUid,
+      revokedAt:null,revokedBy:null
+    });
+  });
+  for(const [i,uid] of driverUids.entries()){
+    const db=testEnv.authenticatedContext(uid).firestore();
+    await assertSucceeds(setDoc(doc(db,`companies/${companyId}/offices/${officeId}/registrationRequests/${uid}`),{
+      displayName:`Fixed Driver ${i+1}`,
+      loginId:`fixed-driver-${i+1}`,
+      role:"driver",companyId,officeId,status:"pending",
+      createdAt:"2026-10-06T00:00:00.000Z",inviteId
+    }));
+  }
+  const adminDb=testEnv.authenticatedContext(adminUid).firestore();
+  const invite=await getDoc(doc(adminDb,`companies/${companyId}/offices/${officeId}/invites/${inviteId}`));
+  assert.equal(invite.data().status,"active");
+});
+
+test("49. 再発行でrevokedになった固定QRからの新規申請は拒否される", async () => {
+  const companyId="company-a", officeId="office-main", adminUid="fixed-qr-revoke-admin", driverUid="fixed-qr-revoked-driver", inviteId="fixed-qr-49";
+  const createdAt=Timestamp.fromMillis(Date.now()), revokedAt=Timestamp.fromMillis(Date.now()+1000);
+  await testEnv.withSecurityRulesDisabled(async context=>{
+    const db=context.firestore();
+    await setDoc(doc(db,`companies/${companyId}`),{name:"Company A"});
+    await setDoc(doc(db,`companies/${companyId}/offices/${officeId}`),{name:"Main"});
+    await setDoc(doc(db,`users/${adminUid}`),{role:"admin",companyId,officeId});
+    await setDoc(doc(db,`companies/${companyId}/offices/${officeId}/invites/${inviteId}`),{
+      companyId,officeId,mode:"fixed",status:"active",createdAt,createdBy:adminUid,revokedAt:null,revokedBy:null
+    });
+  });
+  const adminDb=testEnv.authenticatedContext(adminUid).firestore();
+  await assertSucceeds(updateDoc(doc(adminDb,`companies/${companyId}/offices/${officeId}/invites/${inviteId}`),{
+    status:"revoked",revokedAt,revokedBy:adminUid
+  }));
+  const driverDb=testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(setDoc(doc(driverDb,`companies/${companyId}/offices/${officeId}/registrationRequests/${driverUid}`),{
+    displayName:"Revoked Driver",loginId:"revoked-driver",role:"driver",
+    companyId,officeId,status:"pending",createdAt:"2026-10-06T00:00:00.000Z",inviteId
+  }));
+});
+
+test("50. driverは固定QR inviteを勝手にrevokedへ変更できない", async () => {
+  const companyId="company-a", officeId="office-main", adminUid="fixed-qr-owner-admin", driverUid="fixed-qr-forged-driver", inviteId="fixed-qr-50";
+  await testEnv.withSecurityRulesDisabled(async context=>{
+    const db=context.firestore();
+    await setDoc(doc(db,`companies/${companyId}`),{name:"Company A"});
+    await setDoc(doc(db,`companies/${companyId}/offices/${officeId}`),{name:"Main"});
+    await setDoc(doc(db,`users/${adminUid}`),{role:"admin",companyId,officeId});
+    await setDoc(doc(db,`users/${driverUid}`),{role:"driver",companyId,officeId});
+    await setDoc(doc(db,`companies/${companyId}/offices/${officeId}/invites/${inviteId}`),{
+      companyId,officeId,mode:"fixed",status:"active",
+      createdAt:Timestamp.fromMillis(Date.now()),createdBy:adminUid,
+      revokedAt:null,revokedBy:null
+    });
+  });
+  const driverDb=testEnv.authenticatedContext(driverUid).firestore();
+  await assertFails(updateDoc(doc(driverDb,`companies/${companyId}/offices/${officeId}/invites/${inviteId}`),{
+    status:"revoked",revokedAt:Timestamp.fromMillis(Date.now()),revokedBy:driverUid
+  }));
+});
