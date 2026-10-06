@@ -1379,31 +1379,38 @@ main:has(#dispatchMasterPage.active){max-width:1700px}
     async getOrCreateDriverInvite(){
       if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみ利用できます。");
       const invitesPath=`companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/invites`;
-      const activeSnap=await getDocs(query(collection(firestoreDb,invitesPath), where("status","==","active"), limit(1)));
-      if(!activeSnap.empty){
-        const found=activeSnap.docs[0], data=found.data()||{};
-        return {inviteId:found.id,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,createdAt:data.createdAt?.toDate?data.createdAt.toDate():new Date()};
+      const activeSnap=await getDocs(query(collection(firestoreDb,invitesPath), where("status","==","active")));
+      const fixedDoc=activeSnap.docs.find(d=>{
+        const data=d.data()||{};
+        return data.mode==="fixed" && !data.revokedAt;
+      });
+      if(fixedDoc){
+        const data=fixedDoc.data()||{};
+        return {inviteId:fixedDoc.id,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,createdAt:data.createdAt?.toDate?data.createdAt.toDate():new Date()};
       }
       const inviteId=crypto.randomUUID().replaceAll("-",""), now=new Date();
       await setDoc(doc(firestoreDb,`${invitesPath}/${inviteId}`),{
-        companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,status:"active",
-        createdAt:Timestamp.fromDate(now),createdBy:window.firebaseUser.uid,revokedAt:null,revokedBy:null
+        companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,mode:"fixed",status:"active",
+        createdAt:Timestamp.fromDate(now),createdBy:window.firebaseUser.uid,
+        revokedAt:null,revokedBy:null
       });
       return {inviteId,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,createdAt:now};
     },
     async reissueDriverInvite(){
       if(!window.firebaseReady || window.firebaseProfile?.role!=="admin") throw new Error("管理者のみ利用できます。");
       const invitesPath=`companies/${CLOUD_COMPANY}/offices/${CLOUD_OFFICE}/invites`;
-      const activeSnap=await getDocs(query(collection(firestoreDb,invitesPath), where("status","==","active"), limit(1)));
+      const activeSnap=await getDocs(query(collection(firestoreDb,invitesPath), where("status","==","active")));
       const now=new Date(), newInviteId=crypto.randomUUID().replaceAll("-","");
       const batch=writeBatch(firestoreDb);
-      if(!activeSnap.empty){
-        const oldDoc=activeSnap.docs[0];
-        batch.update(doc(firestoreDb,`${invitesPath}/${oldDoc.id}`),{status:"revoked",revokedAt:Timestamp.fromDate(now),revokedBy:window.firebaseUser.uid});
+      for(const oldDoc of activeSnap.docs){
+        batch.update(doc(firestoreDb,`${invitesPath}/${oldDoc.id}`),{
+          status:"revoked",revokedAt:Timestamp.fromDate(now),revokedBy:window.firebaseUser.uid
+        });
       }
       batch.set(doc(firestoreDb,`${invitesPath}/${newInviteId}`),{
-        companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,status:"active",
-        createdAt:Timestamp.fromDate(now),createdBy:window.firebaseUser.uid,revokedAt:null,revokedBy:null
+        companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,mode:"fixed",status:"active",
+        createdAt:Timestamp.fromDate(now),createdBy:window.firebaseUser.uid,
+        revokedAt:null,revokedBy:null
       });
       await batch.commit();
       return {inviteId:newInviteId,companyId:CLOUD_COMPANY,officeId:CLOUD_OFFICE,createdAt:now};
