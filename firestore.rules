@@ -307,9 +307,7 @@ service cloud.firestore {
                     && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.companyId == companyId
                     && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.officeId == officeId
                     && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.status == "active"
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.mode == "fixed"
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.revokedAt == null
-                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.revokedBy == null;
+                    && get(/databases/$(database)/documents/companies/$(companyId)/offices/$(officeId)/invites/$(request.resource.data.inviteId)).data.mode == "fixed";
 
       // 旧24時間・一回性QR互換。申請と同一Batchでinviteをusedへ遷移させる。
       allow create: if loggedIn()
