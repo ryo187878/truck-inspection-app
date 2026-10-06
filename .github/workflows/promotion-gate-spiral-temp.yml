@@ -1,0 +1,15 @@
+name: Promotion Gate spiral validation
+on:
+  push:
+    branches:
+      - ai-factory/vaccine2-promotion-gate-20261006
+
+jobs:
+  spiral:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run TRAMO regression suite
+        run: node --test tools/*.test.cjs
+      - name: Run Promotion Gate
+        run: node tools/promotion-gate.cjs
