@@ -211,7 +211,7 @@ function generateAxisCandidates(projectRoot,{generation=71}={}){
   return {projectRoot:path.resolve(projectRoot),generation,candidates:raw.map(candidate=>metaValidateCandidate(candidate,{generation}))};
 }
 
-function promoteCandidateToAxis(candidate,evidence){
+function promoteCandidateToAxis(candidate,evidence,{generation=candidate.generationIntroduced+10}={}){
   if(!candidate?.meta?.pass) throw new Error('Candidate meta validation has not passed');
   if(!evidence || evidence.confirmed!==true) throw new Error('Confirmed Evidence is required');
   if(evidence.issueDetected!==true) throw new Error('Issue-detection Evidence is required');
@@ -219,8 +219,8 @@ function promoteCandidateToAxis(candidate,evidence){
   return {
     axisId:candidate.axisId,
     label:candidate.label,
-    generationIntroduced:candidate.generationIntroduced,
-    inheritedFrom:[...candidate.inheritedFrom],
+    generationIntroduced:generation,
+    inheritedFrom:['axis.candidate-generation',...candidate.inheritedFrom].filter((v,i,a)=>a.indexOf(v)===i),
     changedPaths:[],
     failurePatterns:tokenize(candidate.axisId+' '+candidate.riskStatement),
     testTargets:[],
