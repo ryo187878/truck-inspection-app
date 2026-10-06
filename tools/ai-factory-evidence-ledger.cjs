@@ -185,6 +185,29 @@ const EVIDENCE_LEDGER=[
     executionCostMs:null,
     source:'Vaccine5 full regression 106/106 PASS and Promotion Gate PASS'
   }
+,
+  {
+    evidenceId:'EXT-INVENTORY-NONNEGATIVE-20261006',
+    axisId:'boundary.server-domain-enforcement',
+    generation:81,
+    outcome:'detected',
+    issueCount:1,
+    evidenceStrength:98,
+    residualRisk:20,
+    executionCostMs:null,
+    source:'Pinned external inventory app 54a500b6: direct API accepted and persisted negative quantity/price; Actions run 37488245949'
+  },
+  {
+    evidenceId:'EXT-BOOKING-CAPACITY-20261006',
+    axisId:'resource.consumption-sign-invariant',
+    generation:81,
+    outcome:'detected',
+    issueCount:1,
+    evidenceStrength:98,
+    residualRisk:20,
+    executionCostMs:null,
+    source:'Pinned external booking app 02edad46: -3 seat booking accepted and available seats increased 10 to 13; Actions run 37488245949'
+  }
 ];
 
 function validateEvidenceEvent(event){
