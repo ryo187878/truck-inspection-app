@@ -1,0 +1,20 @@
+name: Vaccine 6 spiral G81-G90
+on:
+  push:
+    branches:
+      - ai-factory/vaccine6-axis-generation-external-20261006
+jobs:
+  spiral:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Priority 6 G71-G80 antibody
+        run: node --test tools/ai-factory-generate-axis.test.cjs
+      - name: External Evidence checkpoint
+        run: node --test tools/ai-factory-external-evidence.test.cjs
+      - name: G81-G90 generation transition
+        run: node --test tools/ai-factory-generation-transition.test.cjs
+      - name: Full TRAMO and AI FACTORY regression
+        run: node --test tools/*.test.cjs
+      - name: Promotion Gate
+        run: node tools/promotion-gate.cjs
