@@ -2626,7 +2626,7 @@ function getContainerCaseOptionsHtml(selectedCaseNumber, selectedSourceDispatchI
   });
 
   if (containerCasesMap.size > 0) {
-    html += `<optgroup label="既存海コン案件に追加（工程追加・新枝番発行）">`;
+    html += `<optgroup label="既存海コン案件に追加（工程追加・枝番自動判定）">`;
     const sortedContainerCases = [...containerCasesMap.values()].sort((a,b)=>String(b.caseNumber||"").localeCompare(String(a.caseNumber||"")));
     sortedContainerCases.forEach(c => {
       const isSel = (c.caseNumber === selectedCaseNumber && !singleDispatches.some(sd => sd.caseNumber === selectedCaseNumber));
@@ -2694,7 +2694,7 @@ async function containerOnCaseSelectChanged(){
   } else if (optType === "add-stage") {
     // 既存海コン案件に新しい工程を追加（共通情報を引き継ぎ、未登録の工程のみチェック可能にする）
     const existingStages = (containerDispatchRecords || []).filter(c => c && c.caseNumber === caseNumber);
-    if (descEl) descEl.textContent = `海コン案件 ${caseNumber} に次工程を追加します（新しい枝番が発行されます）。`;
+    if (descEl) descEl.textContent = `海コン案件 ${caseNumber} に次工程を追加します（同じ車番・乗務員は同じ枝番、異なる場合は新しい枝番）。`;
     containerExistingStageIds={};
     existingStages.forEach(st=>{
       const sNo=Number(st.stageNo)>=1 && Number(st.stageNo)<=3 ? Number(st.stageNo) : null;
@@ -3710,6 +3710,10 @@ async function containerSubmitForm(){
     (result.stages||[]).forEach(saved=>{
       const idx=containerDispatchRecords.findIndex(r=>String(r.id||"")===String(saved.id));
       if(idx>=0) containerDispatchRecords[idx]=saved; else containerDispatchRecords.push(saved);
+    });
+    (result.branchUpdates||[]).forEach(update=>{
+      const row=containerDispatchRecords.find(r=>String(r.id||"")===String(update.id));
+      if(row) row.branchNumber=update.branchNumber;
     });
 
     if(result.caseNumber && !caseRecords.some(c=>c.caseNumber===result.caseNumber)){
