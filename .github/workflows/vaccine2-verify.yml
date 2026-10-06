@@ -28,4 +28,4 @@ jobs:
         if: failure()
         run: |
           echo "=== Firestore debug diagnostics ==="
-          grep -n -E "DEBUG|evaluation error|Null value error" firestore-debug.log | tail -n 200 || true
+          tail -n 500 firestore-debug.log || true
