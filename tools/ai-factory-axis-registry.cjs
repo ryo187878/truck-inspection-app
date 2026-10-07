@@ -27,7 +27,7 @@ const AXES=[
     axisId:'promotion.shared-dna',
     label:'共有DNA・正本化',
     generationIntroduced:31,
-    inheritedFrom:['change.diff-purity'],
+    inheritedFrom:[],
     changedPaths:['dispatch-service.js','today-vehicle-status.js','yamato-daily.js','auth-context.js','tools/promotion-gate.cjs'],
     failurePatterns:['shared dna','共有DNA','canonical','正本','duplicate shared','promotion gate'],
     testTargets:[
