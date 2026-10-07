@@ -77,6 +77,20 @@ module.exports = Object.freeze({
       implication: 'The detector can correlate same-named identifiers across unrelated scopes/routes, causing a false structural-sink association.',
       correctionApplied: false,
       promotionAllowed: false
+    },
+    {
+      id: 'P7-E4-FIX-VALIDATION-1',
+      classification: 'LOCAL_FIX_VALIDATED',
+      frozen: true,
+      measured: {
+        contextDiagnosis: { tests: 3, pass: 3, fail: 0, durationMs: 97.2543 },
+        falseNewAxisAntibodies: { tests: 2, pass: 2, fail: 0, durationMs: 65.2035 },
+        frozenExternalE4: { tests: 4, pass: 4, fail: 0, durationMs: 66.5503 }
+      },
+      fact: 'After limiting same-file structural sink matching to local external-input scope, the cross-scope false candidate disappeared, the structural interpolation positive control remained detectable, and all four frozen E4 targets matched expected baseline outputs.',
+      correctionApplied: true,
+      promotionAllowed: false,
+      nextRequiredGate: 'E2/E3 regression plus full regression'
     }
   ]
 });
