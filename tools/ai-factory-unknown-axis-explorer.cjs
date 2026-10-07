@@ -49,12 +49,7 @@ function reachesStructuralSink(text,name){
     const structuralApi=new RegExp('(?:orderBy|limit|offset|groupBy|sortBy)\\s*\\(\\s*'+a+'\\s*\\)','i');
     const mixedVarRe=new RegExp('([A-Za-z_$][\\w$]*)\\s*\\+=\\s*[\\s\\S]{0,240}\\$\\{\\s*'+a+'\\s*\\}','i');
     const mixed=text.match(mixedVarRe);
-    let mixedSink=false;
-    if(mixed){
-      const q=mixed[1].replace(/[.*+?^$()|[\\]\\\\]/g,'\\\\    const structuralApi=new RegExp('(?:orderBy|limit|offset|groupBy|sortBy)\\s*\\(\\s*'+a+'\\s*\\)','i');
-    return concat.test(text)||template.test(text)||structuralApi.test(text);');
-      mixedSink=new RegExp('(?:query|run|execute)\\s*\\(\\s*'+q+'\\b','i').test(text);
-    }
+    const mixedSink=mixed ? new RegExp('(?:query|run|execute)\\s*\\(\\s*'+mixed[1]+'\\b','i').test(text) : false;
     return concat.test(text)||template.test(text)||structuralApi.test(text)||mixedSink;
   });
 }
