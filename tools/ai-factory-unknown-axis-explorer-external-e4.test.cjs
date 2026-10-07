@@ -62,6 +62,9 @@ for(const c of cases){
  test('P7-E4 blind frozen target '+c.name+' records current Explorer output',()=>{
    const project={files:c.files.map(([path,content])=>({path,content}))};
    const out=exploreUnknownAxes(project);
+   if(c.name==='postgres-parameterized'){
+     console.log('P7-E4-TRACE', JSON.stringify({name:c.name,candidates:out.candidates},null,2));
+   }
    assert.equal(out.candidates.length,c.expected);
  });
 }
