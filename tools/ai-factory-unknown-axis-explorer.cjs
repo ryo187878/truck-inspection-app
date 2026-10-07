@@ -75,7 +75,6 @@ function findCrossFileFindings(project){
           const dm=sinkText.match(genericDef);
           if(!defRe.test(sinkText) && !dm) continue;
           const param=dm?dm[1]:valueName;
-          if(isParameterized(sinkText)) continue;
           if(hasAllowlistGuard(sinkText,param)) continue;
           if(reachesStructuralSink(sinkText,param)){
             findings.push({path:sink.path,input:name,sourcePath:source.path,fact:'external input crosses a file/function boundary and reaches structural data-operation sink without observed allowlist'});
@@ -91,7 +90,6 @@ function exploreUnknownAxes(project){
   const findings=findCrossFileFindings(project);
   for(const file of project?.files||[]){
     const text=String(file.content||'');
-    if(isParameterized(text)) continue;
     for(const name of findExternalNames(text)){
       if(hasAllowlistGuard(text,name)) continue;
       if(reachesStructuralSink(text,name)) findings.push({path:file.path,input:name,fact:'external input reaches structural data-operation sink without observed allowlist'});
