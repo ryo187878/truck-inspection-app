@@ -54,6 +54,29 @@ function reachesStructuralSink(text,name){
   });
 }
 
+
+function localScopeAroundExternal(text,name){
+  const n=name.replace(/[.*+?^$()|[\]\\]/g,'\\function findCrossFileFindings(project){');
+  const boundary=new RegExp('(?:req\\.(?:query|body|params)|ctx\\.input)\\.'+n+'\\b');
+  const hit=boundary.exec(text);
+  if(!hit) return text;
+
+  let start=hit.index;
+  while(start>0 && text[start]!=='}' && text[start]!==';') start--;
+  let end=hit.index;
+  let depth=0, seenBrace=false;
+  for(let i=hit.index;i<text.length;i++){
+    const ch=text[i];
+    if(ch==='{'){ depth++; seenBrace=true; }
+    else if(ch==='}' && seenBrace){
+      depth--;
+      if(depth<=0){ end=i+1; break; }
+    }
+    end=i+1;
+  }
+  return text.slice(Math.max(0,start),Math.min(text.length,end));
+}
+
 function findCrossFileFindings(project){
   const findings=[];
   const files=project?.files||[];
@@ -91,8 +114,9 @@ function exploreUnknownAxes(project){
   for(const file of project?.files||[]){
     const text=String(file.content||'');
     for(const name of findExternalNames(text)){
-      if(hasAllowlistGuard(text,name)) continue;
-      if(reachesStructuralSink(text,name)) findings.push({path:file.path,input:name,fact:'external input reaches structural data-operation sink without observed allowlist'});
+      const scope=localScopeAroundExternal(text,name);
+      if(hasAllowlistGuard(scope,name)) continue;
+      if(reachesStructuralSink(scope,name)) findings.push({path:file.path,input:name,fact:'external input reaches structural data-operation sink without observed allowlist'});
     }
   }
   if(!findings.length) return {candidates:[]};
