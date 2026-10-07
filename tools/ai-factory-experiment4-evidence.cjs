@@ -59,6 +59,24 @@ module.exports = Object.freeze({
       implication: 'The external candidate is not explained by parameter binding alone; file-level context or another statement/path in the frozen source contributes to detection.',
       correctionApplied: false,
       promotionAllowed: false
+    },
+    {
+      id: 'P7-E4-CONTEXT-COLLISION-1',
+      classification: 'CROSS_SCOPE_CONTEXT_COLLISION',
+      frozen: true,
+      measured: {
+        tests: 3,
+        pass: 2,
+        fail: 1,
+        durationMs: 89.2059,
+        d1Ms: 1.8366,
+        d2Ms: 2.8577,
+        d3Ms: 0.2341
+      },
+      fact: 'The candidate appears only when a separate route in the same file contains an unrelated template interpolation using the same identifier name id.',
+      implication: 'The detector can correlate same-named identifiers across unrelated scopes/routes, causing a false structural-sink association.',
+      correctionApplied: false,
+      promotionAllowed: false
     }
   ]
 });
