@@ -57,12 +57,10 @@ function findCrossFileFindings(project){
   for(const source of files){
     const sourceText=String(source.content||'');
     for(const name of findExternalNames(sourceText)){
-      const n=name.replace(/[.*+?^$()|[\]\\]/g,'\\function exploreUnknownAxes(project){
-  const findings=[];');
+      const n=name.replace(/[.*+?^$()|[\]\\]/g,'\\$&');
       const aliasMatch=sourceText.match(new RegExp('(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*(?:req\\.(?:query|body|params)|ctx\\.input)\\.'+n+'\\b'));
       const valueName=aliasMatch?aliasMatch[1]:name;
-      const v=valueName.replace(/[.*+?^$()|[\]\\]/g,'\\function exploreUnknownAxes(project){
-  const findings=[];');
+      const v=valueName.replace(/[.*+?^$()|[\]\\]/g,'\\$&');
       const callRe=new RegExp('([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)+)\\s*\\(\\s*'+v+'\\s*(?:,|\\))','g');
       for(const call of sourceText.matchAll(callRe)){
         const method=call[1].split('.').pop();
