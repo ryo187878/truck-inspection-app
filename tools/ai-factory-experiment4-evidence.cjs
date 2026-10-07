@@ -2,7 +2,7 @@
 
 module.exports = Object.freeze({
   experiment: 'P7-E4',
-  status: 'IN_PROGRESS',
+  status: 'PASS_EVIDENCE_LIMITED',
   baselineCommit: '601eef6a85e46595655490242a7c9af381cc8e0a',
   traceCommit: '2af2e9ced01e5594a38484b70d3e1ee16a22ce03',
   measuredBaseline: {
@@ -91,6 +91,32 @@ module.exports = Object.freeze({
       correctionApplied: true,
       promotionAllowed: false,
       nextRequiredGate: 'E2/E3 regression plus full regression'
+    },
+    {
+      id: 'P7-E4-FINAL-GATE-1',
+      classification: 'FINAL_GATE',
+      frozen: true,
+      gate: 'PASS_EVIDENCE_LIMITED',
+      validationCommitBeforeEvidenceClose: '2880ae9eb4e09f4b3a6dcf63085464d1087885f8',
+      measured: {
+        e2: { tests: 8, pass: 8, fail: 0, durationMs: 67.0471 },
+        e3CrossFile: { tests: 1, pass: 1, fail: 0, durationMs: 82.9164 },
+        e3External: { tests: 3, pass: 3, fail: 0, durationMs: 72.5682 },
+        fullRegression: { tests: 165, pass: 165, fail: 0, durationMs: 613.0506 }
+      },
+      falseNewAxisObserved: 1,
+      falseNewAxisResolved: 1,
+      falseBlockObservedInFinalControls: 0,
+      missedRiskObservedInFinalValidation: 0,
+      formalDnaPromotion: 0,
+      formalNewAxisRegistration: 0,
+      actualExternalSoftwareDefectsStopped: 0,
+      humanIntervention: true,
+      limitations: [
+        'External evaluation is static/frozen-source based; no live exploit or runtime vulnerability confirmation was performed.',
+        'Human/assistant intervention was substantial in diagnosis, antibody design, and repair.',
+        'Passing E4 does not establish autonomous unknown-axis discovery or justify formal DNA promotion.'
+      ]
     }
   ]
 });
