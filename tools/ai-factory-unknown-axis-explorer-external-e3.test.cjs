@@ -23,7 +23,7 @@ Tutorial.create = (newTutorial, result) => {
   sql.query("INSERT INTO tutorials SET ?", newTutorial, ()=>{});
 };
 Tutorial.findById = (id, result) => {
-  sql.query(\`SELECT * FROM tutorials WHERE id = ${id}\`, ()=>{});
+  sql.query(\`SELECT * FROM tutorials WHERE id = \${id}\`, ()=>{});
 };
 Tutorial.getAll = (title, result) => {
   let query = "SELECT * FROM tutorials";
