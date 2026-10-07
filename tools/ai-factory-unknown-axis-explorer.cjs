@@ -51,8 +51,43 @@ function reachesStructuralSink(text,name){
   });
 }
 
-function exploreUnknownAxes(project){
+function findCrossFileFindings(project){
   const findings=[];
+  const files=project?.files||[];
+  for(const source of files){
+    const sourceText=String(source.content||'');
+    for(const name of findExternalNames(sourceText)){
+      const n=name.replace(/[.*+?^$()|[\]\\]/g,'\\function exploreUnknownAxes(project){
+  const findings=[];');
+      const aliasMatch=sourceText.match(new RegExp('(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*(?:req\\.(?:query|body|params)|ctx\\.input)\\.'+n+'\\b'));
+      const valueName=aliasMatch?aliasMatch[1]:name;
+      const v=valueName.replace(/[.*+?^$()|[\]\\]/g,'\\function exploreUnknownAxes(project){
+  const findings=[];');
+      const callRe=new RegExp('([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)+)\\s*\\(\\s*'+v+'\\s*(?:,|\\))','g');
+      for(const call of sourceText.matchAll(callRe)){
+        const method=call[1].split('.').pop();
+        for(const sink of files){
+          if(sink===source) continue;
+          const sinkText=String(sink.content||'');
+          const defRe=new RegExp('(?:\\.'+method+'\\s*=|'+method+'\\s*=|function\\s+'+method+')\\s*(?:\\([^)]*\\b'+v+'\\b|\\([^)]*\\))','i');
+          const genericDef=new RegExp('\\.'+method+'\\s*=\\s*\\(\\s*([A-Za-z_$][\\w$]*)','i');
+          const dm=sinkText.match(genericDef);
+          if(!defRe.test(sinkText) && !dm) continue;
+          const param=dm?dm[1]:valueName;
+          if(isParameterized(sinkText)) continue;
+          if(hasAllowlistGuard(sinkText,param)) continue;
+          if(reachesStructuralSink(sinkText,param)){
+            findings.push({path:sink.path,input:name,sourcePath:source.path,fact:'external input crosses a file/function boundary and reaches structural data-operation sink without observed allowlist'});
+          }
+        }
+      }
+    }
+  }
+  return findings;
+}
+
+function exploreUnknownAxes(project){
+  const findings=findCrossFileFindings(project);
   for(const file of project?.files||[]){
     const text=String(file.content||'');
     if(isParameterized(text)) continue;
