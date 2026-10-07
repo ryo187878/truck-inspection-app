@@ -27,7 +27,7 @@ const AXES=[
     axisId:'promotion.shared-dna',
     label:'共有DNA・正本化',
     generationIntroduced:31,
-    inheritedFrom:['change.diff-purity'],
+    inheritedFrom:[],
     changedPaths:['dispatch-service.js','today-vehicle-status.js','yamato-daily.js','auth-context.js','tools/promotion-gate.cjs'],
     failurePatterns:['shared dna','共有DNA','canonical','正本','duplicate shared','promotion gate'],
     testTargets:[
@@ -38,7 +38,7 @@ const AXES=[
     axisId:'auth.context-isolation',
     label:'登録・通常ログインContext分離',
     generationIntroduced:41,
-    inheritedFrom:['promotion.shared-dna','change.diff-purity'],
+    inheritedFrom:['promotion.shared-dna'],
     changedPaths:['auth-context.js','index.html','test/index.html'],
     failurePatterns:['login_context','registration_context','login context','registration context','登録QR','認証','tenant context'],
     testTargets:[
@@ -95,7 +95,7 @@ const AXES=[
     axisId:'impact.test-selection',
     label:'影響範囲連動テスト選択',
     generationIntroduced:51,
-    inheritedFrom:['promotion.shared-dna','auth.context-isolation','change.diff-purity'],
+    inheritedFrom:['promotion.shared-dna','auth.context-isolation'],
     changedPaths:['tools/ai-factory-axis-registry.cjs','tools/ai-factory-select-tests.cjs'],
     failurePatterns:['selector','test selection','影響範囲','テスト選択'],
     testTargets:[
@@ -107,7 +107,7 @@ const AXES=[
     axisId:'axis.effectiveness-scoring',
     label:'Evidenceベース検証軸有効度',
     generationIntroduced:61,
-    inheritedFrom:['impact.test-selection','promotion.shared-dna','auth.context-isolation','change.diff-purity'],
+    inheritedFrom:['impact.test-selection','promotion.shared-dna','auth.context-isolation'],
     changedPaths:['tools/ai-factory-evidence-ledger.cjs','tools/ai-factory-score-axes.cjs'],
     failurePatterns:['effectiveness','有効度','evidence score','axis score','継承候補'],
     testTargets:[
