@@ -41,6 +41,24 @@ module.exports = Object.freeze({
       impact: 'Novelty scoring alone is insufficient to validate a NEW axis candidate. Correctness/guard semantics require separate evidence.',
       correctionApplied: false,
       promotionAllowed: false
+    },
+    {
+      id: 'P7-E4-REDUCTION-NONREPRO-1',
+      classification: 'REDUCTION_NON_REPRODUCTION',
+      frozen: true,
+      sourceEvidenceId: 'P7-E4-FALSE-NEW-AXIS-1',
+      measured: {
+        tests: 2,
+        pass: 2,
+        fail: 0,
+        durationMs: 82.5608,
+        parameterBindingTestMs: 1.3942,
+        structuralInterpolationTestMs: 0.7799
+      },
+      fact: 'A minimal PostgreSQL $1 + [id] parameter-binding case does not reproduce the external full-source candidate, while structural interpolation remains detectable.',
+      implication: 'The external candidate is not explained by parameter binding alone; file-level context or another statement/path in the frozen source contributes to detection.',
+      correctionApplied: false,
+      promotionAllowed: false
     }
   ]
 });
