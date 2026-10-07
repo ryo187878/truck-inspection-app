@@ -95,7 +95,7 @@ const AXES=[
     axisId:'impact.test-selection',
     label:'影響範囲連動テスト選択',
     generationIntroduced:51,
-    inheritedFrom:['promotion.shared-dna','auth.context-isolation','change.diff-purity'],
+    inheritedFrom:['promotion.shared-dna','change.diff-purity'],
     changedPaths:['tools/ai-factory-axis-registry.cjs','tools/ai-factory-select-tests.cjs'],
     failurePatterns:['selector','test selection','影響範囲','テスト選択'],
     testTargets:[
