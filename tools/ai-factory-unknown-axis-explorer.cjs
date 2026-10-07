@@ -47,13 +47,15 @@ function reachesStructuralSink(text,name){
     const concat=new RegExp("(?:query|run|execute)\\s*\\([\\s\\S]{0,240}\\+\\s*"+a+'\\b','i');
     const template=new RegExp('(?:query|run|execute)\\s*\\([\\s\\S]{0,240}\\$\\{\\s*'+a+'\\s*\\}','i');
     const structuralApi=new RegExp('(?:orderBy|limit|offset|groupBy|sortBy)\\s*\\(\\s*'+a+'\\s*\\)','i');
-    const localQueryMix=new RegExp("([A-Za-z_$][\\\\w$]*)\\\\s*\\\\+=\\\\s*[`\"\'][\\\\s\\\\S]{0,240}\\\\$\\\\{\\\\s*"+a+"\\\\s*\\\\}[\\\\s\\\\S]{0,240}[`\"\']","i");
-    const mixed=text.match(localQueryMix);
-    const mixedSink=mixed
-      ? new RegExp('(?:query|run|execute)\\s*\\(\\s*'+mixed[1].replace(/[.*+?^$()|[\\]\\\\]/g,'\\\\    const structuralApi=new RegExp('(?:orderBy|limit|offset|groupBy|sortBy)\\s*\\(\\s*'+a+'\\s*\\)','i');
-    return concat.test(text)||template.test(text)||structuralApi.test(text);')+'\\b','i')
-      : null;
-    return concat.test(text)||template.test(text)||structuralApi.test(text)||(mixedSink&&mixedSink.test(text));
+    const mixedVarRe=new RegExp('([A-Za-z_$][\\w$]*)\\s*\\+=\\s*[\\s\\S]{0,240}\\$\\{\\s*'+a+'\\s*\\}','i');
+    const mixed=text.match(mixedVarRe);
+    let mixedSink=false;
+    if(mixed){
+      const q=mixed[1].replace(/[.*+?^$()|[\\]\\\\]/g,'\\\\    const structuralApi=new RegExp('(?:orderBy|limit|offset|groupBy|sortBy)\\s*\\(\\s*'+a+'\\s*\\)','i');
+    return concat.test(text)||template.test(text)||structuralApi.test(text);');
+      mixedSink=new RegExp('(?:query|run|execute)\\s*\\(\\s*'+q+'\\b','i').test(text);
+    }
+    return concat.test(text)||template.test(text)||structuralApi.test(text)||mixedSink;
   });
 }
 
